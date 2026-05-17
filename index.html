@@ -92,7 +92,7 @@
 
         .meal-content { font-size: 13px; color: var(--text-dark); line-height: 1.6; }
 
-        /* RECUADRO DEL ASISTENTE DE PLATOS */
+        /* ASISTENTE DE PLATOS */
         .generator-card {
             background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
             border: 2px dashed #cbd5e1;
@@ -364,6 +364,7 @@
         document.getElementById('sync-status').innerText = "Error de conexión";
     });
 
+    // --- ANALIZADOR DINÁMICO CORREGIDO PARA EXCEL CON DECIMALES Y TEXTO LARGO ---
     function renderMeals(raw) {
         const json = cleanJSON(raw);
         const rows = json.table.rows;
@@ -378,14 +379,30 @@
             const blocksRaw = row[2] && row[2].v ? String(row[2].v) : 'No asignado'; 
             
             let pBlocks = 0, hcBlocks = 0, gBlocks = 0;
-            const pMatch = blocksRaw.match(/(\d+)\s*P/i);
-            const hcMatch = blocksRaw.match(/(\d+)\s*HC/i);
-            const gMatch = blocksRaw.match(/(\d+)\s*G/i);
-            
-            if (pMatch) pBlocks = parseInt(pMatch[1]);
-            if (hcMatch) hcBlocks = parseInt(hcMatch[1]);
-            if (gMatch) gBlocks = parseInt(gMatch[1]);
 
+            // Separamos por líneas para procesar cada macro de forma individual
+            const lineas = blocksRaw.split(/[\n,]/);
+            lineas.forEach(linea => {
+                // Buscamos cualquier número (entero o decimal con punto/coma) seguido de texto
+                const match = linea.match(/([0-9a-zA-ZáéíóúÁÉÍÓÚñÑ\s:]+):\s*([0-9.,]+)/i) || linea.match(/([0-9.,]+)\s*([0-9a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+)/i);
+                
+                if (match) {
+                    let texto = linea.toLowerCase();
+                    // Limpiamos y extraemos el valor numérico sustituyendo comas por puntos
+                    let valorStr = linea.replace(/[^0-9.,]/g, '').replace(',', '.');
+                    let valor = parseFloat(valorStr) || 0;
+
+                    if (texto.includes('prot')) {
+                        pBlocks = valor;
+                    } else if (texto.includes('carb') || texto.includes('hidr')) {
+                        hcBlocks = valor;
+                    } else if (texto.includes('gras')) {
+                        gBlocks = valor;
+                    }
+                }
+            });
+
+            // Guardamos los bloques decimales procesados correctamente
             bloquesAsignadosPorIngesta[mealName] = { p: pBlocks, hc: hcBlocks, g: gBlocks };
 
             const blocksStyled = blocksRaw.replace(/\n/g, '<br>');
@@ -501,7 +518,7 @@
 
         if (!bloques || (bloques.p === 0 && bloques.hc === 0 && bloques.g === 0)) {
             outputDiv.style.display = "block";
-            outputDiv.innerHTML = `<div class="plate-title">❌ Sin bloques asignados</div><p style="font-size:13px; color:var(--text-light)">No hemos detectado bloques legibles configurados en la pestaña MASTER para esta ingesta.</p>`;
+            outputDiv.innerHTML = `<div class="plate-title">❌ Sin bloques asignados</div><p style="font-size:13px; color:var(--text-light)">No hemos podido leer correctamente tus bloques de la interfaz. Revisa el formato.</p>`;
             return;
         }
 
@@ -513,31 +530,32 @@
 
         if (bloques.p > 0 && proteinas.length > 0) {
             const aleatorio = proteinas[Math.floor(Math.random() * proteinas.length)];
-            const totalGramos = aleatorio.cantidadBase * bloques.p;
+            // Multiplicamos redondeando de forma limpia
+            const totalGramos = Math.round(aleatorio.cantidadBase * bloques.p * 10) / 10;
             propuestasHTML += `
                 <div class="plate-item">
                     <span>🍗 <b>${totalGramos}${aleatorio.unidad}</b> de ${aleatorio.nombreCorto}</span>
-                    <span class="item-macro-tag" style="background-color: var(--p-color)">${bloques.p} Bloques P</span>
+                    <span class="item-macro-tag" style="background-color: var(--p-color)">${bloques.p} Blq P</span>
                 </div>`;
         }
 
         if (bloques.hc > 0 && hidratos.length > 0) {
             const aleatorio = hidratos[Math.floor(Math.random() * hidratos.length)];
-            const totalGramos = aleatorio.cantidadBase * bloques.hc;
+            const totalGramos = Math.round(aleatorio.cantidadBase * bloques.hc * 10) / 10;
             propuestasHTML += `
                 <div class="plate-item">
                     <span>🌾 <b>${totalGramos}${aleatorio.unidad}</b> de ${aleatorio.nombreCorto}</span>
-                    <span class="item-macro-tag" style="background-color: var(--hc-color)">${bloques.hc} Bloques HC</span>
+                    <span class="item-macro-tag" style="background-color: var(--hc-color)">${bloques.hc} Blq HC</span>
                 </div>`;
         }
 
         if (bloques.g > 0 && grasas.length > 0) {
             const aleatorio = grasas[Math.floor(Math.random() * grasas.length)];
-            const totalGramos = aleatorio.cantidadBase * bloques.g;
+            const totalGramos = Math.round(aleatorio.cantidadBase * bloques.g * 10) / 10;
             propuestasHTML += `
                 <div class="plate-item">
                     <span>🥑 <b>${totalGramos}${aleatorio.unidad}</b> de ${aleatorio.nombreCorto}</span>
-                    <span class="item-macro-tag" style="background-color: var(--g-color)">${bloques.g} Bloques G</span>
+                    <span class="item-macro-tag" style="background-color: var(--g-color)">${bloques.g} Blq G</span>
                 </div>`;
         }
 
