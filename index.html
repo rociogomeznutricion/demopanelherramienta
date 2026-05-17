@@ -215,10 +215,10 @@
 
         .filter-btn:hover { background-color: #e2e8f0; }
         .filter-btn.active[data-type="all"] { background-color: var(--navy); color: var(--white); border-color: var(--navy); }
-        .filter-btn.active[data-type="proteína"] { background-color: var(--p-color); color: var(--white); border-color: var(--p-color); }
-        .filter-btn.active[data-type="hidratos"] { background-color: var(--hc-color); color: var(--white); border-color: var(--hc-color); }
+        .filter-btn.active[data-type="proteínas"] { background-color: var(--p-color); color: var(--white); border-color: var(--p-color); }
+        .filter-btn.active[data-type="carbohidratos"] { background-color: var(--hc-color); color: var(--white); border-color: var(--hc-color); }
         .filter-btn.active[data-type="grasas"] { background-color: var(--g-color); color: var(--white); border-color: var(--g-color); }
-        .filter-btn.active[data-type="mixto"] { background-color: var(--m-color); color: var(--white); border-color: var(--m-color); }
+        .filter-btn.active[data-type="alimentos mixtos"] { background-color: var(--m-color); color: var(--white); border-color: var(--m-color); }
 
         .search-area { margin-bottom: 20px; }
         .search-input {
@@ -314,10 +314,10 @@
     <section class="card">
         <div class="filter-container">
             <button class="filter-btn active" data-type="all" onclick="setCategoryFilter('all', this)">⚡ Todos</button>
-            <button class="filter-btn" data-type="proteína" onclick="setCategoryFilter('proteína', this)">🥩 Proteínas</button>
-            <button class="filter-btn" data-type="hidratos" onclick="setCategoryFilter('hidratos', this)">🌾 Hidratos</button>
+            <button class="filter-btn" data-type="proteínas" onclick="setCategoryFilter('proteínas', this)">🥩 Proteínas</button>
+            <button class="filter-btn" data-type="carbohidratos" onclick="setCategoryFilter('carbohidratos', this)">🌾 Carbohidratos</button>
             <button class="filter-btn" data-type="grasas" onclick="setCategoryFilter('grasas', this)">🥑 Grasas</button>
-            <button class="filter-btn" data-type="mixto" onclick="setCategoryFilter('mixto', this)">🥣 Mixtos</button>
+            <button class="filter-btn" data-type="alimentos mixtos" onclick="setCategoryFilter('alimentos mixtos', this)">🥣 Mixtos</button>
         </div>
 
         <div class="search-area">
@@ -328,6 +328,7 @@
                 <thead>
                     <tr>
                         <th>Alimento</th>
+                        <th>Cantidad base (1 bloque)</th>
                         <th style="width: 200px;">Tipo</th>
                     </tr>
                 </thead>
@@ -341,19 +342,24 @@
 </div>
 
 <script>
-    // CORREGIDO EL ESPACIO EN BLANCO DEL ID DE TU SPREADSHEET
     const SPREADSHEET_ID = '1agPyD1JW34QSqXOeisPSsjXQuIXkwvdP4ZFyRAlvip4'; 
     const GID_AJUSTES = '1147936171'; 
     const GID_EQUIV = '1979658163';   
 
-    const CLEAN_ID = SPREADSHEET_ID.replace(/\s/g, '');
-    const urlAjustes = `https://docs.google.com/spreadsheets/d/${CLEAN_ID}/gviz/tq?gid=${GID_AJUSTES}&tqx=out:json`;
-    const urlEquiv = `https://docs.google.com/spreadsheets/d/${CLEAN_ID}/gviz/tq?gid=${GID_EQUIV}&tqx=out:json`;
+    const urlAjustes = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?gid=${GID_AJUSTES}&tqx=out:json`;
+    const urlEquiv = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?gid=${GID_EQUIV}&tqx=out:json`;
 
     const mealIcons = { "DESAYUNO": "fa-coffee", "ALMUERZO": "fa-apple-whole", "COMIDA": "fa-utensils", "MERIENDA": "fa-cookie", "CENA": "fa-moon" };
     
     let bloquesAsignadosPorIngesta = {}; 
-    let baseDatosAlimentos = []; 
+    
+    // Arrays separados de alimentos limpios para el generador automático (Excluyendo Mixtos)
+    let poolProteinas = [];
+    let poolCarbohidratos = [];
+    let poolGrasas = [];
+    
+    // Array general para renderizar y filtrar en el buscador manual (Incluye Mixtos)
+    let poolBuscadorCompleto = [];
     let currentCategoryFilter = 'all';
 
     Promise.all([
@@ -361,7 +367,7 @@
         fetch(urlEquiv).then(r => r.text())
     ]).then(([dataAjustes, dataEquiv]) => {
         renderMeals(dataAjustes);
-        renderTableAndObservations(dataEquiv);
+        procesarYRenderizarEquivalencias(dataEquiv);
         document.getElementById('sync-status').innerText = "Sincronizado";
     }).catch(err => {
         console.error(err);
@@ -387,7 +393,6 @@
             const lineas = blocksRaw.split(/[\n]/);
             lineas.forEach(linea => {
                 const cleanLine = linea.replace(/\s+/g, ' ').trim().toLowerCase();
-                
                 let numericoStr = cleanLine.replace(/[^0-9.,]/g, '').replace(',', '.');
                 let valorDecimal = parseFloat(numericoStr) || 0;
 
@@ -417,74 +422,117 @@
         grid.innerHTML = html;
     }
 
-    // --- PARSER BASADO EN EL NUEVO FORMATO DE FILA CON DOS PUNTOS (:) Y RECTAS (|) ---
-    function renderTableAndObservations(raw) {
+    // --- PARSER DE NUEVA ESTRUCTURA DE COLUMNAS A-B, C-D, E-F, H ---
+    function procesarYRenderizarEquivalencias(raw) {
         const json = cleanJSON(raw);
         const rows = json.table.rows;
         
-        let typesHeader = [];
-        if(rows[0] && rows[0].c) {
-            for(let col = 0; col < 5; col++) {
-                if(rows[0].c[col] && rows[0].c[col].v) {
-                    let cleanType = String(rows[0].c[col].v).replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ]/g, '').trim();
-                    typesHeader[col] = cleanType;
-                } else {
-                    typesHeader[col] = "General";
+        // Inicializamos los almacenes vacíos
+        poolProteinas = []; poolCarbohidratos = []; poolGrasas = []; poolBuscadorCompleto = [];
+
+        // Definimos las cabeceras solicitadas limpiando los paréntesis
+        const labelP = "PROTEÍNAS";
+        const labelHC = "CARBOHIDRATOS";
+        const labelG = "GRASAS";
+        const labelM = "ALIMENTOS MIXTOS";
+
+        // Recorremos la tabla fila por fila (saltando la cabecera i=0)
+        for (let i = 1; i < rows.length; i++) {
+            const row = rows[i].c;
+            if (!row) continue;
+
+            // Helper para extraer número limpio de la celda de gramos
+            function parsearGramos(celda) {
+                if(!celda || celda.v === null) return null;
+                let str = String(celda.v).replace(/\s+/g, '').toLowerCase();
+                let match = str.match(/(\d+(?:[.,]\d+)?)/); // Captura enteros o decimales
+                if(match) return parseFloat(match[1].replace(',', '.')) || null;
+                return null;
+            }
+
+            // Helper para extraer la unidad de medida (g, ml, udes, etc.)
+            function detectarUnidad(celdaStr) {
+                let str = celdaStr.toLowerCase();
+                if(str.includes('ml')) return 'ml';
+                if(str.includes('udes') || str.includes('ud') || str.includes('unidad')) return 'udes';
+                return 'g';
+            }
+
+            // 1. COLUMNA A y B: PROTEÍNAS
+            if (row[0] && row[0].v !== null && String(row[0].v).trim() !== "" && !String(row[0].v).includes("PROTEÍNAS")) {
+                const nombre = String(row[0].v).trim();
+                const gramos = parsearGramos(row[1]);
+                const unidad = row[1] ? detectarUnidad(String(row[1].v)) : 'g';
+                if(gramos !== null) {
+                    const item = { nombre, gramos, unidad, tipo: labelP };
+                    poolProteinas.push(item);
+                    poolBuscadorCompleto.push(item);
                 }
+            }
+
+            // 2. COLUMNA C y D: CARBOHIDRATOS
+            if (row[2] && row[2].v !== null && String(row[2].v).trim() !== "" && !String(row[2].v).includes("CARBOHIDRATOS")) {
+                let nombre = String(row[2].v).trim();
+                // Limpieza estética por si arrastra restos de caracteres de separación antiguos
+                if(nombre.endsWith('|')) nombre = nombre.slice(0, -1).trim();
+
+                const gramos = parsearGramos(row[3]);
+                const unidad = row[3] ? detectarUnidad(String(row[3].v)) : 'g';
+                if(gramos !== null) {
+                    const item = { nombre, gramos, unidad, tipo: labelHC };
+                    poolCarbohidratos.push(item);
+                    poolBuscadorCompleto.push(item);
+                }
+            }
+
+            // 3. COLUMNA E y F: GRASAS
+            if (row[4] && row[4].v !== null && String(row[4].v).trim() !== "" && !String(row[4].v).includes("GRASAS")) {
+                const nombre = String(row[4].v).trim();
+                const gramos = parsearGramos(row[5]);
+                const unidad = row[5] ? detectarUnidad(String(row[5].v)) : 'g';
+                if(gramos !== null) {
+                    const item = { nombre, gramos, unidad, tipo: labelG };
+                    poolGrasas.push(item);
+                    poolBuscadorCompleto.push(item);
+                }
+            }
+
+            // 4. COLUMNA H (Índice 7): ALIMENTOS MIXTOS (Solo buscador manual, sin desglose)
+            if (row[7] && row[7].v !== null && String(row[7].v).trim() !== "" && !String(row[7].v).includes("MIXTO")) {
+                const nombreCompleto = String(row[7].v).trim();
+                poolBuscadorCompleto.push({
+                    nombre: nombreCompleto,
+                    gramos: null, // No se usa en multiplicación automática
+                    unidad: '',
+                    tipo: labelM
+                });
             }
         }
 
+        // Renderizar elementos en la tabla HTML inferior
         const tbody = document.getElementById('table-body');
         let htmlTable = "";
-        baseDatosAlimentos = [];
 
-        for (let i = 1; i < rows.length; i++) {
-            const rowC = rows[i].c;
-            if (!rowC) continue;
+        poolBuscadorCompleto.forEach(item => {
+            let badgeClass = "bg-default";
+            if(item.tipo === labelP) badgeClass = "bg-p";
+            else if(item.tipo === labelHC) badgeClass = "bg-hc";
+            else if(item.tipo === labelG) badgeClass = "bg-g";
+            else if(item.tipo === labelM) badgeClass = "bg-m";
 
-            for(let col = 0; col < 5; col++) {
-                if(rowC[col] && rowC[col].v !== null && String(rowC[col].v).trim() !== "") {
-                    const celdaCompleta = String(rowC[col].v);
-                    const typeLabel = typesHeader[col] || "Proteína";
-                    const subAlimentos = celdaCompleta.split('|');
+            // Si es mixto se muestra el bloque entero de texto, si no, se muestra desglosado de forma bonita
+            const displayCantidad = item.gramos !== null ? `${item.gramos}${item.unidad}` : 'Ver descripción';
 
-                    subAlimentos.forEach(item => {
-                        const bloqueTexto = item.trim();
-                        if (!bloqueTexto || !bloqueTexto.includes(':')) return;
+            htmlTable += `<tr data-type="${item.tipo.toLowerCase()}">
+                <td><strong>${item.nombre}</strong></td>
+                <td>${displayCantidad}</td>
+                <td><span class="badge ${badgeClass}">${item.tipo}</span></td>
+            </tr>`;
+        });
 
-                        const partes = bloqueTexto.split(':');
-                        const nombreLimpio = partes[0].trim();
-                        const restoValores = partes[1].trim(); 
+        tbody.innerHTML = htmlTable || '<tr><td colspan="3">No se encontraron alimentos en la hoja.</td></tr>';
 
-                        const numMatch = restoValores.match(/^(\d+)\s*(g|ml|ud|unidad|udes)/i);
-                        if (numMatch) {
-                            const cantidadGramosBase = parseInt(numMatch[1]);
-                            const unidadMedida = numMatch[2].toLowerCase();
-
-                            baseDatosAlimentos.push({
-                                nombreCorto: nombreLimpio,
-                                cantidadBase: cantidadGramosBase,
-                                unidad: unidadMedida,
-                                tipo: typeLabel.toLowerCase()
-                            });
-
-                            let badgeClass = "bg-default";
-                            if(typeLabel.toLowerCase().includes("prot")) badgeClass = "bg-p";
-                            else if(typeLabel.toLowerCase().includes("hidr") || typeLabel.toLowerCase().includes("carb")) badgeClass = "bg-hc";
-                            else if(typeLabel.toLowerCase().includes("gras")) badgeClass = "bg-g";
-                            else if(typeLabel.toLowerCase().includes("mixt")) badgeClass = "bg-m";
-
-                            htmlTable += `<tr data-type="${typeLabel.toLowerCase()}">
-                                <td><strong>${nombreLimpio} (${cantidadGramosBase}${unidadMedida})</strong></td>
-                                <td><span class="badge ${badgeClass}">${typeLabel}</span></td>
-                            </tr>`;
-                        }
-                    });
-                }
-            }
-        }
-        tbody.innerHTML = htmlTable || '<tr><td colspan="2">No se encontraron alimentos.</td></tr>';
-
+        // Procesamiento de bloques de notas (Columnas F y G de la hoja)
         const obsGrid = document.getElementById('obs-grid');
         let obsColF = []; let obsColG = [];
         for (let i = 0; i < rows.length; i++) {
@@ -505,7 +553,7 @@
         `;
     }
 
-    // --- ASISTENTE PREMIUM CON CALCULO DECIMAL PERFECTO Y CRITERIO GASTRONÓMICO ---
+    // --- GENERADOR AUTOMÁTICO DE PLATOS ULTRA PRECISO (CON EXCLUSIÓN DE MIXTOS) ---
     function generarPlatoInteligente() {
         const ingestaSeleccionada = document.getElementById('meal-selector').value;
         const bloques = bloquesAsignadosPorIngesta[ingestaSeleccionada];
@@ -513,88 +561,64 @@
 
         if (!bloques || (bloques.p === 0 && bloques.hc === 0 && bloques.g === 0)) {
             outputDiv.style.display = "block";
-            outputDiv.innerHTML = `<div class="plate-title">❌ Ajustes de bloques no leídos</div><p style="font-size:13px; color:var(--text-light)">Revisa el panel superior de sincronización.</p>`;
+            outputDiv.innerHTML = `<div class="plate-title">❌ Ajustes de bloques no detectados</div><p style="font-size:13px; color:var(--text-light)">Asegúrate de que la hoja de Ajustes esté correctamente rellenada.</p>`;
             return;
         }
 
-        let proteinas = baseDatosAlimentos.filter(a => a.tipo.includes("prot"));
-        let hidratos = baseDatosAlimentos.filter(a => a.tipo.includes("hidr") || a.tipo.includes("carb"));
-        let grasas = baseDatosAlimentos.filter(a => a.tipo.includes("gras"));
+        // Usamos los pools limpios correspondientes a las columnas A, C y E (Excluyendo la H)
+        let listaP = [...poolProteinas];
+        let listaHC = [...poolCarbohidratos];
+        let listaG = [...poolGrasas];
 
         let seleccionados = { p: [], hc: [], g: [] };
 
-        // REGLA DE COHERENCIA ULTRA: Filtrar desayuno estructurado (Evitar Pan + Yogur + Avena cruzados sin sentido)
-        if (ingestaSeleccionada === "DESAYUNO" && hidratos.length > 0) {
-            let hcElegido = hidratos[Math.floor(Math.random() * hidratos.length)];
+        // FILTRO DE COHERENCIA BÁSICA PARA EL DESAYUNO
+        if (ingestaSeleccionada === "DESAYUNO" && listaHC.length > 0) {
+            let hcElegido = listaHC[Math.floor(Math.random() * listaHC.length)];
             seleccionados.hc.push(hcElegido);
-            const nombreHc = hcElegido.nombreCorto.toLowerCase();
+            const nombreHc = hcElegido.nombre.toLowerCase();
 
-            if (nombreHc.includes("avena") || nombreHc.includes("cere") || nombreHc.includes("fruta") || nombreHc.includes("fresa") || nombreHc.includes("plátano")) {
-                let pCompatibles = proteinas.filter(p => p.nombreCorto.toLowerCase().includes("yogur") || p.nombreCorto.toLowerCase().includes("batido") || p.nombreCorto.toLowerCase().includes("clara") || p.nombreCorto.toLowerCase().includes("polvo"));
-                if(pCompatibles.length > 0) proteinas = pCompatibles;
+            if (nombreHc.includes("avena") || nombreHc.includes("fruta") || nombreHc.includes("plátano") || nombreHc.includes("manzana")) {
+                let pCompatibles = listaP.filter(p => p.nombre.toLowerCase().includes("yogur") || p.nombre.toLowerCase().includes("batido") || p.nombre.toLowerCase().includes("clara") || p.nombre.toLowerCase().includes("queso"));
+                if(pCompatibles.length > 0) listaP = pCompatibles;
             } else if (nombreHc.includes("pan") || nombreHc.includes("tost")) {
-                let pCompatibles = proteinas.filter(p => p.nombreCorto.toLowerCase().includes("pavo") || p.nombreCorto.toLowerCase().includes("jamón") || p.nombreCorto.toLowerCase().includes("huevo") || p.nombreCorto.toLowerCase().includes("atún"));
-                if(pCompatibles.length > 0) proteinas = pCompatibles;
+                let pCompatibles = listaP.filter(p => p.nombre.toLowerCase().includes("pavo") || p.nombre.toLowerCase().includes("jamón") || p.nombre.toLowerCase().includes("huevo") || p.nombre.toLowerCase().includes("atún"));
+                if(pCompatibles.length > 0) listaP = pCompatibles;
             }
         }
 
-        // Reparto equilibrado de fuentes de Proteínas
-        if (bloques.p > 0 && proteinas.length > 0) {
-            let p1 = proteinas[Math.floor(Math.random() * proteinas.length)];
-            seleccionados.p.push(p1);
-            if (bloques.p > 1.5 && proteinas.length > 1) {
-                let p2 = proteinas[Math.floor(Math.random() * proteinas.length)];
-                while(p1.nombreCorto === p2.nombreCorto && proteinas.length > 1) {
-                    p2 = proteinas[Math.floor(Math.random() * proteinas.length)];
-                }
-                seleccionados.p.push(p2);
-            }
+        // Selección aleatoria de fuentes limpias
+        if (bloques.p > 0 && listaP.length > 0) {
+            seleccionados.p.push(listaP[Math.floor(Math.random() * listaP.length)]);
+        }
+        if (seleccionados.hc.length === 0 && bloques.hc > 0 && listaHC.length > 0) {
+            seleccionados.hc.push(listaHC[Math.floor(Math.random() * listaHC.length)]);
+        }
+        if (bloques.g > 0 && listaG.length > 0) {
+            seleccionados.g.push(listaG[Math.floor(Math.random() * listaG.length)]);
         }
 
-        // Reparto de Hidratos si no se fijaron por desayuno
-        if (seleccionados.hc.length === 0 && bloques.hc > 0 && hidratos.length > 0) {
-            let hc1 = hidratos[Math.floor(Math.random() * hidratos.length)];
-            seleccionados.hc.push(hc1);
-            if (bloques.hc > 1.5 && hidratos.length > 1) {
-                let hc2 = hidratos[Math.floor(Math.random() * hidratos.length)];
-                while(hc1.nombreCorto === hc2.nombreCorto && hidratos.length > 1) {
-                    hc2 = hidratos[Math.floor(Math.random() * hidratos.length)];
-                }
-                seleccionados.hc.push(hc2);
-            }
-        }
-
-        // Grasas
-        if (bloques.g > 0 && grasas.length > 0) {
-            seleccionados.g.push(grasas[Math.floor(Math.random() * grasas.length)]);
-        }
-
-        // --- CONSTRUCTOR DE LA PROPUESTA CON MULTIPLICACIÓN DECIMAL FIEL ---
+        // --- RENDERIZADOR Y MULTIPLICADOR MATEMÁTICO DIRECTO CON LOS NUEVOS GRAMOS ---
         let htmlFinal = "";
 
         function procesarMacroBloque(listaAlimentos, totalBloquesAsignados, colorBadge, textoMacro, emoji) {
             if (listaAlimentos.length === 0 || totalBloquesAsignados <= 0) return "";
             let htmlAcumulado = "";
-            let numFuentes = listaAlimentos.length;
 
             listaAlimentos.forEach(alimento => {
-                let fraccionBloque = totalBloquesAsignados / numFuentes;
-
-                if (alimento.nombreCorto.toLowerCase().includes("huevo entero") && numFuentes > 1) {
-                    fraccionBloque = Math.min(fraccionBloque, 1);
-                }
-
-                let gramosFinales = fraccionBloque * alimento.cantidadBase;
+                // MULTIPLICACIÓN DIRECTA REAL: Bloques (con decimales) * gramos base de la nueva columna de equivalencias
+                let gramosFinales = totalBloquesAsignados * alimento.gramos;
                 let stringMedida = `<b>${gramosFinales.toFixed(0)}${alimento.unidad}</b>`;
 
-                if (alimento.nombreCorto.toLowerCase().includes("aceite") && alimento.unidad.includes("cuch")) {
-                    stringMedida = `<b>${fraccionBloque.toFixed(1)} cucharada(s)</b>`;
+                // Excepción puramente estética para el aceite medido en cucharadas
+                if (alimento.nombre.toLowerCase().includes("aceite") && alimento.unidad.includes("cuch")) {
+                    stringMedida = `<b>${totalBloquesAsignados.toFixed(1)} cucharada(s)</b>`;
                 }
 
                 htmlAcumulado += `
                     <div class="plate-item">
-                        <span>${emoji} ${stringMedida} de <b>${alimento.nombreCorto}</b></span>
-                        <span class="item-macro-tag" style="background-color: ${colorBadge}">${fraccionBloque.toFixed(1)} ${textoMacro}</span>
+                        <span>${emoji} ${stringMedida} de <b>${alimento.nombre}</b></span>
+                        <span class="item-macro-tag" style="background-color: ${colorBadge}">${totalBloquesAsignados} ${textoMacro}</span>
                     </div>`;
             });
             return htmlAcumulado;
@@ -611,11 +635,11 @@
                 Propuesta de Menú para tu ${ingestaSeleccionada.toLowerCase()}
             </div>
             <div style="margin-bottom:15px; font-size:13px; color:var(--text-dark)">
-                Cálculo de alta fidelidad para tus bloques reales de: <b>${bloques.p}P - ${bloques.hc}HC - ${bloques.g}G</b>
+                Cálculo matemático exacto para tus bloques configurados de: <b>${bloques.p}P - ${bloques.hc}HC - ${bloques.g}G</b>
             </div>
             ${htmlFinal}
             <div style="margin-top:15px; font-size:11px; text-align:center; color:var(--text-light); font-style:italic;">
-                ¿Quieres ver otra idea? Pulsa de nuevo para recalcular con total coherencia.
+                ¿Quieres ver otra idea? Pulsa de nuevo para barajar nuevos alimentos limpios.
             </div>
         `;
     }
@@ -638,7 +662,7 @@
             const foodNameText = tr.getElementsByTagName('td')[0].textContent.toLowerCase();
             const trTypeAttr = tr.getAttribute('data-type') || "";
             const matchesText = foodNameText.includes(textInput);
-            let matchesCategory = (currentCategoryFilter === 'all') ? true : trTypeAttr.includes(currentCategoryFilter);
+            let matchesCategory = (currentCategoryFilter === 'all') ? true : trTypeAttr === currentCategoryFilter;
             tr.style.display = (matchesText && matchesCategory) ? "" : "none";
         }
     }
