@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Nutricional - Reparto e Ingestas</title>
+    <title>Dashboard Nutricional Inteligente</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
@@ -20,7 +20,7 @@
             --p-color: #ef4444;
             --hc-color: #f59e0b;
             --g-color: #10b981;
-            --m-color: #8b5cf6; /* Color violeta premium para alimentos mixtos */
+            --m-color: #8b5cf6;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -35,7 +35,6 @@
 
         .container { max-width: 1100px; margin: 0 auto; }
 
-        /* Header Estilo Consultoría */
         .header {
             background-color: var(--navy);
             color: var(--white);
@@ -45,19 +44,9 @@
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
         }
 
-        .header h1 {
-            font-family: 'Poppins', sans-serif;
-            font-size: 26px;
-            margin-bottom: 5px;
-        }
+        .header h1 { font-family: 'Poppins', sans-serif; font-size: 26px; margin-bottom: 5px; }
+        .header p { font-weight: 300; opacity: 0.8; font-size: 14px; }
 
-        .header p {
-            font-weight: 300;
-            opacity: 0.8;
-            font-size: 14px;
-        }
-
-        /* Sección de Ingestas */
         .section-title {
             font-family: 'Poppins', sans-serif;
             font-size: 18px;
@@ -101,13 +90,105 @@
             gap: 8px;
         }
 
-        .meal-content {
-            font-size: 13px;
-            color: var(--text-dark);
-            line-height: 1.6;
+        .meal-content { font-size: 13px; color: var(--text-dark); line-height: 1.6; }
+
+        /* RECUADRO DEL ASISTENTE DE PLATOS */
+        .generator-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
+            border: 2px dashed #cbd5e1;
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            text-align: center;
         }
 
-        /* Estilos de la Tabla y Filtros */
+        .gen-controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+
+        .gen-select {
+            padding: 12px 20px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            color: var(--navy);
+            outline: none;
+            background: var(--white);
+            cursor: pointer;
+        }
+
+        .gen-btn {
+            background: linear-gradient(135deg, var(--blue-accent) 0%, var(--navy) 100%);
+            color: var(--white);
+            border: none;
+            padding: 12px 25px;
+            border-radius: 10px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0, 71, 171, 0.2);
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .gen-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 71, 171, 0.3);
+        }
+
+        .plate-output {
+            background: var(--white);
+            border-radius: 14px;
+            padding: 25px;
+            max-width: 600px;
+            margin: 0 auto;
+            border: 1px solid var(--border);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.02);
+            text-align: left;
+            display: none;
+        }
+
+        .plate-title {
+            font-family: 'Poppins', sans-serif;
+            font-size: 16px;
+            color: var(--navy);
+            border-bottom: 2px solid var(--soft-bg);
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .plate-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px dashed var(--soft-bg);
+        }
+
+        .plate-item:last-child { border-bottom: none; }
+
+        .item-macro-tag {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: white;
+            margin-left: 8px;
+        }
+
+        /* Tabla y Filtros */
         .card {
             background: var(--white);
             border-radius: 16px;
@@ -117,12 +198,7 @@
             margin-bottom: 25px;
         }
 
-        .filter-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
+        .filter-container { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; }
 
         .filter-btn {
             background-color: #f1f5f9;
@@ -136,10 +212,7 @@
             transition: all 0.2s ease;
         }
 
-        .filter-btn:hover {
-            background-color: #e2e8f0;
-        }
-
+        .filter-btn:hover { background-color: #e2e8f0; }
         .filter-btn.active[data-type="all"] { background-color: var(--navy); color: var(--white); border-color: var(--navy); }
         .filter-btn.active[data-type="proteína"] { background-color: var(--p-color); color: var(--white); border-color: var(--p-color); }
         .filter-btn.active[data-type="hidratos"] { background-color: var(--hc-color); color: var(--white); border-color: var(--hc-color); }
@@ -147,7 +220,6 @@
         .filter-btn.active[data-type="mixto"] { background-color: var(--m-color); color: var(--white); border-color: var(--m-color); }
 
         .search-area { margin-bottom: 20px; }
-
         .search-input {
             width: 100%;
             padding: 12px 18px;
@@ -158,14 +230,8 @@
             background-color: #fcfcfd;
         }
 
-        .table-container {
-            width: 100%;
-            overflow-x: auto;
-            border-radius: 10px;
-        }
-
+        .table-container { width: 100%; overflow-x: auto; border-radius: 10px; }
         table { width: 100%; border-collapse: collapse; }
-
         th {
             background-color: #f1f5f9;
             padding: 14px;
@@ -175,12 +241,7 @@
             color: var(--text-light);
             border-bottom: 2px solid var(--border);
         }
-
-        td {
-            padding: 14px;
-            border-bottom: 1px solid var(--border);
-            font-size: 14px;
-        }
+        td { padding: 14px; border-bottom: 1px solid var(--border); font-size: 14px; }
 
         .badge {
             display: inline-block;
@@ -197,62 +258,14 @@
         .bg-m { background-color: var(--m-color); }
         .bg-default { background-color: var(--text-light); }
 
-        /* Tarjetas de Observaciones */
-        .obs-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
-            gap: 20px;
-            margin-top: 15px;
-        }
-
-        .obs-card {
-            background: #fffdf5;
-            border: 1px solid #fef3c7;
-            border-radius: 14px;
-            padding: 22px;
-            box-shadow: 0 4px 6px -1px rgba(217, 119, 6, 0.05);
-        }
-
-        .obs-card.g2 {
-            background: #f0fdf4;
-            border-color: #bbf7d0;
-            box-shadow: 0 4px 6px -1px rgba(22, 163, 74, 0.05);
-        }
-
-        .obs-title {
-            font-family: 'Poppins', sans-serif;
-            font-size: 15px;
-            font-weight: 700;
-            color: #b45309;
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .obs-card.g2 .obs-title {
-            color: #15803d;
-        }
-
-        .obs-content {
-            font-size: 13.5px;
-            color: #451a03;
-            line-height: 1.6;
-            white-space: pre-wrap;
-        }
-
-        .obs-card.g2 .obs-content {
-            color: #14532d;
-        }
-
-        .status-pill {
-            font-size: 10px;
-            padding: 4px 10px;
-            border-radius: 20px;
-            background: #dcfce7;
-            color: #15803d;
-            font-weight: 700;
-        }
+        .obs-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 20px; margin-top: 15px; }
+        .obs-card { background: #fffdf5; border: 1px solid #fef3c7; border-radius: 14px; padding: 22px; }
+        .obs-card.g2 { background: #f0fdf4; border-color: #bbf7d0; }
+        .obs-title { font-family: 'Poppins', sans-serif; font-size: 15px; font-weight: 700; color: #b45309; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        .obs-card.g2 .obs-title { color: #15803d; }
+        .obs-content { font-size: 13.5px; color: #451a03; line-height: 1.6; white-space: pre-wrap; }
+        .obs-card.g2 .obs-content { color: #14532d; }
+        .status-pill { font-size: 10px; padding: 4px 10px; border-radius: 20px; background: #dcfce7; color: #15803d; font-weight: 700; }
 
         @media (max-width: 768px) {
             .meal-grid { grid-template-columns: 1fr; }
@@ -273,8 +286,28 @@
         <span id="sync-status" class="status-pill">Sincronizando...</span>
     </div>
 
-    <div class="meal-grid" id="meal-grid">
+    <div class="meal-grid" id="meal-grid"></div>
+
+    <div class="section-title">✨ Asistente de Menú Instantáneo</div>
+    <div class="generator-card">
+        <p style="color: var(--text-light); font-size: 14px; margin-bottom: 15px; font-weight: 500;">
+            ¿No sabes qué preparar? Selecciona una ingesta y el sistema armará una combinación coherente respetando tus bloques asignados.
+        </p>
+        <div class="gen-controls">
+            <select id="meal-selector" class="gen-select">
+                <option value="DESAYUNO">☕ Desayuno</option>
+                <option value="ALMUERZO">🍏 Almuerzo (Media Mañana)</option>
+                <option value="COMIDA">🍳 Comida</option>
+                <option value="MERIENDA">🍪 Merienda</option>
+                <option value="CENA">🌙 Cena</option>
+            </select>
+            <button class="gen-btn" onclick="generarPlatoInteligente()">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> Sugerir Combinación
+            </button>
         </div>
+
+        <div class="plate-output" id="plate-output"></div>
+    </div>
 
     <div class="section-title">Base de Datos de Equivalencias</div>
     <section class="card">
@@ -297,34 +330,27 @@
                         <th style="width: 200px;">Tipo</th>
                     </tr>
                 </thead>
-                <tbody id="table-body">
-                    </tbody>
+                <tbody id="table-body"></tbody>
             </table>
         </div>
     </section>
 
     <div class="section-title">📌 Observaciones y Pautas de Uso</div>
-    <div class="obs-grid" id="obs-grid">
-        </div>
+    <div class="obs-grid" id="obs-grid"></div>
 </div>
 
 <script>
-    // Configuración de IDs de Google Sheets
     const SPREADSHEET_ID = '1agPyD1JW34QSqXOeisPSsjXQuIXkwvdP4ZFyRAlvip4';
-    const GID_AJUSTES = '1147936171'; // Pestaña MASTER
-    const GID_EQUIV = '1979658163';   // Pestaña Equivalencias Mercadona
+    const GID_AJUSTES = '1147936171'; 
+    const GID_EQUIV = '1979658163';   
 
     const urlAjustes = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?gid=${GID_AJUSTES}&tqx=out:json`;
     const urlEquiv = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?gid=${GID_EQUIV}&tqx=out:json`;
 
-    const mealIcons = {
-        "DESAYUNO": "fa-coffee",
-        "ALMUERZO": "fa-apple-whole",
-        "COMIDA": "fa-utensils",
-        "MERIENDA": "fa-cookie",
-        "CENA": "fa-moon"
-    };
-
+    const mealIcons = { "DESAYUNO": "fa-coffee", "ALMUERZO": "fa-apple-whole", "COMIDA": "fa-utensils", "MERIENDA": "fa-cookie", "CENA": "fa-moon" };
+    
+    let bloquesAsignadosPorIngesta = {}; 
+    let baseDatosAlimentos = []; 
     let currentCategoryFilter = 'all';
 
     Promise.all([
@@ -336,8 +362,6 @@
         document.getElementById('sync-status').innerText = "Sincronizado";
     }).catch(err => {
         document.getElementById('sync-status').innerText = "Error de conexión";
-        document.getElementById('sync-status').style.background = "#fee2e2";
-        document.getElementById('sync-status').style.color = "#b91c1c";
     });
 
     function renderMeals(raw) {
@@ -350,20 +374,29 @@
             if (!rows[i] || !rows[i].c) continue;
             
             const row = rows[i].c;
-            const mealName = row[0] && row[0].v ? row[0].v : `Ingesta ${i+1}`; 
+            const mealName = row[0] && row[0].v ? String(row[0].v).toUpperCase() : `INGESTA ${i+1}`; 
             const blocksRaw = row[2] && row[2].v ? String(row[2].v) : 'No asignado'; 
             
+            let pBlocks = 0, hcBlocks = 0, gBlocks = 0;
+            const pMatch = blocksRaw.match(/(\d+)\s*P/i);
+            const hcMatch = blocksRaw.match(/(\d+)\s*HC/i);
+            const gMatch = blocksRaw.match(/(\d+)\s*G/i);
+            
+            if (pMatch) pBlocks = parseInt(pMatch[1]);
+            if (hcMatch) hcBlocks = parseInt(hcMatch[1]);
+            if (gMatch) gBlocks = parseInt(gMatch[1]);
+
+            bloquesAsignadosPorIngesta[mealName] = { p: pBlocks, hc: hcBlocks, g: gBlocks };
+
             const blocksStyled = blocksRaw.replace(/\n/g, '<br>');
-            const icon = mealIcons[mealName.toUpperCase()] || "fa-utensils";
+            const icon = mealIcons[mealName] || "fa-utensils";
 
             html += `
                 <div class="meal-card">
                     <div class="meal-name">
                         <i class="fa-solid ${icon}"></i> ${mealName}
                     </div>
-                    <div class="meal-content">
-                        ${blocksStyled}
-                    </div>
+                    <div class="meal-content">${blocksStyled}</div>
                 </div>
             `;
         }
@@ -374,7 +407,6 @@
         const json = cleanJSON(raw);
         const rows = json.table.rows;
         
-        // --- PARTE 1: PROCESAR ENCABEZADOS ---
         let typesHeader = [];
         if(rows[0] && rows[0].c) {
             for(let col = 0; col < 5; col++) {
@@ -387,9 +419,9 @@
             }
         }
 
-        // --- PARTE 2: PROCESAR TABLA DE ALIMENTOS ---
         const tbody = document.getElementById('table-body');
         let htmlTable = "";
+        baseDatosAlimentos = [];
 
         for (let i = 1; i < rows.length; i++) {
             const rowC = rows[i].c;
@@ -397,17 +429,35 @@
 
             for(let col = 0; col < 5; col++) {
                 if(rowC[col] && rowC[col].v !== null && String(rowC[col].v).trim() !== "") {
-                    const foodName = rowC[col].v;
+                    const originalString = String(rowC[col].v);
+                    
+                    let gramos = 1; 
+                    let nombreLimpio = originalString;
+                    
+                    const gMatch = originalString.match(/(\d+)\s*(g|ml|ud|unidad)/i);
+                    if(gMatch) {
+                        gramos = parseInt(gMatch[1]);
+                        nombreLimpio = originalString.replace(gMatch[0], '').replace(/[\(\)-]/g, '').trim();
+                    }
+
                     const typeLabel = typesHeader[col] || "Proteína";
                     
+                    baseDatosAlimentos.push({
+                        nombreCompleto: originalString,
+                        nombreCorto: nombreLimpio,
+                        cantidadBase: gramos,
+                        unidad: gMatch ? gMatch[2] : "g",
+                        tipo: typeLabel.toLowerCase()
+                    });
+
                     let badgeClass = "bg-default";
                     if(typeLabel.toLowerCase().includes("prot")) badgeClass = "bg-p";
                     else if(typeLabel.toLowerCase().includes("hidr") || typeLabel.toLowerCase().includes("carb")) badgeClass = "bg-hc";
                     else if(typeLabel.toLowerCase().includes("gras")) badgeClass = "bg-g";
-                    else if(typeLabel.toLowerCase().includes("mixt")) badgeClass = "bg-m"; // Color morado asignado dinámicamente
+                    else if(typeLabel.toLowerCase().includes("mixt")) badgeClass = "bg-m";
 
                     htmlTable += `<tr data-type="${typeLabel.toLowerCase()}">
-                        <td><strong>${foodName}</strong></td>
+                        <td><strong>${originalString}</strong></td>
                         <td><span class="badge ${badgeClass}">${typeLabel}</span></td>
                     </tr>`;
                 }
@@ -415,55 +465,99 @@
         }
         tbody.innerHTML = htmlTable || '<tr><td colspan="2">No se encontraron alimentos.</td></tr>';
 
-        // --- PARTE 3: EXTRAER OBSERVACIONES FIJAS ---
         const obsGrid = document.getElementById('obs-grid');
-        let obsColF = [];
-        let obsColG = [];
-
+        let obsColF = []; let obsColG = [];
         for (let i = 0; i < rows.length; i++) {
             if(rows[i] && rows[i].c) {
-                if(rows[i].c[5] && rows[i].c[5].v !== null && String(rows[i].c[5].v).trim() !== "") {
-                    obsColF.push(String(rows[i].c[5].v));
-                }
-                if(rows[i].c[6] && rows[i].c[6].v !== null && String(rows[i].c[6].v).trim() !== "") {
-                    obsColG.push(String(rows[i].c[6].v));
-                }
+                if(rows[i].c[5] && rows[i].c[5].v !== null && String(rows[i].c[5].v).trim() !== "") obsColF.push(String(rows[i].c[5].v));
+                if(rows[i].c[6] && rows[i].c[6].v !== null && String(rows[i].c[6].v).trim() !== "") obsColG.push(String(rows[i].c[6].v));
             }
         }
-
         let titleF = "Observaciones Generales", contentF = "No hay pautas registradas.";
-        if(obsColF.length > 0) {
-            titleF = obsColF[0];
-            contentF = obsColF.slice(1).join("\n");
-        }
-
+        if(obsColF.length > 0) { titleF = obsColF[0]; contentF = obsColF.slice(1).join("\n"); }
         let titleG = "Salsas y Condimentos", contentG = "No hay pautas registradas.";
-        if(obsColG.length > 0) {
-            titleG = obsColG[0];
-            contentG = obsColG.slice(1).join("\n");
-        }
-
-        if(obsColF.length > 0 && obsColF[0].length > 30) { titleF = "Pautas Adicionales"; contentF = obsColF.join("\n"); }
-        if(obsColG.length > 0 && obsColG[0].length > 30) { titleG = "Uso de Salsas y Extras"; contentG = obsColG.join("\n"); }
-
-        contentF = contentF.replace(/\n/g, '<br>');
-        contentG = contentG.replace(/\n/g, '<br>');
+        if(obsColG.length > 0) { titleG = obsColG[0]; contentG = obsColG.slice(1).join("\n"); }
+        contentF = contentF.replace(/\n/g, '<br>'); contentG = contentG.replace(/\n/g, '<br>');
 
         obsGrid.innerHTML = `
-            <div class="obs-card">
-                <div class="obs-title"><i class="fa-solid fa-circle-info"></i> ${titleF}</div>
-                <div class="obs-content">${contentF}</div>
+            <div class="obs-card"><div class="obs-title"><i class="fa-solid fa-circle-info"></i> ${titleF}</div><div class="obs-content">${contentF}</div></div>
+            <div class="obs-card g2"><div class="obs-title"><i class="fa-solid fa-bowl-food"></i> ${titleG}</div><div class="obs-content">${contentG}</div></div>
+        `;
+    }
+
+    function esAlimentoCoherenteConIngesta(alimento, tipoIngesta) {
+        const nombre = alimento.nombreCorto.toLowerCase();
+        if (tipoIngesta === "DESAYUNO" || tipoIngesta === "MERIENDA") {
+            const permitidos = ["huevo", "clara", "queso", "jamón", "pavo", "atún", "avena", "pan", "tostada", "fruta", "plátano", "manzana", "fresa", "leche", "yogur", "kéfir", "nueces", "almendras", "cacahuete", "aguacate", "aceite", "cashew", "crema", "tortitas"];
+            return permitidos.some(palabra => nombre.includes(palabra));
+        }
+        return true; 
+    }
+
+    function generarPlatoInteligente() {
+        const ingestaSeleccionada = document.getElementById('meal-selector').value;
+        const bloques = bloquesAsignadosPorIngesta[ingestaSeleccionada];
+        const outputDiv = document.getElementById('plate-output');
+
+        if (!bloques || (bloques.p === 0 && bloques.hc === 0 && bloques.g === 0)) {
+            outputDiv.style.display = "block";
+            outputDiv.innerHTML = `<div class="plate-title">❌ Sin bloques asignados</div><p style="font-size:13px; color:var(--text-light)">No hemos detectado bloques legibles configurados en la pestaña MASTER para esta ingesta.</p>`;
+            return;
+        }
+
+        const proteinas = baseDatosAlimentos.filter(a => a.tipo.includes("prot") && esAlimentoCoherenteConIngesta(a, ingestaSeleccionada));
+        const hidratos = baseDatosAlimentos.filter(a => (a.tipo.includes("hidr") || a.tipo.includes("carb")) && esAlimentoCoherenteConIngesta(a, ingestaSeleccionada));
+        const grasas = baseDatosAlimentos.filter(a => a.tipo.includes("gras") && esAlimentoCoherenteConIngesta(a, ingestaSeleccionada));
+
+        let propuestasHTML = "";
+
+        if (bloques.p > 0 && proteinas.length > 0) {
+            const aleatorio = proteinas[Math.floor(Math.random() * proteinas.length)];
+            const totalGramos = aleatorio.cantidadBase * bloques.p;
+            propuestasHTML += `
+                <div class="plate-item">
+                    <span>🍗 <b>${totalGramos}${aleatorio.unidad}</b> de ${aleatorio.nombreCorto}</span>
+                    <span class="item-macro-tag" style="background-color: var(--p-color)">${bloques.p} Bloques P</span>
+                </div>`;
+        }
+
+        if (bloques.hc > 0 && hidratos.length > 0) {
+            const aleatorio = hidratos[Math.floor(Math.random() * hidratos.length)];
+            const totalGramos = aleatorio.cantidadBase * bloques.hc;
+            propuestasHTML += `
+                <div class="plate-item">
+                    <span>🌾 <b>${totalGramos}${aleatorio.unidad}</b> de ${aleatorio.nombreCorto}</span>
+                    <span class="item-macro-tag" style="background-color: var(--hc-color)">${bloques.hc} Bloques HC</span>
+                </div>`;
+        }
+
+        if (bloques.g > 0 && grasas.length > 0) {
+            const aleatorio = grasas[Math.floor(Math.random() * grasas.length)];
+            const totalGramos = aleatorio.cantidadBase * bloques.g;
+            propuestasHTML += `
+                <div class="plate-item">
+                    <span>🥑 <b>${totalGramos}${aleatorio.unidad}</b> de ${aleatorio.nombreCorto}</span>
+                    <span class="item-macro-tag" style="background-color: var(--g-color)">${bloques.g} Bloques G</span>
+                </div>`;
+        }
+
+        outputDiv.style.display = "block";
+        outputDiv.innerHTML = `
+            <div class="plate-title">
+                <i class="fa-solid fa-utensils" style="color: var(--blue-accent)"></i> 
+                Propuesta de Menú para tu ${ingestaSeleccionada.toLowerCase()}
             </div>
-            <div class="obs-card g2">
-                <div class="obs-title"><i class="fa-solid fa-bowl-food"></i> ${titleG}</div>
-                <div class="obs-content">${contentG}</div>
+            <div style="margin-bottom:15px; font-size:13px; color:var(--text-light)">
+                Combinación aleatoria calculada para cubrir tus <b>${bloques.p}P - ${bloques.hc}HC - ${bloques.g}G</b>:
+            </div>
+            ${propuestasHTML}
+            <div style="margin-top:15px; font-size:11px; text-align:center; color:var(--text-light); font-style:italic;">
+                ¿No te convence? Dale otra vez al botón para barajar nuevos alimentos.
             </div>
         `;
     }
 
-    function cleanJSON(raw) {
-        return JSON.parse(raw.substring(raw.indexOf('{'), raw.lastIndexOf('}') + 1));
-    }
+    function cleanJSON(raw) { return JSON.parse(raw.substring(raw.indexOf('{'), raw.lastIndexOf('}') + 1)); }
 
     function setCategoryFilter(category, buttonElement) {
         currentCategoryFilter = category;
@@ -476,26 +570,13 @@
     function ejecutarFiltroCombinado() {
         const textInput = document.getElementById('search').value.toLowerCase();
         const trs = document.getElementById('table-body').getElementsByTagName('tr');
-
         for (let i = 0; i < trs.length; i++) {
             const tr = trs[i];
             const foodNameText = tr.getElementsByTagName('td')[0].textContent.toLowerCase();
             const trTypeAttr = tr.getAttribute('data-type') || "";
-
             const matchesText = foodNameText.includes(textInput);
-            
-            let matchesCategory = false;
-            if (currentCategoryFilter === 'all') {
-                matchesCategory = true;
-            } else {
-                matchesCategory = trTypeAttr.includes(currentCategoryFilter);
-            }
-
-            if (matchesText && matchesCategory) {
-                tr.style.display = "";
-            } else {
-                tr.style.display = "none";
-            }
+            let matchesCategory = (currentCategoryFilter === 'all') ? true : trTypeAttr.includes(currentCategoryFilter);
+            tr.style.display = (matchesText && matchesCategory) ? "" : "none";
         }
     }
 </script>
