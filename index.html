@@ -448,38 +448,33 @@
                 return 'g';
             }
 
-            // --- MOTOR DE ETIQUETADO DE COHERENCIA GASTRONÓMICA ---
             function asignarTagsMomentos(nombreAlimento) {
                 let n = nombreAlimento.toLowerCase();
                 let tags = { desayuno: false, almuerzo: false, comida: false, merienda: false, cena: false };
 
-                // Alimentos lógicos para perfiles Dulces / Ligeros / Snacks rápidos (Desayuno / Merienda / Almuerzo)
                 if (n.includes("yogur") || n.includes("queso fresco") || n.includes("avena") || n.includes("fruta") || 
                     n.includes("plátano") || n.includes("manzana") || n.includes("pera") || n.includes("fresa") || 
                     n.includes("pan integral") || n.includes("tost") || n.includes("pavo") || n.includes("jamón") || 
                     n.includes("clara") || n.includes("batido") || n.includes("proteina en polvo") || n.includes("nueces") || 
-                    n.includes("almendra") || n.includes("crema de cacahuete") || n.includes("cashew") || n.includes("huevo entero")) {
+                    n.includes("almendra") || n.includes("crema de cacahuete") || n.includes("cashew") || n.includes("huevo")) {
                     tags.desayuno = true;
                     tags.merienda = true;
                     tags.almuerzo = true;
                 }
 
-                // Alimentos lógicos para Almuerzos de media mañana (Snacks salados o rápidos)
                 if (n.includes("atún al natural")) {
                     tags.almuerzo = true;
                 }
 
-                // Alimentos de Platos Principales Consistentes (Comida / Cena)
                 if (n.includes("arroz") || n.includes("pasta") || n.includes("ñoquis") || n.includes("quinoa") || 
                     n.includes("legumbre") || n.includes("garbanzo") || n.includes("lenteja") || n.includes("boniato") || 
                     n.includes("patata") || n.includes("cuscus") || n.includes("pollo") || n.includes("ternera") || 
                     n.includes("lomo") || n.includes("merluza") || n.includes("pescado") || n.includes("salmón") || 
-                    n.includes("atún") || n.includes("huevo entero") || n.includes("aguacate") || n.includes("aceite")) {
+                    n.includes("atún") || n.includes("aguacate") || n.includes("aceite")) {
                     tags.comida = true;
                     tags.cena = true;
                 }
 
-                // Si un alimento es nuevo y no cae en ningún filtro, actúa como comodín total por seguridad
                 if (!tags.desayuno && !tags.almuerzo && !tags.comida && !tags.merienda && !tags.cena) {
                     tags.desayuno = true; tags.almuerzo = true; tags.comida = true; tags.merienda = true; tags.cena = true;
                 }
@@ -487,7 +482,6 @@
                 return tags;
             }
 
-            // 1. PROTEÍNAS
             if (row[0] && row[0].v !== null && String(row[0].v).trim() !== "" && !String(row[0].v).includes("PROTEÍNAS")) {
                 const nombre = String(row[0].v).trim();
                 const gramos = parsearGramos(row[1]);
@@ -499,7 +493,6 @@
                 }
             }
 
-            // 2. CARBOHIDRATOS
             if (row[2] && row[2].v !== null && String(row[2].v).trim() !== "" && !String(row[2].v).includes("CARBOHIDRATOS")) {
                 let nombre = String(row[2].v).trim();
                 if(nombre.endsWith('|')) nombre = nombre.slice(0, -1).trim();
@@ -513,7 +506,6 @@
                 }
             }
 
-            // 3. GRASAS
             if (row[4] && row[4].v !== null && String(row[4].v).trim() !== "" && !String(row[4].v).includes("GRASAS")) {
                 const nombre = String(row[4].v).trim();
                 const gramos = parsearGramos(row[5]);
@@ -525,7 +517,6 @@
                 }
             }
 
-            // 4. ALIMENTOS MIXTOS (Solo buscador)
             if (row[7] && row[7].v !== null && String(row[7].v).trim() !== "" && !String(row[7].v).includes("MIXTO")) {
                 const nombreCompleto = String(row[7].v).trim();
                 poolBuscadorCompleto.push({
@@ -578,7 +569,7 @@
         `;
     }
 
-    // --- ASISTENTE PREMIUM INTELIGENTE FILTRADO POR INGESTA REAL ---
+    // --- GENERADOR CON REGLA ESPECIAL PARA COMPLEMENTAR 2 HUEVOS ---
     function generarPlatoInteligente() {
         const ingestaSeleccionada = document.getElementById('meal-selector').value;
         const bloques = bloquesAsignadosPorIngesta[ingestaSeleccionada];
@@ -586,25 +577,23 @@
 
         if (!bloques || (bloques.p === 0 && bloques.hc === 0 && bloques.g === 0)) {
             outputDiv.style.display = "block";
-            outputDiv.innerHTML = `<div class="plate-title">❌ Ajustes de bloques no detectados</div><p style="font-size:13px; color:var(--text-light)">Asegúrate de que la hoja de Ajustes esté correctamente configurada.</p>`;
+            outputDiv.innerHTML = `<div class="plate-title">❌ Ajustes de bloques no detectados</div><p style="font-size:13px; color:var(--text-light)">Revisa tu hoja de Ajustes.</p>`;
             return;
         }
 
-        const mKey = ingestaSeleccionada.toLowerCase(); // 'desayuno', 'almuerzo', 'comida', 'merienda' o 'cena'
+        const mKey = ingestaSeleccionada.toLowerCase();
 
-        // Aplicamos el filtro estricto por momento del día en los pools limpios de datos
         let listaP = poolProteinas.filter(a => a.momentos && a.momentos[mKey] === true);
         let listaHC = poolCarbohidratos.filter(a => a.momentos && a.momentos[mKey] === true);
         let listaG = poolGrasas.filter(a => a.momentos && a.momentos[mKey] === true);
 
-        // Respaldo de seguridad (Failsafe): Si por un error de escritura la lista se queda a cero, usa el pool general
         if (listaP.length === 0) listaP = [...poolProteinas];
         if (listaHC.length === 0) listaHC = [...poolCarbohidratos];
         if (listaG.length === 0) listaG = [...poolGrasas];
 
         let seleccionados = { p: [], hc: [], g: [] };
 
-        // COHERENCIA AVANZADA INTERNA (Ej: Si toca desayuno y sale Avena, emparejar con Lácteo/Polvo en vez de Fiambre salado)
+        // COHERENCIA INICIAL HC
         if ((ingestaSeleccionada === "DESAYUNO" || ingestaSeleccionada === "MERIENDA") && listaHC.length > 0) {
             let hcElegido = listaHC[Math.floor(Math.random() * listaHC.length)];
             seleccionados.hc.push(hcElegido);
@@ -619,43 +608,105 @@
             }
         }
 
-        // Selección final
+        // SELECCIÓN DE PROTEÍNA CON LÓGICA DE HUEVO INTEGRADA
+        let proteinaElegida = null;
+        let complementoProteina = null;
+        let esCasoHuevo = false;
+        let bloquesParaHuevo = 0;
+        let bloquesParaComplemento = 0;
+
         if (bloques.p > 0 && listaP.length > 0) {
-            seleccionados.p.push(listaP[Math.floor(Math.random() * listaP.length)]);
+            proteinaElegida = listaP[Math.floor(Math.random() * listaP.length)];
+            
+            // Si sale Huevo entero (3 unidades equivale a 1 bloque base en tu tabla)
+            if (proteinaElegida.nombre.toLowerCase().includes("huevo entero") || proteinaElegida.nombre.toLowerCase().includes("huevo cocido")) {
+                esCasoHuevo = true;
+                
+                // Forzamos que se tomen únicamente 2 huevos enteros permanentes (lo que equivale matemáticamente a 0.67 bloques)
+                bloquesParaHuevo = 0.67; 
+                bloquesParaComplemento = bloques.p - bloquesParaHuevo;
+
+                // Si los bloques totales eran muy bajos (ej. 0.5), lo capamos al total por seguridad
+                if (bloquesParaComplemento < 0) {
+                    bloquesParaHuevo = bloques.p;
+                    bloquesParaComplemento = 0;
+                }
+
+                // Buscamos un compañero de proteína DIFERENTE al huevo para rellenar lo que falta
+                let poolCompañeros = listaP.filter(p => !p.nombre.toLowerCase().includes("huevo"));
+                if (poolCompañeros.length > 0) {
+                    complementoProteina = poolCompañeros[Math.floor(Math.random() * poolCompañeros.length)];
+                }
+            } else {
+                seleccionados.p.push(proteinaElegida);
+            }
         }
+
+        // Selección ordinaria de Hidratos si no se pre-fijaron
         if (seleccionados.hc.length === 0 && bloques.hc > 0 && listaHC.length > 0) {
             seleccionados.hc.push(listaHC[Math.floor(Math.random() * listaHC.length)]);
         }
+        // Grasas
         if (bloques.g > 0 && listaG.length > 0) {
             seleccionados.g.push(listaG[Math.floor(Math.random() * listaG.length)]);
         }
 
+        // --- CONSTRUCTOR VISUAL DEL PLATO INTEGRADOR ---
         let htmlFinal = "";
 
-        function procesarMacroBloque(listaAlimentos, totalBloquesAsignados, colorBadge, textoMacro, emoji) {
-            if (listaAlimentos.length === 0 || totalBloquesAsignados <= 0) return "";
-            let htmlAcumulado = "";
-
-            listaAlimentos.forEach(alimento => {
-                let gramosFinales = totalBloquesAsignados * alimento.gramos;
-                let stringMedida = `<b>${gramosFinales.toFixed(0)}${alimento.unidad}</b>`;
-
-                if (alimento.nombre.toLowerCase().includes("aceite") && alimento.unidad.includes("cuch")) {
-                    stringMedida = `<b>${totalBloquesAsignados.toFixed(1)} cucharada(s)</b>`;
-                }
-
-                htmlAcumulado += `
-                    <div class="plate-item">
-                        <span>${emoji} ${stringMedida} de <b>${alimento.nombre}</b></span>
-                        <span class="item-macro-tag" style="background-color: ${colorBadge}">${totalBloquesAsignados} ${textoMacro}</span>
+        // Renderizado del bloque de proteínas (Especial Huevo vs Normal)
+        if (bloques.p > 0) {
+            if (esCasoHuevo) {
+                // Primer elemento: Los 2 huevos fijos calculados de su base
+                let gramosHuevo = bloquesParaHuevo * proteinaElegida.gramos;
+                htmlFinal += `
+                    <div class="plate-item" style="border-left: 3px solid var(--p-color); padding-left: 8px; margin-bottom: 4px;">
+                        <span>🍳 <b>${gramosHuevo.toFixed(0)} udes</b> de <b>${proteinaElegida.nombre}</b> (Equivale a 2 huevos exactos)</span>
+                        <span class="item-macro-tag" style="background-color: var(--p-color)">0.7 BLQ P</span>
                     </div>`;
-            });
-            return htmlAcumulado;
+                
+                // Segundo elemento: El complemento proteico calculado al milímetro
+                if (complementoProteina && bloquesParaComplemento > 0) {
+                    let gramosComp = bloquesParaComplemento * complementoProteina.gramos;
+                    let notaExtra = complementoProteina.nombre.toLowerCase().includes("yogur") ? " <i>(¡Ideal de postre!)</i>" : "";
+                    htmlFinal += `
+                        <div class="plate-item" style="border-left: 3px solid var(--p-color); padding-left: 8px; margin-bottom: 12px; background: #fffafb;">
+                            <span>🍗 Complemento: <b>${gramosComp.toFixed(0)}${complementoProteina.unidad}</b> de <b>${complementoProteina.nombre}</b>${notaExtra}</span>
+                            <span class="item-macro-tag" style="background-color: #df2c2c">${bloquesParaComplemento.toFixed(1)} BLQ P</span>
+                        </div>`;
+                }
+            } else if (proteinaElegida) {
+                let gramosFinales = bloques.p * proteinaElegida.gramos;
+                htmlFinal += `
+                    <div class="plate-item">
+                        <span>🍗 <b>${gramosFinales.toFixed(0)}${proteinaElegida.unidad}</b> de <b>${proteinaElegida.nombre}</b></span>
+                        <span class="item-macro-tag" style="background-color: var(--p-color)">${bloques.p} BLQ P</span>
+                    </div>`;
+            }
         }
 
-        htmlFinal += procesarMacroBloque(seleccionados.p, bloques.p, "var(--p-color)", "BLQ P", "🍗");
-        htmlFinal += procesarMacroBloque(seleccionados.hc, bloques.hc, "var(--hc-color)", "BLQ HC", "🌾");
-        htmlFinal += procesarMacroBloque(seleccionados.g, bloques.g, "var(--g-color)", "BLQ G", "🥑");
+        // Renderizado de Carbohidratos y Grasas standard
+        seleccionados.hc.forEach(alimento => {
+            let gramosFinales = bloques.hc * alimento.gramos;
+            htmlFinal += `
+                <div class="plate-item">
+                    <span>🌾 <b>${gramosFinales.toFixed(0)}${alimento.unidad}</b> de <b>${alimento.nombre}</b></span>
+                    <span class="item-macro-tag" style="background-color: var(--hc-color)">${bloques.hc} BLQ HC</span>
+                </div>`;
+        });
+
+        seleccionados.g.forEach(alimento => {
+            let gramosFinales = bloques.g * alimento.gramos;
+            let stringMedida = `<b>${gramosFinales.toFixed(0)}${alimento.unidad}</b>`;
+            if (alimento.nombre.toLowerCase().includes("aceite") && alimento.unidad.includes("cuch")) {
+                stringMedida = `<b>${bloques.g.toFixed(1)} cucharada(s)</b>`;
+            }
+            htmlFinal += `
+                <div class="plate-item">
+                    <span>🥑 ${stringMedida} de <b>${alimento.nombre}</b></span>
+                    <span class="item-macro-tag" style="background-color: var(--g-color)">${bloques.g} BLQ G</span>
+                </div>`;
+        });
 
         outputDiv.style.display = "block";
         outputDiv.innerHTML = `
@@ -668,7 +719,7 @@
             </div>
             ${htmlFinal}
             <div style="margin-top:15px; font-size:11px; text-align:center; color:var(--text-light); font-style:italic;">
-                ¿Prefieres otra opción? Dale al botón para barajar ideas adaptadas a este momento del día.
+                ¿Prefieres otra opción? Dale al botón para recalcular ideas adaptadas.
             </div>
         `;
     }
