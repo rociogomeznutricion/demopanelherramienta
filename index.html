@@ -3,120 +3,436 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mi Plataforma de Nutrición</title>
+    <title>Plataforma de Nutrición Inteligente</title>
+    <style>
+        :root {
+            --primary: #1e3c72;
+            --primary-light: #2a5298;
+            --accent-p: #e53e3e;
+            --accent-p-bg: #fff5f5;
+            --accent-p-border: #fed7d7;
+            --accent-hc: #dd6b20;
+            --accent-hc-bg: #fffaf0;
+            --accent-hc-border: #feebc8;
+            --accent-g: #38a169;
+            --accent-g-bg: #f0fff4;
+            --accent-g-border: #c6f6d5;
+            --text-main: #2d3748;
+            --text-muted: #718096;
+            --bg-body: #f7fafc;
+            --bg-card: #ffffff;
+            --border-color: #e2e8f0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            line-height: 1.6;
+            padding: 20px 10px;
+        }
+
+        .container {
+            max-width: 950px;
+            margin: 0 auto;
+        }
+
+        /* Cabecera Premium */
+        .header {
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: white;
+            padding: 30px 20px;
+            border-radius: 16px;
+            text-align: center;
+            margin-bottom: 25px;
+            box-shadow: 0 10px 20px rgba(30, 60, 114, 0.15);
+        }
+
+        .header h1 {
+            font-size: 26px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+            font-weight: 300;
+        }
+
+        /* Tarjetas Principales */
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #edf2f7;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            color: var(--primary);
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Indicador de Estado */
+        .status-badge {
+            font-size: 12px;
+            font-weight: bold;
+            padding: 6px 14px;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+        }
+        .status-loading { background: #fee2e2; color: #ef4444; }
+        .status-success { background: #e6fffa; color: #319795; }
+
+        /* Grid de Ajuste de Bloques */
+        .grid-macros {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        .macro-box {
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid transparent;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.01);
+        }
+
+        .macro-box.p { background: var(--accent-p-bg); border-color: var(--accent-p-border); }
+        .macro-box.hc { background: var(--accent-hc-bg); border-color: var(--accent-hc-border); }
+        .macro-box.g { background: var(--accent-g-bg); border-color: var(--accent-g-border); }
+
+        .macro-label {
+            display: block;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+        .macro-box.p .macro-label { color: var(--accent-p); }
+        .macro-box.hc .macro-label { color: var(--accent-hc); }
+        .macro-box.g .macro-label { color: var(--accent-g); }
+
+        .macro-value {
+            font-size: 22px;
+            font-weight: 700;
+        }
+        .macro-box.p .macro-value { color: #c53030; }
+        .macro-box.hc .macro-value { color: #c05621; }
+        .macro-box.g .macro-value { color: #276749; }
+
+        /* Buscador Dinámico */
+        .search-container {
+            margin-bottom: 15px;
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 15px 12px 40px;
+            font-size: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            outline: none;
+            background-color: #fafafa;
+            transition: all 0.2s;
+        }
+
+        .search-input:focus {
+            border-color: var(--primary-light);
+            background-color: #fff;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.15);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 16px;
+        }
+
+        /* Tabla de Equivalencias Estilizada */
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .equiv-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        .equiv-table th {
+            background-color: #f8fafc;
+            color: var(--text-main);
+            font-weight: 700;
+            padding: 14px 16px;
+            border-bottom: 2px solid var(--border-color);
+            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: 0.5px;
+        }
+
+        .equiv-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            color: #4a5568;
+        }
+
+        .equiv-table tbody tr:hover {
+            background-color: #f7fafc;
+        }
+
+        /* Etiquetas de Categorías dentro de la tabla */
+        .badge-cat {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .badge-cat.p { background: var(--accent-p-bg); color: var(--accent-p); }
+        .badge-cat.hc { background: var(--accent-hc-bg); color: var(--accent-hc); }
+        .badge-cat.g { background: var(--accent-g-bg); color: var(--accent-g); }
+
+        /* Notas e Instrucciones */
+        .info-note {
+            background-color: #fff9db;
+            border: 1px solid #fff3bf;
+            padding: 12px 15px;
+            border-radius: 10px;
+            font-size: 13px;
+            color: #666;
+            margin-top: 15px;
+        }
+
+        @media(max-width: 600px) {
+            .grid-macros { grid-template-columns: 1fr; gap: 10px; }
+            .card-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+            .status-badge { align-self: flex-start; }
+        }
+    </style>
 </head>
-<body style="margin: 0; background-color: #f8f9fa; font-family: 'Segoe UI', Roboto, sans-serif; color: #333; padding: 15px;">
+<body>
 
-    <div style="max-width: 800px; margin: 0 auto;">
+    <div class="container">
         
-        <!-- ENCABEZADO CORPORATIVO -->
-        <div style="background: linear-gradient(135deg, #1e3c72, #2a5298); color: white; padding: 25px; border-radius: 12px; text-align: center; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-            <h1 style="margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 1px;">Tu Plan de Nutrición Inteligente</h1>
-            <p style="margin: 5px 0 0 0; opacity: 0.9; font-size: 14px;">Datos sincronizados en tiempo real con Google Sheets</p>
-        </div>
+        <header class="header">
+            <h1>Tu App de Nutrición Inteligente</h1>
+            <p>Ajuste de bloques asignados y tabla interactiva de equivalencias en tiempo real</p>
+        </header>
 
-        <!-- TARJETA PRINCIPAL -->
-        <div style="background: white; border: 1px solid #e0e0e0; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+        <section class="card">
+            <div class="card-header">
+                <h2 class="card-title">📊 Tus Bloques Diarios Asignados</h2>
+                <div id="status-badge" class="status-badge status-loading">
+                    <span id="status-text">Sincronizando celdas...</span>
+                </div>
+            </div>
+
+            <div class="grid-macros">
+                <div class="macro-box p">
+                    <span class="macro-label">Proteínas</span>
+                    <span id="macro-p" class="macro-value">--</span>
+                </div>
+                <div class="macro-box hc">
+                    <span class="macro-label">Carbohidratos</span>
+                    <span id="macro-hc" class="macro-value">--</span>
+                </div>
+                <div class="macro-box g">
+                    <span class="macro-label">Grasas</span>
+                    <span id="macro-g" class="macro-value">--</span>
+                </div>
+            </div>
             
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f0f0f0; padding-bottom: 15px; margin-bottom: 15px;">
-                <h2 style="margin: 0; color: #1e3c72; font-size: 20px;">🌙 DATOS DE TU FICHA</h2>
-                <div id="status-box" style="background: #fff5f5; color: #e53e3e; padding: 6px 12px; border-radius: 20px; font-weight: bold; font-size: 13px;">
-                    Estado: <span id="loading-status">Conectando...</span>
-                </div>
+            <p style="font-size: 13.5px; color: var(--text-muted);">
+                💡 Modificaciones automáticas: Cualquier cambio que tu entrenador realice en la ficha interna modificará tus bloques asignados al instante en esta pantalla.
+            </p>
+        </section>
+
+        <section class="card">
+            <div class="card-header" style="border-bottom: none; margin-bottom: 0; padding-bottom: 5px;">
+                <h2 class="card-title">🥑 Tabla de Equivalencias Interactiva</h2>
+            </div>
+            <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 15px;">
+                Busca cualquier alimento para saber cuánto equivale a <strong>1 Bloque</strong>. Puedes añadir infinitos registros en tu Excel y aparecerán aquí ordenados.
+            </p>
+
+            <div class="search-container">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="search-input" class="search-input" placeholder="Busca un alimento (ej: pollo, arroz, yogur, aguacate)..." onkeyup="filtrarTabla()">
             </div>
 
-            <!-- MARCADORES DE BLOQUES (Se rellenan solos leyendo tus celdas reales) -->
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; text-align: center;">
-                <div style="background: #fff5f5; border: 1px solid #ffe3e3; padding: 10px; border-radius: 8px;">
-                    <span style="display: block; font-size: 12px; color: #e53e3e; font-weight: bold; text-transform: uppercase;">Proteínas (B12)</span>
-                    <span id="macro-p" style="font-size: 20px; font-weight: bold; color: #cc5c5c;">--</span>
-                </div>
-                <div style="background: #f8f9fa; border: 1px solid #e9ecef; padding: 10px; border-radius: 8px;">
-                    <span style="display: block; font-size: 12px; color: #495057; font-weight: bold; text-transform: uppercase;">Carbohidratos (B14)</span>
-                    <span id="macro-hc" style="font-size: 20px; font-weight: bold; color: #495057;">--</span>
-                </div>
-                <div style="background: #f3fbf5; border: 1px solid #e3f7e7; padding: 10px; border-radius: 8px;">
-                    <span style="display: block; font-size: 12px; color: #2f855a; font-weight: bold; text-transform: uppercase;">Grasas (B13)</span>
-                    <span id="macro-g" style="font-size: 20px; font-weight: bold; color: #2f855a;">--</span>
-                </div>
+            <div class="table-responsive">
+                <table class="equiv-table" id="equiv-table">
+                    <thead>
+                        <tr>
+                            <th>Alimento</th>
+                            <th style="width: 140px;">Categoría</th>
+                            <th style="width: 180px;">Cantidad = 1 Bloque</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body">
+                        <tr>
+                            <td colspan="3" style="text-align: center; color: var(--text-muted); padding: 30px;">Cargando base de datos de alimentos...</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
 
-            <!-- OPCIONES DE COMIDA DINÁMICAS -->
-            <h3 style="font-size: 14px; color: #777; text-transform: uppercase; margin-bottom: 15px; letter-spacing: 0.5px;">Tus raciones automáticas para la cena:</h3>
-            
-            <div style="display: flex; flex-direction: column; gap: 12px;">
-                <!-- Opción Pollo -->
-                <div style="border-left: 4px solid #3182ce; background: #f7fafc; padding: 12px 15px; border-radius: 0 8px 8px 0;">
-                    <strong style="color: #2b6cb0; display: block; margin-bottom: 4px;">🥗 Opción Pechuga de Pollo</strong>
-                    <span style="font-size: 14px; line-height: 1.5;">Según tus bloques asignados de cena, hoy te toca pesar: <span id="peso-pollo" style="font-weight: bold; color: #1e3c72; font-size: 16px;">--</span>g de Pechuga de Pollo.</span>
-                </div>
-
-                <!-- Opción Arroz -->
-                <div style="border-left: 4px solid #b7791f; background: #fffaf0; padding: 12px 15px; border-radius: 0 8px 8px 0;">
-                    <strong style="color: #dd6b20; display: block; margin-bottom: 4px;">🍚 Opción Arroz Cocinado</strong>
-                    <span style="font-size: 14px; line-height: 1.5;">Para acompañar el plato, añade exactamente: <span id="peso-arroz" style="font-weight: bold; color: #dd6b20; font-size: 16px;">--</span>g de Arroz Blanco (ya cocinado).</span>
-                </div>
+            <div class="info-note">
+                <strong>¿Cómo usar las equivalencias?</strong> Si tu cena tiene asignados 2 bloques de Carbohidratos y decides comer arroz blanco, busca "Arroz" en la tabla para saber los gramos exactos que corresponden a 1 bloque y multiplícalo por dos.
             </div>
+        </section>
 
-        </div>
     </div>
 
     <script>
-    // Tu URL de publicación exacta en formato CSV
-    const URL_PUBLICACION = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSgr5oev20q2fo_KCHlWXvGSXEYtVHb-8v1aLjqVmh5uFmDQX_lj1a5QRykDyePmrDi2i_mOG1pF7IC/pub?output=csv";
+        // Tu ID de documento normal
+        const SPREADSHEET_ID = '14X2-1vSgr5oev20q2fo_KCHlWXvGSXEYtVHb-8v1aLjqVmh5uFmDQX_lj1a5QRykDyePmrDi2i_mOG1pF7IC';
+        
+        // Pestañas específicas vinculadas mediante sus códigos GID reales
+        const GID_MASTER = '1147936171'; 
+        const GID_EQUIV = '1979658163';  // <-- Tu número ya está configurado aquí automáticamente
 
-    fetch(URL_PUBLICACION)
-        .then(res => res.text())
-        .then(csvTexto => {
-            // Dividimos por filas
-            const lineas = csvTexto.split("\n");
-            
-            // Detectamos si tu Google Sheets usa coma (,) o punto y coma (;) como separador
-            const separador = lineas[0].includes(";") ? ";" : ",";
-            
-            // Convertimos el CSV en filas y columnas limpiando comillas residuales
-            const filas = lineas.map(fila => 
-                fila.split(separador).map(celda => celda.replace(/^"|"$/g, '').trim())
-            );
+        // URLs de consulta estructurada JSON
+        const urlMaster = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?gid=${GID_MASTER}&tqx=out:json`;
+        const urlEquiv = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?gid=${GID_EQUIV}&tqx=out:json`;
 
-            // Posiciones en tu pestaña MASTER: Fila 12 (11), Fila 13 (12), Fila 14 (13), Fila 18 (17)
-            // Usamos .replace(",", ".") por si los decimales vienen con coma europea (ej: 0,25)
-            const proteinasB12 = parseFloat(filas[11][1].replace(",", ".")); 
-            const grasasB13 = parseFloat(filas[12][1].replace(",", "."));    
-            const hidratosB14 = parseFloat(filas[13][1].replace(",", "."));   
+        // Arrancamos la carga paralela de datos al abrir el GitHub Pages
+        Promise.all([
+            fetch(urlMaster).then(res => res.text()),
+            fetch(urlEquiv).then(res => res.text())
+        ])
+        .then(([dataMaster, dataEquiv]) => {
+            procesarBloques(dataMaster);
+            procesarTablaEquivalencias(dataEquiv);
             
-            let porcentajeCenaB18 = filasen17 = filas[17][1] ? parseFloat(filas[17][1].replace(",", ".")) : 0.25;
-            // Si el porcentaje viene como "25" en vez de "0.25", lo corregimos de fondo
-            if (porcentajeCenaB18 > 1) { porcentajeCenaB18 = porcentajeCenaB18 / 100; }
+            // Cambiamos el diseño del botón de estado a Conectado con éxito
+            const badge = document.getElementById('status-badge');
+            badge.className = "status-badge status-success";
+            document.getElementById('status-text').innerText = "Sincronizado";
+        })
+        .catch(err => {
+            console.error("Error en la sincronización general:", err);
+            document.getElementById('status-text').innerText = "Error de red";
+        });
 
-            // Si alguno de los datos principales no es un número válido, forzamos el error para revisarlo
-            if (isNaN(proteinasB12) || isNaN(hidratosB14) || isNaN(grasasB13)) {
-                throw new Error("Las celdas leídas no contienen números válidos.");
+        // 1. PROCESAR E INYECTAR LOS AJUSTES DE BLOQUES (Pestaña MASTER)
+        function procesarBloques(textoRaw) {
+            const json = limpiarJsonGoogle(textoRaw);
+            const filas = json.table.rows;
+
+            // Extraemos los valores de tus celdas fijas (Fila 12, 13 y 14 -> posiciones [11], [12], [13])
+            const proteinasB12 = filas[11] && filas[11].c[1] ? filas[11].c[1].v : '--';
+            const grasasB13 = filas[12] && filas[12].c[1] ? filas[12].c[1].v : '--';
+            const hidratosB14 = filas[13] && filas[13].c[1] ? filas[13].c[1].v : '--';
+
+            document.getElementById('macro-p').innerText = proteinasB12 + "g";
+            document.getElementById('macro-g').innerText = grasasB13 + "g";
+            document.getElementById('macro-hc').innerText = hidratosB14 + "g";
+        }
+
+        // 2. PROCESAR E INYECTAR LA TABLA COMPLETA DE ALIMENTOS
+        function procesarTablaEquivalencias(textoRaw) {
+            const json = limpiarJsonGoogle(textoRaw);
+            const filas = json.table.rows;
+            const tableBody = document.getElementById('table-body');
+            
+            let htmlFilas = "";
+
+            // Recorremos todas las filas del Excel empezando desde la fila 2 (índice 1) para saltarnos los encabezados
+            for (let i = 1; i < filas.length; i++) {
+                const celda = filas[i].c;
+                
+                // Saltamos la fila si no tiene el nombre del alimento básico
+                if (!celda || !celda[0] || celda[0].v === null) continue;
+
+                const nombreAlimento = celda[0].v;
+                const categoria = celda[1] ? celda[1].v : 'P'; // P, HC o G
+                const cantidad = celda[2] ? celda[2].v : 'Ver tabla';
+
+                // Clasificamos visualmente por colores según macronutriente
+                let claseBadge = "p";
+                let textoBadge = "Proteína";
+                if(categoria.toUpperCase().includes("HC") || categoria.toUpperCase().includes("CARB")) {
+                    claseBadge = "hc";
+                    textoBadge = "Hidratos";
+                } else if(categoria.toUpperCase().includes("G") || categoria.toUpperCase().includes("GRAS")) {
+                    claseBadge = "g";
+                    textoBadge = "Grasas";
+                }
+
+                htmlFilas += `
+                    <tr>
+                        <td style="font-weight: 600;">${nombreAlimento}</td>
+                        <td><span class="badge-cat ${claseBadge}">${textoBadge}</span></td>
+                        <td style="font-weight: bold; color: var(--primary);">${cantidad}</td>
+                    </tr>
+                `;
             }
 
-            // Mostramos los macros totales diarios en las tarjetas superiores
-            document.getElementById('macro-p').innerText = proteinasB12 + "g al día";
-            document.getElementById('macro-hc').innerText = hidratosB14 + "g al día";
-            document.getElementById('macro-g').innerText = grasasB13 + "g al día";
+            tableBody.innerHTML = htmlFilas || '<tr><td colspan="3" style="text-align:center;">No se encontraron registros.</td></tr>';
+        }
 
-            // Calculamos los bloques específicos de la CENA (1 Bloque P = 20g, 1 Bloque HC = 20g)
-            const gramosPolloCena = (proteinasB12 * porcentajeCenaB18 / 20) * 100;
-            const gramosArrozCena = (hidratosB14 * porcentajeCenaB18 / 20) * 75;
+        // FUNCIÓN AUXILIAR: Limpia la envoltura de seguridad que añade Google
+        function limpiarJsonGoogle(textoRaw) {
+            const inicio = textoRaw.indexOf('{');
+            const fin = textoRaw.lastIndexOf('}') + 1;
+            return JSON.parse(textoRaw.substring(inicio, fin));
+        }
 
-            // Pintamos los resultados finales redondeados
-            document.getElementById('peso-pollo').innerText = Math.round(gramosPolloCena * 2) / 2;
-            document.getElementById('peso-arroz').innerText = Math.round(gramosArrozCena * 2) / 2;
+        // FILTRADO DINÁMICO (Buscador en tiempo real)
+        function filtrarTabla() {
+            const input = document.getElementById('search-input');
+            const filter = input.value.toLowerCase();
+            const table = document.getElementById('equiv-table');
+            const tr = table.getElementsByTagName('tr');
 
-            // Cambiamos el estado visual a "Conectado" (Verde)
-            document.getElementById('loading-status').innerText = "Conectado al instante";
-            const statusBox = document.getElementById('status-box');
-            statusBox.style.background = "#e6fffa";
-            statusBox.style.color = "#319795";
-        })
-        .catch(error => {
-            console.error("Error detallado en la conexión:", error);
-            document.getElementById('loading-status').innerText = "Error al sincronizar";
-        });
-</script>
+            for (let i = 1; i < tr.length; i++) {
+                let td = tr[i].getElementsByTagName('td')[0];
+                if (td) {
+                    let txtValue = td.textContent || td.innerText;
+                    if (txtValue.toLowerCase().indexOf(filter) > -1) {
+                        tr[i].style.display = "";
+                    } else {
+                        tr[i].style.display = "none";
+                    }
+                }
+            }
+        }
+    </script>
 </body>
 </html>
