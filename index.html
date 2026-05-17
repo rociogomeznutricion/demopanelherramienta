@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Nutricional - Reparto por Ingestas</title>
+    <title>Dashboard Nutricional - Reparto e Ingestas</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
@@ -60,6 +60,7 @@
         .section-title {
             font-family: 'Poppins', sans-serif;
             font-size: 18px;
+            margin-top: 30px;
             margin-bottom: 20px;
             color: var(--navy);
             display: flex;
@@ -71,7 +72,7 @@
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 15px;
-            margin-bottom: 40px;
+            margin-bottom: 20px;
         }
 
         .meal-card {
@@ -112,6 +113,7 @@
             padding: 25px;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
             border: 1px solid var(--border);
+            margin-bottom: 25px;
         }
 
         .search-area { margin-bottom: 20px; }
@@ -162,6 +164,55 @@
         .bg-p { background-color: var(--p-color); }
         .bg-hc { background-color: var(--hc-color); }
         .bg-g { background-color: var(--g-color); }
+        .bg-default { background-color: var(--text-light); }
+
+        /* Tarjetas de Observaciones */
+        .obs-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 20px;
+            margin-top: 15px;
+        }
+
+        .obs-card {
+            background: #fffdf5;
+            border: 1px solid #fef3c7;
+            border-radius: 14px;
+            padding: 22px;
+            box-shadow: 0 4px 6px -1px rgba(217, 119, 6, 0.05);
+        }
+
+        .obs-card.g2 {
+            background: #f0fdf4;
+            border-color: #bbf7d0;
+            box-shadow: 0 4px 6px -1px rgba(22, 163, 74, 0.05);
+        }
+
+        .obs-title {
+            font-family: 'Poppins', sans-serif;
+            font-size: 15px;
+            font-weight: 700;
+            color: #b45309;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .obs-card.g2 .obs-title {
+            color: #15803d;
+        }
+
+        .obs-content {
+            font-size: 13.5px;
+            color: #451a03;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        .obs-card.g2 .obs-content {
+            color: #14532d;
+        }
 
         .status-pill {
             font-size: 10px;
@@ -174,6 +225,7 @@
 
         @media (max-width: 768px) {
             .meal-grid { grid-template-columns: 1fr; }
+            .obs-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -196,15 +248,14 @@
     <div class="section-title">Base de Datos de Equivalencias</div>
     <section class="card">
         <div class="search-area">
-            <input type="text" id="search" class="search-input" placeholder="🔎 Buscar alimento de Mercadona..." onkeyup="filterTable()">
+            <input type="text" id="search" class="search-input" placeholder="🔎 Buscar alimento en tu lista..." onkeyup="filterTable()">
         </div>
         <div class="table-container">
             <table id="equiv-table">
                 <thead>
                     <tr>
                         <th>Alimento</th>
-                        <th>Tipo</th>
-                        <th>Cantidad (1 Bloque)</th>
+                        <th style="width: 200px;">Tipo</th>
                     </tr>
                 </thead>
                 <tbody id="table-body">
@@ -212,18 +263,21 @@
             </table>
         </div>
     </section>
+
+    <div class="section-title">📌 Observaciones y Pautas de Uso</div>
+    <div class="obs-grid" id="obs-grid">
+        </div>
 </div>
 
 <script>
-    // Configuración con tus enlaces reales confirmados
+    // Configuración de IDs de Google Sheets
     const SPREADSHEET_ID = '1agPyD1JW34QSqXOeisPSsjXQuIXkwvdP4ZFyRAlvip4';
-    const GID_AJUSTES = '1147936171'; // Pestaña MASTER 
+    const GID_AJUSTES = '1147936171'; // Pestaña MASTER
     const GID_EQUIV = '1979658163';   // Pestaña Equivalencias Mercadona
 
     const urlAjustes = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?gid=${GID_AJUSTES}&tqx=out:json`;
     const urlEquiv = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?gid=${GID_EQUIV}&tqx=out:json`;
 
-    // Iconos temáticos para las ingestas
     const mealIcons = {
         "DESAYUNO": "fa-coffee",
         "ALMUERZO": "fa-apple-whole",
@@ -237,7 +291,7 @@
         fetch(urlEquiv).then(r => r.text())
     ]).then(([dataAjustes, dataEquiv]) => {
         renderMeals(dataAjustes);
-        renderTable(dataEquiv);
+        renderTableAndObservations(dataEquiv);
         document.getElementById('sync-status').innerText = "Sincronizado";
     }).catch(err => {
         document.getElementById('sync-status').innerText = "Error de conexión";
@@ -251,15 +305,13 @@
         const grid = document.getElementById('meal-grid');
         let html = "";
 
-        // Cambiado a índice 0 para capturar exactamente la Fila 2 de Google (A2 y C2) hasta la Fila 6 (A6 y C6)
         for (let i = 0; i < 5; i++) {
             if (!rows[i] || !rows[i].c) continue;
             
             const row = rows[i].c;
-            const mealName = row[0] && row[0].v ? row[0].v : `Ingesta ${i+1}`; // Columna A
-            const blocksRaw = row[2] && row[2].v ? String(row[2].v) : 'No asignado'; // Columna C
+            const mealName = row[0] && row[0].v ? row[0].v : `Ingesta ${i+1}`; 
+            const blocksRaw = row[2] && row[2].v ? String(row[2].v) : 'No asignado'; 
             
-            // Organiza los saltos de línea dentro de la tarjeta
             const blocksStyled = blocksRaw.replace(/\n/g, '<br>');
             const icon = mealIcons[mealName.toUpperCase()] || "fa-utensils";
 
@@ -277,32 +329,102 @@
         grid.innerHTML = html;
     }
 
-    function renderTable(raw) {
+    function renderTableAndObservations(raw) {
         const json = cleanJSON(raw);
         const rows = json.table.rows;
-        const tbody = document.getElementById('table-body');
-        let html = "";
-
-        for (let i = 1; i < rows.length; i++) {
-            const c = rows[i].c;
-            if (!c || !c[0] || c[0].v === null) continue;
-
-            const name = c[0].v;
-            const typeRaw = c[1] && c[1].v ? String(c[1].v).toUpperCase() : "P";
-            const qty = c[2] && c[2].v !== null ? c[2].v : "---";
-
-            let badgeClass = "bg-p";
-            let typeLabel = "Proteína";
-            if (typeRaw.includes("HC") || typeRaw.includes("CARB")) { badgeClass = "bg-hc"; typeLabel = "Hidratos"; }
-            else if (typeRaw.includes("G") || typeRaw.includes("GRAS")) { badgeClass = "bg-g"; typeLabel = "Grasas"; }
-
-            html += `<tr>
-                <td><strong>${name}</strong></td>
-                <td><span class="badge ${badgeClass}">${typeLabel}</span></td>
-                <td><span style="font-weight:600; color:#0047ab">${qty}</span></td>
-            </tr>`;
+        
+        // --- PARTE 1: PROCESAR ENCABEZAOS "TIPO" DESDE FILA 1 (ÍNDICE 0) ---
+        let typesHeader = [];
+        if(rows[0] && rows[0].c) {
+            for(let col = 0; col < 5; col++) {
+                if(rows[0].c[col] && rows[0].c[col].v) {
+                    // Quitamos lo que haya entre paréntesis con una expresión regular
+                    let cleanType = String(rows[0].c[col].v).replace(/\s*\(.*?\)\s*/g, '').trim();
+                    typesHeader[col] = cleanType;
+                } else {
+                    typesHeader[col] = "General";
+                }
+            }
         }
-        tbody.innerHTML = html;
+
+        // --- PARTE 2: PROCESAR TABLA DE ALIMENTOS (COLUMNAS A, B, C, D, E) ---
+        const tbody = document.getElementById('table-body');
+        let htmlTable = "";
+
+        // Recorremos desde la fila 2 (índice 1) en adelante
+        for (let i = 1; i < rows.length; i++) {
+            const rowC = rows[i].c;
+            if (!rowC) continue;
+
+            // Revisamos de la columna A (0) hasta la E (4)
+            for(let col = 0; col < 5; col++) {
+                if(rowC[col] && rowC[col].v !== null && String(rowC[col].v).trim() !== "") {
+                    const foodName = rowC[col].v;
+                    const typeLabel = typesHeader[col] || "Proteína";
+                    
+                    // Asignación inteligente de color según el nombre de la cabecera limpia
+                    let badgeClass = "bg-default";
+                    if(typeLabel.toLowerCase().includes("prot")) badgeClass = "bg-p";
+                    else if(typeLabel.toLowerCase().includes("hidr") || typeLabel.toLowerCase().includes("carb")) badgeClass = "bg-hc";
+                    else if(typeLabel.toLowerCase().includes("gras")) badgeClass = "bg-g";
+
+                    htmlTable += `<tr>
+                        <td><strong>${foodName}</strong></td>
+                        <td><span class="badge ${badgeClass}">${typeLabel}</span></td>
+                    </tr>`;
+                }
+            }
+        }
+        tbody.innerHTML = htmlTable || '<tr><td colspan="2">No se encontraron alimentos.</td></tr>';
+
+        // --- PARTE 3: EXTRAER OBSERVACIONES FIJAS (COLUMNAS F Y G) ---
+        const obsGrid = document.getElementById('obs-grid');
+        let obsColF = [];
+        let obsColG = [];
+
+        // Agrupamos todos los textos válidos de las columnas F (5) y G (6)
+        for (let i = 0; i < rows.length; i++) {
+            if(rows[i] && rows[i].c) {
+                if(rows[i].c[5] && rows[i].c[5].v !== null && String(rows[i].c[5].v).trim() !== "") {
+                    obsColF.push(String(rows[i].c[5].v));
+                }
+                if(rows[i].c[6] && rows[i].c[6].v !== null && String(rows[i].c[6].v).trim() !== "") {
+                    obsColG.push(String(rows[i].c[6].v));
+                }
+            }
+        }
+
+        // El título de la tarjeta será la primera línea o celda si existe, el resto el contenido
+        let titleF = "Observaciones Generales", contentF = "No hay pautas registradas.";
+        if(obsColF.length > 0) {
+            titleF = obsColF[0];
+            contentF = obsColF.slice(1).join("\n");
+        }
+
+        let titleG = "Salsas y Condimentos", contentG = "No hay pautas registradas.";
+        if(obsColG.length > 0) {
+            titleG = obsColG[0];
+            contentG = obsColG.slice(1).join("\n");
+        }
+
+        // Si el primer elemento ya parecía contenido, acomodamos los textos de forma legible
+        if(obsColF.length > 0 && obsColF[0].length > 30) { titleF = "Pautas Adicionales"; contentF = obsColF.join("\n"); }
+        if(obsColG.length > 0 && obsColG[0].length > 30) { titleG = "Uso de Salsas y Extras"; contentG = obsColG.join("\n"); }
+
+        // Reemplazamos los saltos de línea para renderizado HTML correcto
+        contentF = contentF.replace(/\n/g, '<br>');
+        contentG = contentG.replace(/\n/g, '<br>');
+
+        obsGrid.innerHTML = `
+            <div class="obs-card">
+                <div class="obs-title"><i class="fa-solid fa-circle-info"></i> ${titleF}</div>
+                <div class="obs-content">${contentF}</div>
+            </div>
+            <div class="obs-card g2">
+                <div class="obs-title"><i class="fa-solid fa-bowl-food"></i> ${titleG}</div>
+                <div class="obs-content">${contentG}</div>
+            </div>
+        `;
     }
 
     function cleanJSON(raw) {
