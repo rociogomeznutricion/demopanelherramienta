@@ -106,7 +106,7 @@
             line-height: 1.6;
         }
 
-        /* Estilos de la Tabla */
+        /* Estilos de la Tabla y Filtros */
         .card {
             background: var(--white);
             border-radius: 16px;
@@ -115,6 +115,34 @@
             border: 1px solid var(--border);
             margin-bottom: 25px;
         }
+
+        .filter-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .filter-btn {
+            background-color: #f1f5f9;
+            color: var(--text-dark);
+            border: 1px solid var(--border);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .filter-btn:hover {
+            background-color: #e2e8f0;
+        }
+
+        .filter-btn.active[data-type="all"] { background-color: var(--navy); color: var(--white); border-color: var(--navy); }
+        .filter-btn.active[data-type="proteína"] { background-color: var(--p-color); color: var(--white); border-color: var(--p-color); }
+        .filter-btn.active[data-type="hidratos"] { background-color: var(--hc-color); color: var(--white); border-color: var(--hc-color); }
+        .filter-btn.active[data-type="grasas"] { background-color: var(--g-color); color: var(--white); border-color: var(--g-color); }
 
         .search-area { margin-bottom: 20px; }
 
@@ -247,8 +275,15 @@
 
     <div class="section-title">Base de Datos de Equivalencias</div>
     <section class="card">
+        <div class="filter-container">
+            <button class="filter-btn active" data-type="all" onclick="setCategoryFilter('all', this)">⚡ Todos</button>
+            <button class="filter-btn" data-type="proteína" onclick="setCategoryFilter('proteína', this)">🥩 Proteínas</button>
+            <button class="filter-btn" data-type="hidratos" onclick="setCategoryFilter('hidratos', this)">🌾 Hidratos</button>
+            <button class="filter-btn" data-type="grasas" onclick="setCategoryFilter('grasas', this)">🥑 Grasas</button>
+        </div>
+
         <div class="search-area">
-            <input type="text" id="search" class="search-input" placeholder="🔎 Buscar alimento en tu lista..." onkeyup="filterTable()">
+            <input type="text" id="search" class="search-input" placeholder="🔎 Escribe cualquier parte del alimento para buscar..." onkeyup="ejecutarFiltroCombinado()">
         </div>
         <div class="table-container">
             <table id="equiv-table">
@@ -285,6 +320,9 @@
         "MERIENDA": "fa-cookie",
         "CENA": "fa-moon"
     };
+
+    // Variable global para controlar el filtro de tipo activo
+    let currentCategoryFilter = 'all';
 
     Promise.all([
         fetch(urlAjustes).then(r => r.text()),
@@ -333,12 +371,11 @@
         const json = cleanJSON(raw);
         const rows = json.table.rows;
         
-        // --- PARTE 1: PROCESAR ENCABEZAOS "TIPO" DESDE FILA 1 (ÍNDICE 0) ---
+        // --- PARTE 1: PROCESAR ENCABEZADOS "TIPO" DESDE FILA 1 ---
         let typesHeader = [];
         if(rows[0] && rows[0].c) {
             for(let col = 0; col < 5; col++) {
                 if(rows[0].c[col] && rows[0].c[col].v) {
-                    // Quitamos lo que haya entre paréntesis con una expresión regular
                     let cleanType = String(rows[0].c[col].v).replace(/\s*\(.*?\)\s*/g, '').trim();
                     typesHeader[col] = cleanType;
                 } else {
@@ -347,28 +384,26 @@
             }
         }
 
-        // --- PARTE 2: PROCESAR TABLA DE ALIMENTOS (COLUMNAS A, B, C, D, E) ---
+        // --- PARTE 2: PROCESAR TABLA DE ALIMENTOS ---
         const tbody = document.getElementById('table-body');
         let htmlTable = "";
 
-        // Recorremos desde la fila 2 (índice 1) en adelante
         for (let i = 1; i < rows.length; i++) {
             const rowC = rows[i].c;
             if (!rowC) continue;
 
-            // Revisamos de la columna A (0) hasta la E (4)
             for(let col = 0; col < 5; col++) {
                 if(rowC[col] && rowC[col].v !== null && String(rowC[col].v).trim() !== "") {
                     const foodName = rowC[col].v;
                     const typeLabel = typesHeader[col] || "Proteína";
                     
-                    // Asignación inteligente de color según el nombre de la cabecera limpia
                     let badgeClass = "bg-default";
                     if(typeLabel.toLowerCase().includes("prot")) badgeClass = "bg-p";
                     else if(typeLabel.toLowerCase().includes("hidr") || typeLabel.toLowerCase().includes("carb")) badgeClass = "bg-hc";
                     else if(typeLabel.toLowerCase().includes("gras")) badgeClass = "bg-g";
 
-                    htmlTable += `<tr>
+                    // Guardamos la etiqueta limpia en un atributo de datos oculto (data-type) para facilitar el filtrado
+                    htmlTable += `<tr data-type="${typeLabel.toLowerCase()}">
                         <td><strong>${foodName}</strong></td>
                         <td><span class="badge ${badgeClass}">${typeLabel}</span></td>
                     </tr>`;
@@ -382,7 +417,6 @@
         let obsColF = [];
         let obsColG = [];
 
-        // Agrupamos todos los textos válidos de las columnas F (5) y G (6)
         for (let i = 0; i < rows.length; i++) {
             if(rows[i] && rows[i].c) {
                 if(rows[i].c[5] && rows[i].c[5].v !== null && String(rows[i].c[5].v).trim() !== "") {
@@ -394,7 +428,6 @@
             }
         }
 
-        // El título de la tarjeta será la primera línea o celda si existe, el resto el contenido
         let titleF = "Observaciones Generales", contentF = "No hay pautas registradas.";
         if(obsColF.length > 0) {
             titleF = obsColF[0];
@@ -407,11 +440,9 @@
             contentG = obsColG.slice(1).join("\n");
         }
 
-        // Si el primer elemento ya parecía contenido, acomodamos los textos de forma legible
         if(obsColF.length > 0 && obsColF[0].length > 30) { titleF = "Pautas Adicionales"; contentF = obsColF.join("\n"); }
         if(obsColG.length > 0 && obsColG[0].length > 30) { titleG = "Uso de Salsas y Extras"; contentG = obsColG.join("\n"); }
 
-        // Reemplazamos los saltos de línea para renderizado HTML correcto
         contentF = contentF.replace(/\n/g, '<br>');
         contentG = contentG.replace(/\n/g, '<br>');
 
@@ -431,12 +462,47 @@
         return JSON.parse(raw.substring(raw.indexOf('{'), raw.lastIndexOf('}') + 1));
     }
 
-    function filterTable() {
-        const input = document.getElementById('search').value.toLowerCase();
+    // Gestionar el cambio de categoría al pulsar los botones superiores
+    function setCategoryFilter(category, buttonElement) {
+        currentCategoryFilter = category;
+        
+        // Quitar la clase activa de todos los botones y ponérsela al pulsado
+        const buttons = document.querySelectorAll('.filter-btn');
+        buttons.forEach(btn => btn.classList.remove('active'));
+        buttonElement.classList.add('active');
+        
+        // Ejecutar la lógica de visualización cruzada
+        ejecutarFiltroCombinado();
+    }
+
+    // MOTOR DE BÚSQUEDA INTERACTIVO (Filtra de manera cruzada: Botones + Buscador de texto)
+    function ejecutarFiltroCombinado() {
+        const textInput = document.getElementById('search').value.toLowerCase();
         const trs = document.getElementById('table-body').getElementsByTagName('tr');
+
         for (let i = 0; i < trs.length; i++) {
-            const text = trs[i].getElementsByTagName('td')[0].textContent.toLowerCase();
-            trs[i].style.display = text.indexOf(input) > -1 ? "" : "none";
+            const tr = trs[i];
+            const foodNameText = tr.getElementsByTagName('td')[0].textContent.toLowerCase();
+            const trTypeAttr = tr.getAttribute('data-type') || "";
+
+            // Condición 1: Comprobar el buscador de texto ("que contenga" e ignore mayúsculas)
+            const matchesText = foodNameText.includes(textInput);
+
+            // Condición 2: Comprobar el filtro del botón seleccionado
+            let matchesCategory = false;
+            if (currentCategoryFilter === 'all') {
+                matchesCategory = true;
+            } else {
+                // Comprueba si el tipo asignado a la fila incluye la palabra del botón (ej: "proteína", "hidratos")
+                matchesCategory = trTypeAttr.includes(currentCategoryFilter);
+            }
+
+            // Si cumple ambas condiciones a la vez, se muestra; si no, se oculta
+            if (matchesText && matchesCategory) {
+                tr.style.display = "";
+            } else {
+                tr.style.display = "none";
+            }
         }
     }
 </script>
