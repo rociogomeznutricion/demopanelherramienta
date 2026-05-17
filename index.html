@@ -375,16 +375,46 @@
         document.getElementById('sync-status').innerText = "Error de conexión";
     });
 
-    // Carga de la pestaña MASTER (Bloques + Título desde Celda D2)
+    // Carga de la pestaña MASTER (Bloques + Título desde Celda D2 con escaneo a prueba de fallos)
     function renderMealsAndTitle(raw) {
         const json = cleanJSON(raw);
         const rows = json.table.rows;
         
-        // --- CAMBIO FINAL: LECTURA DE D2 PARA EL TITULO ---
-        // Fila 2 en Sheets es el índice 1. Columna D es el índice 3.
-        if (rows[1] && rows[1].c && rows[1].c[3] && rows[1].c[3].v) {
-            const nombreUsuario = String(rows[1].c[3].v).trim();
-            document.getElementById('main-title').innerText = `Plan nutritional por bloques de ${nombreUsuario}`;
+        // --- EXTRAER NOMBRE DEL USUARIO (D2 / FILA 2 COLUMNA 4) EN MODO SEGURO ---
+        let nombreDetectado = "";
+        
+        // Buscamos en la segunda fila del Sheets (índice 1) recorriendo sus celdas existentes
+        if (rows[1] && rows[1].c) {
+            // Filtramos valores válidos no vacíos de esa fila que no sean los bloques de desayuno
+            let celdasFila2 = rows[1].c.filter(cell => cell && cell.v !== null && String(cell.v).trim() !== "");
+            
+            // Si la fila contiene texto plano largo (tu nombre), lo capturamos dinámicamente
+            for (let cell of celdasFila2) {
+                let textoCelda = String(cell.v).trim();
+                if (!textoCelda.includes("Prot") && !textoCelda.includes("Carb") && !textoCelda.includes("Gras") && !textoCelda.includes("DESAYUNO") && textoCelda.length > 1) {
+                    nombreDetectado = textoCelda;
+                    break;
+                }
+            }
+        }
+
+        // Si el escaneo dinámico falla por estructura, usamos un fallback por posición relativa
+        if (!nombreDetectado && rows[1] && rows[1].c) {
+            // Intentamos coger el último elemento disponible de la fila 2 (suele ser la columna D si A-C están comprimidas)
+            let celdasValidas = rows[1].c.filter(c => c !== null);
+            if(celdasValidas.length >= 2) {
+                let posibleNombre = String(celdasValidas[celdasValidas.length - 1].v).trim();
+                if(posibleNombre.length > 2 && !posibleNombre.includes(":")) {
+                    nombreDetectado = posibleNombre;
+                }
+            }
+        }
+
+        // Aplicamos el título dinámico final
+        if (nombreDetectado) {
+            document.getElementById('main-title').innerText = `Plan nutritional por bloques de ${nombreDetectado}`;
+        } else {
+            document.getElementById('main-title').innerText = "Plan nutritional por bloques";
         }
 
         const grid = document.getElementById('meal-grid');
@@ -394,8 +424,12 @@
             if (!rows[i] || !rows[i].c) continue;
             
             const row = rows[i].c;
-            const mealName = row[0] && row[0].v ? String(row[0].v).toUpperCase() : `INGESTA ${i+1}`; 
-            const blocksRaw = row[2] && row[2].v ? String(row[2].v) : 'No asignado'; 
+            // Limpieza de celdas nulas para evitar desalineación de columnas en el pool de bloques
+            const celdasFiltradas = row.filter(c => c !== null && c.v !== null);
+            if(celdasFiltradas.length < 2) continue;
+
+            const mealName = String(celdasFiltradas[0].v).toUpperCase(); 
+            const blocksRaw = String(celdasFiltradas[1].v); 
             
             let pBlocks = 0, hcBlocks = 0, gBlocks = 0;
 
@@ -567,25 +601,24 @@
 
         tbody.innerHTML = htmlTable || '<tr><td colspan="3">No se encontraron alimentos en la hoja.</td></tr>';
 
-        // --- CAMBIO FINAL: LECTURA DE COLUMNAS G, I y J DE TABLA EQUIVALENCIAS ---
+        // --- EXTRACCIÓN DINÁMICA DE COLUMNAS G, I y J ---
         let obsColG = []; let obsColI = []; let obsColJ = [];
         
         for (let i = 0; i < rows.length; i++) {
             if(rows[i] && rows[i].c) {
-                // Columnas de base 0 en JS: G = índice 6, I = índice 8, J = índice 9
                 if(rows[i].c[6] && rows[i].c[6].v !== null && String(rows[i].c[6].v).trim() !== "") obsColG.push(String(rows[i].c[6].v));
                 if(rows[i].c[8] && rows[i].c[8].v !== null && String(rows[i].c[8].v).trim() !== "") obsColI.push(String(rows[i].c[8].v));
                 if(rows[i].c[9] && rows[i].c[9].v !== null && String(rows[i].c[9].v).trim() !== "") obsColJ.push(String(rows[i].c[9].v));
             }
         }
         
-        let titleG = "Pautas Columna G", contentG = "No hay datos.";
+        let titleG = "Pautas Generales", contentG = "No hay datos.";
         if(obsColG.length > 0) { titleG = obsColG[0]; contentG = obsColG.slice(1).join("\n").replace(/\n/g, '<br>'); }
         
-        let titleI = "Pautas Columna I", contentI = "No hay datos.";
+        let titleI = "Salsas y Extras", contentI = "No hay datos.";
         if(obsColI.length > 0) { titleI = obsColI[0]; contentI = obsColI.slice(1).join("\n").replace(/\n/g, '<br>'); }
 
-        let titleJ = "Pautas Columna J", contentJ = "No hay datos.";
+        let titleJ = "Ajustes y Suplementos", contentJ = "No hay datos.";
         if(obsColJ.length > 0) { titleJ = obsColJ[0]; contentJ = obsColJ.slice(1).join("\n").replace(/\n/g, '<br>'); }
 
         const obsGrid = document.getElementById('obs-grid');
