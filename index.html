@@ -320,34 +320,44 @@
     </div>
 
     <script>
-        // Tu ID de documento normal
-        const SPREADSHEET_ID = '14X2-1vSgr5oev20q2fo_KCHlWXvGSXEYtVHb-8v1aLjqVmh5uFmDQX_lj1a5QRykDyePmrDi2i_mOG1pF7IC';
+        // ==========================================
+        // ⚠️ PEGA AQUÍ ABAJO TU URL COMPLETA DE EDITAR EXCEL
+        // ==========================================
+        const URL_DE_TU_EXCEL = 'https://docs.google.com/spreadsheets/d/1vSgr5oev20q2fo_KCHlWXvGSXEYtVHb-8v1aLjqVmh5uFmDQX_lj1a5QRykDyePmrDi2i_mOG1pF7IC/edit'; 
         
         // Pestañas específicas vinculadas mediante sus códigos GID reales
         const GID_MASTER = '1147936171'; 
-        const GID_EQUIV = '1979658163';  // <-- Tu número ya está configurado aquí automáticamente
+        const GID_EQUIV = '1979658163';  
+
+        // El propio script limpia la URL y extrae el ID real para que nunca falle una letra
+        const matches = URL_DE_TU_EXCEL.match(/\/d\/([a-zA-Z0-9-_]+)/);
+        if (!matches || matches.length < 2) {
+            document.getElementById('status-text').innerText = "URL de Excel incorrecta";
+            throw new Error("La URL de Google Sheets no tiene el formato correcto.");
+        }
+        const SPREADSHEET_ID = matches[1];
 
         // URLs de consulta estructurada JSON
         const urlMaster = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?gid=${GID_MASTER}&tqx=out:json`;
         const urlEquiv = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?gid=${GID_EQUIV}&tqx=out:json`;
 
-        // Arrancamos la carga paralela de datos al abrir el GitHub Pages
+        // Carga paralela de datos desde GitHub Pages
         Promise.all([
-            fetch(urlMaster).then(res => res.text()),
-            fetch(urlEquiv).then(res => res.text())
+            fetch(urlMaster).then(res => { if(!res.ok) throw new Error(); return res.text(); }),
+            fetch(urlEquiv).then(res => { if(!res.ok) throw new Error(); return res.text(); })
         ])
         .then(([dataMaster, dataEquiv]) => {
             procesarBloques(dataMaster);
             procesarTablaEquivalencias(dataEquiv);
             
-            // Cambiamos el diseño del botón de estado a Conectado con éxito
+            // Cambiamos el diseño del botón de estado a Sincronizado
             const badge = document.getElementById('status-badge');
             badge.className = "status-badge status-success";
             document.getElementById('status-text').innerText = "Sincronizado";
         })
         .catch(err => {
-            console.error("Error en la sincronización general:", err);
-            document.getElementById('status-text').innerText = "Error de red";
+            console.error("Error en la sincronización:", err);
+            document.getElementById('status-text').innerText = "Error: Hoja No Compartida";
         });
 
         // 1. PROCESAR E INYECTAR LOS AJUSTES DE BLOQUES (Pestaña MASTER)
@@ -355,7 +365,7 @@
             const json = limpiarJsonGoogle(textoRaw);
             const filas = json.table.rows;
 
-            // Extraemos los valores de tus celdas fijas (Fila 12, 13 y 14 -> posiciones [11], [12], [13])
+            // Fila 12, 13 y 14 -> posiciones [11], [12], [13]
             const proteinasB12 = filas[11] && filas[11].c[1] ? filas[11].c[1].v : '--';
             const grasasB13 = filas[12] && filas[12].c[1] ? filas[12].c[1].v : '--';
             const hidratosB14 = filas[13] && filas[13].c[1] ? filas[13].c[1].v : '--';
@@ -373,18 +383,16 @@
             
             let htmlFilas = "";
 
-            // Recorremos todas las filas del Excel empezando desde la fila 2 (índice 1) para saltarnos los encabezados
+            // Recorremos las filas desde el índice 1 para saltarnos el título
             for (let i = 1; i < filas.length; i++) {
                 const celda = filas[i].c;
                 
-                // Saltamos la fila si no tiene el nombre del alimento básico
                 if (!celda || !celda[0] || celda[0].v === null) continue;
 
                 const nombreAlimento = celda[0].v;
-                const categoria = celda[1] ? celda[1].v : 'P'; // P, HC o G
+                const categoria = celda[1] ? String(celda[1].v) : 'P'; 
                 const cantidad = celda[2] ? celda[2].v : 'Ver tabla';
 
-                // Clasificamos visualmente por colores según macronutriente
                 let claseBadge = "p";
                 let textoBadge = "Proteína";
                 if(categoria.toUpperCase().includes("HC") || categoria.toUpperCase().includes("CARB")) {
@@ -407,14 +415,12 @@
             tableBody.innerHTML = htmlFilas || '<tr><td colspan="3" style="text-align:center;">No se encontraron registros.</td></tr>';
         }
 
-        // FUNCIÓN AUXILIAR: Limpia la envoltura de seguridad que añade Google
         function limpiarJsonGoogle(textoRaw) {
             const inicio = textoRaw.indexOf('{');
             const fin = textoRaw.lastIndexOf('}') + 1;
             return JSON.parse(textoRaw.substring(inicio, fin));
         }
 
-        // FILTRADO DINÁMICO (Buscador en tiempo real)
         function filtrarTabla() {
             const input = document.getElementById('search-input');
             const filter = input.value.toLowerCase();
