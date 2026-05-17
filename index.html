@@ -259,13 +259,17 @@
         .bg-m { background-color: var(--m-color); }
         .bg-default { background-color: var(--text-light); }
 
-        .obs-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 20px; margin-top: 15px; }
+        /* Ajuste de Grid para 3 columnas fijas abajo */
+        .obs-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 15px; }
         .obs-card { background: #fffdf5; border: 1px solid #fef3c7; border-radius: 14px; padding: 22px; }
-        .obs-card.g2 { background: #f0fdf4; border-color: #bbf7d0; }
+        .obs-card.c2 { background: #f0fdf4; border-color: #bbf7d0; }
+        .obs-card.c3 { background: #eff6ff; border-color: #bfdbfe; }
         .obs-title { font-family: 'Poppins', sans-serif; font-size: 15px; font-weight: 700; color: #b45309; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
-        .obs-card.g2 .obs-title { color: #15803d; }
+        .obs-card.c2 .obs-title { color: #15803d; }
+        .obs-card.c3 .obs-title { color: #1d4ed8; }
         .obs-content { font-size: 13.5px; color: #451a03; line-height: 1.6; white-space: pre-wrap; }
-        .obs-card.g2 .obs-content { color: #14532d; }
+        .obs-card.c2 .obs-content { color: #14532d; }
+        .obs-card.c3 .obs-content { color: #1e3a8a; }
         .status-pill { font-size: 10px; padding: 4px 10px; border-radius: 20px; background: #dcfce7; color: #15803d; font-weight: 700; }
 
         @media (max-width: 768px) {
@@ -278,7 +282,7 @@
 
 <div class="container">
     <header class="header">
-        <h1>Plan Nutricional de Bloques</h1>
+        <h1 id="main-title">Plan Nutricional por Bloques</h1>
         <p>Dashboard personalizado para el seguimiento de ingestas y equivalencias</p>
     </header>
 
@@ -343,8 +347,8 @@
 
 <script>
     const SPREADSHEET_ID = '1agPyD1JW34QSqXOeisPSsjXQuIXkwvdP4ZFyRAlvip4'; 
-    const GID_AJUSTES = '1147936171'; 
-    const GID_EQUIV = '1979658163';   
+    const GID_AJUSTES = '1147936171'; // Pestaña MASTER
+    const GID_EQUIV = '1979658163';   // Pestaña TABLA EQUIVALENCIAS
 
     const urlAjustes = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?gid=${GID_AJUSTES}&tqx=out:json`;
     const urlEquiv = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?gid=${GID_EQUIV}&tqx=out:json`;
@@ -363,7 +367,7 @@
         fetch(urlAjustes).then(r => r.text()),
         fetch(urlEquiv).then(r => r.text())
     ]).then(([dataAjustes, dataEquiv]) => {
-        renderMeals(dataAjustes);
+        renderMealsAndTitle(dataAjustes);
         procesarYRenderizarEquivalencias(dataEquiv);
         document.getElementById('sync-status').innerText = "Sincronizado";
     }).catch(err => {
@@ -371,9 +375,18 @@
         document.getElementById('sync-status').innerText = "Error de conexión";
     });
 
-    function renderMeals(raw) {
+    // Carga de la pestaña MASTER (Bloques + Título desde Celda D2)
+    function renderMealsAndTitle(raw) {
         const json = cleanJSON(raw);
         const rows = json.table.rows;
+        
+        // --- CAMBIO FINAL: LECTURA DE D2 PARA EL TITULO ---
+        // Fila 2 en Sheets es el índice 1. Columna D es el índice 3.
+        if (rows[1] && rows[1].c && rows[1].c[3] && rows[1].c[3].v) {
+            const nombreUsuario = String(rows[1].c[3].v).trim();
+            document.getElementById('main-title').innerText = `Plan nutritional por bloques de ${nombreUsuario}`;
+        }
+
         const grid = document.getElementById('meal-grid');
         let html = "";
 
@@ -452,7 +465,6 @@
                 let n = nombreAlimento.toLowerCase();
                 let tags = { desayuno: false, almuerzo: false, comida: false, merienda: false, cena: false };
 
-                // El HUEVO es versatilidad pura: forzamos que esté disponible SIEMPRE en todas las ingestas.
                 if (n.includes("huevo")) {
                     tags.desayuno = true; tags.almuerzo = true; tags.comida = true; tags.merienda = true; tags.cena = true;
                     return tags;
@@ -555,27 +567,35 @@
 
         tbody.innerHTML = htmlTable || '<tr><td colspan="3">No se encontraron alimentos en la hoja.</td></tr>';
 
-        const obsGrid = document.getElementById('obs-grid');
-        let obsColF = []; let obsColG = [];
+        // --- CAMBIO FINAL: LECTURA DE COLUMNAS G, I y J DE TABLA EQUIVALENCIAS ---
+        let obsColG = []; let obsColI = []; let obsColJ = [];
+        
         for (let i = 0; i < rows.length; i++) {
             if(rows[i] && rows[i].c) {
-                if(rows[i].c[5] && rows[i].c[5].v !== null && String(rows[i].c[5].v).trim() !== "") obsColF.push(String(rows[i].c[5].v));
+                // Columnas de base 0 en JS: G = índice 6, I = índice 8, J = índice 9
                 if(rows[i].c[6] && rows[i].c[6].v !== null && String(rows[i].c[6].v).trim() !== "") obsColG.push(String(rows[i].c[6].v));
+                if(rows[i].c[8] && rows[i].c[8].v !== null && String(rows[i].c[8].v).trim() !== "") obsColI.push(String(rows[i].c[8].v));
+                if(rows[i].c[9] && rows[i].c[9].v !== null && String(rows[i].c[9].v).trim() !== "") obsColJ.push(String(rows[i].c[9].v));
             }
         }
-        let titleF = "Observaciones Generales", contentF = "No hay pautas registradas.";
-        if(obsColF.length > 0) { titleF = obsColF[0]; contentF = obsColF.slice(1).join("\n"); }
-        let titleG = "Salsas y Condimentos", contentG = "No hay pautas registradas.";
-        if(obsColG.length > 0) { titleG = obsColG[0]; contentG = obsColG.slice(1).join("\n"); }
-        contentF = contentF.replace(/\n/g, '<br>'); contentG = contentG.replace(/\n/g, '<br>');
+        
+        let titleG = "Pautas Columna G", contentG = "No hay datos.";
+        if(obsColG.length > 0) { titleG = obsColG[0]; contentG = obsColG.slice(1).join("\n").replace(/\n/g, '<br>'); }
+        
+        let titleI = "Pautas Columna I", contentI = "No hay datos.";
+        if(obsColI.length > 0) { titleI = obsColI[0]; contentI = obsColI.slice(1).join("\n").replace(/\n/g, '<br>'); }
 
+        let titleJ = "Pautas Columna J", contentJ = "No hay datos.";
+        if(obsColJ.length > 0) { titleJ = obsColJ[0]; contentJ = obsColJ.slice(1).join("\n").replace(/\n/g, '<br>'); }
+
+        const obsGrid = document.getElementById('obs-grid');
         obsGrid.innerHTML = `
-            <div class="obs-card"><div class="obs-title"><i class="fa-solid fa-circle-info"></i> ${titleF}</div><div class="obs-content">${contentF}</div></div>
-            <div class="obs-card g2"><div class="obs-title"><i class="fa-solid fa-bowl-food"></i> ${titleG}</div><div class="obs-content">${contentG}</div></div>
+            <div class="obs-card"><div class="obs-title"><i class="fa-solid fa-circle-info"></i> ${titleG}</div><div class="obs-content">${contentG}</div></div>
+            <div class="obs-card c2"><div class="obs-title"><i class="fa-solid fa-bowl-food"></i> ${titleI}</div><div class="obs-content">${contentI}</div></div>
+            <div class="obs-card c3"><div class="obs-title"><i class="fa-solid fa-bottle-water"></i> ${titleJ}</div><div class="obs-content">${contentJ}</div></div>
         `;
     }
 
-    // --- REGLA LOGICA DE CONTROL DE HUEVOS Y MOMENTOS DEL DIA OPTIMIZADA ---
     function generarPlatoInteligente() {
         const ingestaSeleccionada = document.getElementById('meal-selector').value;
         const bloques = bloquesAsignadosPorIngesta[ingestaSeleccionada];
@@ -599,7 +619,6 @@
 
         let seleccionados = { p: [], hc: [], g: [] };
 
-        // Coherencia cruzada para Carbohidratos iniciales
         if ((ingestaSeleccionada === "DESAYUNO" || ingestaSeleccionada === "MERIENDA") && listaHC.length > 0) {
             let hcElegido = listaHC[Math.floor(Math.random() * listaHC.length)];
             seleccionados.hc.push(hcElegido);
@@ -625,8 +644,6 @@
             
             if (proteinaElegida.nombre.toLowerCase().includes("huevo entero")) {
                 esCasoHuevo = true;
-                
-                // Forzamos 2 huevos fijos (un tercio menos de 1 bloque base de 3 udes = 0.67 bloques)
                 bloquesParaHuevo = 0.67; 
                 bloquesParaComplemento = bloques.p - bloquesParaHuevo;
 
@@ -635,7 +652,6 @@
                     bloquesParaComplemento = 0;
                 }
 
-                // Buscamos un compañero proteico que NO sea huevo
                 let poolCompañeros = listaP.filter(p => !p.nombre.toLowerCase().includes("huevo"));
                 if (poolCompañeros.length > 0) {
                     complementoProteina = poolCompañeros[Math.floor(Math.random() * poolCompañeros.length)];
@@ -652,12 +668,10 @@
             seleccionados.g.push(listaG[Math.floor(Math.random() * listaG.length)]);
         }
 
-        // --- RENDERIZADO VISUAL FORMATEADO SIN TEXTOS EXTRAÑOS ---
         let htmlFinal = "";
 
         if (bloques.p > 0) {
             if (esCasoHuevo) {
-                // Cálculo de gramos reales para la equivalencia de 2 huevos (2/3 de los 160g de tu tabla son ~107g)
                 let gramosHuevoEquiv = (bloquesParaHuevo * proteinaElegida.gramos).toFixed(0);
                 htmlFinal += `
                     <div class="plate-item" style="border-left: 3px solid var(--p-color); padding-left: 8px; margin-bottom: 4px;">
