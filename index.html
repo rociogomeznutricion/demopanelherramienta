@@ -320,28 +320,18 @@
     </div>
 
     <script>
-        // ==========================================
-        // ⚠️ PEGA AQUÍ ABAJO TU URL COMPLETA DE EDITAR EXCEL
-        // ==========================================
-        const URL_DE_TU_EXCEL = 'https://docs.google.com/spreadsheets/d/1vSgr5oev20q2fo_KCHlWXvGSXEYtVHb-8v1aLjqVmh5uFmDQX_lj1a5QRykDyePmrDi2i_mOG1pF7IC/edit'; 
+        // ID Limpio Extraído de tu URL de edición real
+        const SPREADSHEET_ID = '1agPyD1JW34QSqXOeisPSsjXQuIXkwvdP4ZFyRAlvip4';
         
-        // Pestañas específicas vinculadas mediante sus códigos GID reales
+        // Códigos GID exactos de tus pestañas internas
         const GID_MASTER = '1147936171'; 
         const GID_EQUIV = '1979658163';  
 
-        // El propio script limpia la URL y extrae el ID real para que nunca falle una letra
-        const matches = URL_DE_TU_EXCEL.match(/\/d\/([a-zA-Z0-9-_]+)/);
-        if (!matches || matches.length < 2) {
-            document.getElementById('status-text').innerText = "URL de Excel incorrecta";
-            throw new Error("La URL de Google Sheets no tiene el formato correcto.");
-        }
-        const SPREADSHEET_ID = matches[1];
-
-        // URLs de consulta estructurada JSON
+        // URLs de consulta estructurada JSON seguras de Google Data API
         const urlMaster = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?gid=${GID_MASTER}&tqx=out:json`;
         const urlEquiv = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?gid=${GID_EQUIV}&tqx=out:json`;
 
-        // Carga paralela de datos desde GitHub Pages
+        // Carga y sincronización paralela en tiempo real desde GitHub Pages
         Promise.all([
             fetch(urlMaster).then(res => { if(!res.ok) throw new Error(); return res.text(); }),
             fetch(urlEquiv).then(res => { if(!res.ok) throw new Error(); return res.text(); })
@@ -350,14 +340,14 @@
             procesarBloques(dataMaster);
             procesarTablaEquivalencias(dataEquiv);
             
-            // Cambiamos el diseño del botón de estado a Sincronizado
+            // Activamos indicador de sincronización en verde
             const badge = document.getElementById('status-badge');
             badge.className = "status-badge status-success";
             document.getElementById('status-text').innerText = "Sincronizado";
         })
         .catch(err => {
-            console.error("Error en la sincronización:", err);
-            document.getElementById('status-text').innerText = "Error: Hoja No Compartida";
+            console.error("Error en la conexión con Google Sheets:", err);
+            document.getElementById('status-text').innerText = "Error: Comprobar botón Compartir";
         });
 
         // 1. PROCESAR E INYECTAR LOS AJUSTES DE BLOQUES (Pestaña MASTER)
@@ -365,7 +355,7 @@
             const json = limpiarJsonGoogle(textoRaw);
             const filas = json.table.rows;
 
-            // Fila 12, 13 y 14 -> posiciones [11], [12], [13]
+            // Lee automáticamente las filas de tus bloques [11] = Fila 12, [12] = Fila 13, [13] = Fila 14
             const proteinasB12 = filas[11] && filas[11].c[1] ? filas[11].c[1].v : '--';
             const grasasB13 = filas[12] && filas[12].c[1] ? filas[12].c[1].v : '--';
             const hidratosB14 = filas[13] && filas[13].c[1] ? filas[13].c[1].v : '--';
@@ -383,7 +373,7 @@
             
             let htmlFilas = "";
 
-            // Recorremos las filas desde el índice 1 para saltarnos el título
+            // Recorremos las filas desde el índice 1 para saltarnos los títulos superiores del Excel
             for (let i = 1; i < filas.length; i++) {
                 const celda = filas[i].c;
                 
