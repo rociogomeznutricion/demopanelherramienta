@@ -292,7 +292,7 @@
     <div class="section-title">✨ Asistente de Menú Instantáneo</div>
     <div class="generator-card">
         <p style="color: var(--text-light); font-size: 14px; margin-bottom: 15px; font-weight: 500;">
-            ¿No sabes qué preparar? Selecciona una ingesta y el sistema armará una combinación coherente respetando tus bloques asignados.
+            ¿No sabes qué preparar? Selecciona una ingesta y el sistema armará una combinación coherentemente balanceada respetando tus bloques.
         </p>
         <div class="gen-controls">
             <select id="meal-selector" class="gen-select">
@@ -452,11 +452,17 @@
                 let n = nombreAlimento.toLowerCase();
                 let tags = { desayuno: false, almuerzo: false, comida: false, merienda: false, cena: false };
 
+                // El HUEVO es versatilidad pura: forzamos que esté disponible SIEMPRE en todas las ingestas.
+                if (n.includes("huevo")) {
+                    tags.desayuno = true; tags.almuerzo = true; tags.comida = true; tags.merienda = true; tags.cena = true;
+                    return tags;
+                }
+
                 if (n.includes("yogur") || n.includes("queso fresco") || n.includes("avena") || n.includes("fruta") || 
                     n.includes("plátano") || n.includes("manzana") || n.includes("pera") || n.includes("fresa") || 
                     n.includes("pan integral") || n.includes("tost") || n.includes("pavo") || n.includes("jamón") || 
                     n.includes("clara") || n.includes("batido") || n.includes("proteina en polvo") || n.includes("nueces") || 
-                    n.includes("almendra") || n.includes("crema de cacahuete") || n.includes("cashew") || n.includes("huevo")) {
+                    n.includes("almendra") || n.includes("crema de cacahuete") || n.includes("cashew")) {
                     tags.desayuno = true;
                     tags.merienda = true;
                     tags.almuerzo = true;
@@ -569,7 +575,7 @@
         `;
     }
 
-    // --- GENERADOR CON REGLA ESPECIAL PARA COMPLEMENTAR 2 HUEVOS ---
+    // --- REGLA LOGICA DE CONTROL DE HUEVOS Y MOMENTOS DEL DIA OPTIMIZADA ---
     function generarPlatoInteligente() {
         const ingestaSeleccionada = document.getElementById('meal-selector').value;
         const bloques = bloquesAsignadosPorIngesta[ingestaSeleccionada];
@@ -593,7 +599,7 @@
 
         let seleccionados = { p: [], hc: [], g: [] };
 
-        // COHERENCIA INICIAL HC
+        // Coherencia cruzada para Carbohidratos iniciales
         if ((ingestaSeleccionada === "DESAYUNO" || ingestaSeleccionada === "MERIENDA") && listaHC.length > 0) {
             let hcElegido = listaHC[Math.floor(Math.random() * listaHC.length)];
             seleccionados.hc.push(hcElegido);
@@ -608,7 +614,6 @@
             }
         }
 
-        // SELECCIÓN DE PROTEÍNA CON LÓGICA DE HUEVO INTEGRADA
         let proteinaElegida = null;
         let complementoProteina = null;
         let esCasoHuevo = false;
@@ -618,21 +623,19 @@
         if (bloques.p > 0 && listaP.length > 0) {
             proteinaElegida = listaP[Math.floor(Math.random() * listaP.length)];
             
-            // Si sale Huevo entero (3 unidades equivale a 1 bloque base en tu tabla)
-            if (proteinaElegida.nombre.toLowerCase().includes("huevo entero") || proteinaElegida.nombre.toLowerCase().includes("huevo cocido")) {
+            if (proteinaElegida.nombre.toLowerCase().includes("huevo entero")) {
                 esCasoHuevo = true;
                 
-                // Forzamos que se tomen únicamente 2 huevos enteros permanentes (lo que equivale matemáticamente a 0.67 bloques)
+                // Forzamos 2 huevos fijos (un tercio menos de 1 bloque base de 3 udes = 0.67 bloques)
                 bloquesParaHuevo = 0.67; 
                 bloquesParaComplemento = bloques.p - bloquesParaHuevo;
 
-                // Si los bloques totales eran muy bajos (ej. 0.5), lo capamos al total por seguridad
                 if (bloquesParaComplemento < 0) {
                     bloquesParaHuevo = bloques.p;
                     bloquesParaComplemento = 0;
                 }
 
-                // Buscamos un compañero de proteína DIFERENTE al huevo para rellenar lo que falta
+                // Buscamos un compañero proteico que NO sea huevo
                 let poolCompañeros = listaP.filter(p => !p.nombre.toLowerCase().includes("huevo"));
                 if (poolCompañeros.length > 0) {
                     complementoProteina = poolCompañeros[Math.floor(Math.random() * poolCompañeros.length)];
@@ -642,62 +645,59 @@
             }
         }
 
-        // Selección ordinaria de Hidratos si no se pre-fijaron
         if (seleccionados.hc.length === 0 && bloques.hc > 0 && listaHC.length > 0) {
             seleccionados.hc.push(listaHC[Math.floor(Math.random() * listaHC.length)]);
         }
-        // Grasas
         if (bloques.g > 0 && listaG.length > 0) {
             seleccionados.g.push(listaG[Math.floor(Math.random() * listaG.length)]);
         }
 
-        // --- CONSTRUCTOR VISUAL DEL PLATO INTEGRADOR ---
+        // --- RENDERIZADO VISUAL FORMATEADO SIN TEXTOS EXTRAÑOS ---
         let htmlFinal = "";
 
-        // Renderizado del bloque de proteínas (Especial Huevo vs Normal)
         if (bloques.p > 0) {
             if (esCasoHuevo) {
-                // Primer elemento: Los 2 huevos fijos calculados de su base
-                let gramosHuevo = bloquesParaHuevo * proteinaElegida.gramos;
+                // Cálculo de gramos reales para la equivalencia de 2 huevos (2/3 de los 160g de tu tabla son ~107g)
+                let gramosHuevoEquiv = (bloquesParaHuevo * proteinaElegida.gramos).toFixed(0);
                 htmlFinal += `
                     <div class="plate-item" style="border-left: 3px solid var(--p-color); padding-left: 8px; margin-bottom: 4px;">
-                        <span>🍳 <b>${gramosHuevo.toFixed(0)} udes</b> de <b>${proteinaElegida.nombre}</b> (Equivale a 2 huevos exactos)</span>
+                        <span>🍳 <b>2 udes</b> (aprox. ${gramosHuevoEquiv}g) de <b>Huevo entero</b></span>
                         <span class="item-macro-tag" style="background-color: var(--p-color)">0.7 BLQ P</span>
                     </div>`;
                 
-                // Segundo elemento: El complemento proteico calculado al milímetro
                 if (complementoProteina && bloquesParaComplemento > 0) {
-                    let gramosComp = bloquesParaComplemento * complementoProteina.gramos;
-                    let notaExtra = complementoProteina.nombre.toLowerCase().includes("yogur") ? " <i>(¡Ideal de postre!)</i>" : "";
+                    let gramosComp = (bloquesParaComplemento * complementoProteina.gramos).toFixed(0);
+                    let esLacteo = complementoProteina.nombre.toLowerCase().includes("yogur") || complementoProteina.nombre.toLowerCase().includes("queso");
+                    let notaExtra = esLacteo ? " <i>(¡Ideal para tomar como postre!)</i>" : " <i>(Añadido al plato)</i>";
+                    
                     htmlFinal += `
                         <div class="plate-item" style="border-left: 3px solid var(--p-color); padding-left: 8px; margin-bottom: 12px; background: #fffafb;">
-                            <span>🍗 Complemento: <b>${gramosComp.toFixed(0)}${complementoProteina.unidad}</b> de <b>${complementoProteina.nombre}</b>${notaExtra}</span>
+                            <span>🍗 Complemento: <b>${gramosComp}${complementoProteina.unidad}</b> de <b>${complementoProteina.nombre}</b>${notaExtra}</span>
                             <span class="item-macro-tag" style="background-color: #df2c2c">${bloquesParaComplemento.toFixed(1)} BLQ P</span>
                         </div>`;
                 }
             } else if (proteinaElegida) {
-                let gramosFinales = bloques.p * proteinaElegida.gramos;
+                let gramosFinales = (bloques.p * proteinaElegida.gramos).toFixed(0);
                 htmlFinal += `
                     <div class="plate-item">
-                        <span>🍗 <b>${gramosFinales.toFixed(0)}${proteinaElegida.unidad}</b> de <b>${proteinaElegida.nombre}</b></span>
+                        <span>🍗 <b>${gramosFinales}${proteinaElegida.unidad}</b> de <b>${proteinaElegida.nombre}</b></span>
                         <span class="item-macro-tag" style="background-color: var(--p-color)">${bloques.p} BLQ P</span>
                     </div>`;
             }
         }
 
-        // Renderizado de Carbohidratos y Grasas standard
         seleccionados.hc.forEach(alimento => {
-            let gramosFinales = bloques.hc * alimento.gramos;
+            let gramosFinales = (bloques.hc * alimento.gramos).toFixed(0);
             htmlFinal += `
                 <div class="plate-item">
-                    <span>🌾 <b>${gramosFinales.toFixed(0)}${alimento.unidad}</b> de <b>${alimento.nombre}</b></span>
+                    <span>🌾 <b>${gramosFinales}${alimento.unidad}</b> de <b>${alimento.nombre}</b></span>
                     <span class="item-macro-tag" style="background-color: var(--hc-color)">${bloques.hc} BLQ HC</span>
                 </div>`;
         });
 
         seleccionados.g.forEach(alimento => {
-            let gramosFinales = bloques.g * alimento.gramos;
-            let stringMedida = `<b>${gramosFinales.toFixed(0)}${alimento.unidad}</b>`;
+            let gramosFinales = (bloques.g * alimento.gramos).toFixed(0);
+            let stringMedida = `<b>${gramosFinales}${alimento.unidad}</b>`;
             if (alimento.nombre.toLowerCase().includes("aceite") && alimento.unidad.includes("cuch")) {
                 stringMedida = `<b>${bloques.g.toFixed(1)} cucharada(s)</b>`;
             }
