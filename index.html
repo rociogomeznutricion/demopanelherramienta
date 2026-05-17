@@ -20,6 +20,7 @@
             --p-color: #ef4444;
             --hc-color: #f59e0b;
             --g-color: #10b981;
+            --m-color: #8b5cf6; /* Color violeta premium para alimentos mixtos */
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -143,6 +144,7 @@
         .filter-btn.active[data-type="proteína"] { background-color: var(--p-color); color: var(--white); border-color: var(--p-color); }
         .filter-btn.active[data-type="hidratos"] { background-color: var(--hc-color); color: var(--white); border-color: var(--hc-color); }
         .filter-btn.active[data-type="grasas"] { background-color: var(--g-color); color: var(--white); border-color: var(--g-color); }
+        .filter-btn.active[data-type="mixto"] { background-color: var(--m-color); color: var(--white); border-color: var(--m-color); }
 
         .search-area { margin-bottom: 20px; }
 
@@ -192,6 +194,7 @@
         .bg-p { background-color: var(--p-color); }
         .bg-hc { background-color: var(--hc-color); }
         .bg-g { background-color: var(--g-color); }
+        .bg-m { background-color: var(--m-color); }
         .bg-default { background-color: var(--text-light); }
 
         /* Tarjetas de Observaciones */
@@ -280,6 +283,7 @@
             <button class="filter-btn" data-type="proteína" onclick="setCategoryFilter('proteína', this)">🥩 Proteínas</button>
             <button class="filter-btn" data-type="hidratos" onclick="setCategoryFilter('hidratos', this)">🌾 Hidratos</button>
             <button class="filter-btn" data-type="grasas" onclick="setCategoryFilter('grasas', this)">🥑 Grasas</button>
+            <button class="filter-btn" data-type="mixto" onclick="setCategoryFilter('mixto', this)">🥣 Mixtos</button>
         </div>
 
         <div class="search-area">
@@ -321,7 +325,6 @@
         "CENA": "fa-moon"
     };
 
-    // Variable global para controlar el filtro de tipo activo
     let currentCategoryFilter = 'all';
 
     Promise.all([
@@ -371,7 +374,7 @@
         const json = cleanJSON(raw);
         const rows = json.table.rows;
         
-        // --- PARTE 1: PROCESAR ENCABEZADOS "TIPO" DESDE FILA 1 ---
+        // --- PARTE 1: PROCESAR ENCABEZADOS ---
         let typesHeader = [];
         if(rows[0] && rows[0].c) {
             for(let col = 0; col < 5; col++) {
@@ -401,8 +404,8 @@
                     if(typeLabel.toLowerCase().includes("prot")) badgeClass = "bg-p";
                     else if(typeLabel.toLowerCase().includes("hidr") || typeLabel.toLowerCase().includes("carb")) badgeClass = "bg-hc";
                     else if(typeLabel.toLowerCase().includes("gras")) badgeClass = "bg-g";
+                    else if(typeLabel.toLowerCase().includes("mixt")) badgeClass = "bg-m"; // Color morado asignado dinámicamente
 
-                    // Guardamos la etiqueta limpia en un atributo de datos oculto (data-type) para facilitar el filtrado
                     htmlTable += `<tr data-type="${typeLabel.toLowerCase()}">
                         <td><strong>${foodName}</strong></td>
                         <td><span class="badge ${badgeClass}">${typeLabel}</span></td>
@@ -412,7 +415,7 @@
         }
         tbody.innerHTML = htmlTable || '<tr><td colspan="2">No se encontraron alimentos.</td></tr>';
 
-        // --- PARTE 3: EXTRAER OBSERVACIONES FIJAS (COLUMNAS F Y G) ---
+        // --- PARTE 3: EXTRAER OBSERVACIONES FIJAS ---
         const obsGrid = document.getElementById('obs-grid');
         let obsColF = [];
         let obsColG = [];
@@ -462,20 +465,14 @@
         return JSON.parse(raw.substring(raw.indexOf('{'), raw.lastIndexOf('}') + 1));
     }
 
-    // Gestionar el cambio de categoría al pulsar los botones superiores
     function setCategoryFilter(category, buttonElement) {
         currentCategoryFilter = category;
-        
-        // Quitar la clase activa de todos los botones y ponérsela al pulsado
         const buttons = document.querySelectorAll('.filter-btn');
         buttons.forEach(btn => btn.classList.remove('active'));
         buttonElement.classList.add('active');
-        
-        // Ejecutar la lógica de visualización cruzada
         ejecutarFiltroCombinado();
     }
 
-    // MOTOR DE BÚSQUEDA INTERACTIVO (Filtra de manera cruzada: Botones + Buscador de texto)
     function ejecutarFiltroCombinado() {
         const textInput = document.getElementById('search').value.toLowerCase();
         const trs = document.getElementById('table-body').getElementsByTagName('tr');
@@ -485,19 +482,15 @@
             const foodNameText = tr.getElementsByTagName('td')[0].textContent.toLowerCase();
             const trTypeAttr = tr.getAttribute('data-type') || "";
 
-            // Condición 1: Comprobar el buscador de texto ("que contenga" e ignore mayúsculas)
             const matchesText = foodNameText.includes(textInput);
-
-            // Condición 2: Comprobar el filtro del botón seleccionado
+            
             let matchesCategory = false;
             if (currentCategoryFilter === 'all') {
                 matchesCategory = true;
             } else {
-                // Comprueba si el tipo asignado a la fila incluye la palabra del botón (ej: "proteína", "hidratos")
                 matchesCategory = trTypeAttr.includes(currentCategoryFilter);
             }
 
-            // Si cumple ambas condiciones a la vez, se muestra; si no, se oculta
             if (matchesText && matchesCategory) {
                 tr.style.display = "";
             } else {
