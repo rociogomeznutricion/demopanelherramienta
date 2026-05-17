@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Plataforma de Nutrición</title>
+</head>
+<body style="margin: 0; background-color: #f8f9fa; font-family: 'Segoe UI', Roboto, sans-serif; color: #333; padding: 15px;">
+
+    <div style="max-width: 800px; margin: 0 auto;">
+        
+        <!-- ENCABEZADO CORPORATIVO -->
+        <div style="background: linear-gradient(135deg, #1e3c72, #2a5298); color: white; padding: 25px; border-radius: 12px; text-align: center; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <h1 style="margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 1px;">Tu Plan de Nutrición Inteligente</h1>
+            <p style="margin: 5px 0 0 0; opacity: 0.9; font-size: 14px;">Datos sincronizados en tiempo real con Google Sheets</p>
+        </div>
+
+        <!-- TARJETA PRINCIPAL -->
+        <div style="background: white; border: 1px solid #e0e0e0; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f0f0f0; padding-bottom: 15px; margin-bottom: 15px;">
+                <h2 style="margin: 0; color: #1e3c72; font-size: 20px;">🌙 DATOS DE TU FICHA</h2>
+                <div id="status-box" style="background: #fff5f5; color: #e53e3e; padding: 6px 12px; border-radius: 20px; font-weight: bold; font-size: 13px;">
+                    Estado: <span id="loading-status">Conectando...</span>
+                </div>
+            </div>
+
+            <!-- MARCADORES DE BLOQUES (Se rellenan solos leyendo tus celdas reales) -->
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; text-align: center;">
+                <div style="background: #fff5f5; border: 1px solid #ffe3e3; padding: 10px; border-radius: 8px;">
+                    <span style="display: block; font-size: 12px; color: #e53e3e; font-weight: bold; text-transform: uppercase;">Proteínas (B12)</span>
+                    <span id="macro-p" style="font-size: 20px; font-weight: bold; color: #cc5c5c;">--</span>
+                </div>
+                <div style="background: #f8f9fa; border: 1px solid #e9ecef; padding: 10px; border-radius: 8px;">
+                    <span style="display: block; font-size: 12px; color: #495057; font-weight: bold; text-transform: uppercase;">Carbohidratos (B14)</span>
+                    <span id="macro-hc" style="font-size: 20px; font-weight: bold; color: #495057;">--</span>
+                </div>
+                <div style="background: #f3fbf5; border: 1px solid #e3f7e7; padding: 10px; border-radius: 8px;">
+                    <span style="display: block; font-size: 12px; color: #2f855a; font-weight: bold; text-transform: uppercase;">Grasas (B13)</span>
+                    <span id="macro-g" style="font-size: 20px; font-weight: bold; color: #2f855a;">--</span>
+                </div>
+            </div>
+
+            <!-- OPCIONES DE COMIDA DINÁMICAS -->
+            <h3 style="font-size: 14px; color: #777; text-transform: uppercase; margin-bottom: 15px; letter-spacing: 0.5px;">Tus raciones automáticas para la cena:</h3>
+            
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <!-- Opción Pollo -->
+                <div style="border-left: 4px solid #3182ce; background: #f7fafc; padding: 12px 15px; border-radius: 0 8px 8px 0;">
+                    <strong style="color: #2b6cb0; display: block; margin-bottom: 4px;">🥗 Opción Pechuga de Pollo</strong>
+                    <span style="font-size: 14px; line-height: 1.5;">Según tus bloques asignados de cena, hoy te toca pesar: <span id="peso-pollo" style="font-weight: bold; color: #1e3c72; font-size: 16px;">--</span>g de Pechuga de Pollo.</span>
+                </div>
+
+                <!-- Opción Arroz -->
+                <div style="border-left: 4px solid #b7791f; background: #fffaf0; padding: 12px 15px; border-radius: 0 8px 8px 0;">
+                    <strong style="color: #dd6b20; display: block; margin-bottom: 4px;">🍚 Opción Arroz Cocinado</strong>
+                    <span style="font-size: 14px; line-height: 1.5;">Para acompañar el plato, añade exactamente: <span id="peso-arroz" style="font-weight: bold; color: #dd6b20; font-size: 16px;">--</span>g de Arroz Blanco (ya cocinado).</span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+    // Tu URL de publicación exacta en formato CSV
+    const URL_PUBLICACION = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSgr5oev20q2fo_KCHlWXvGSXEYtVHb-8v1aLjqVmh5uFmDQX_lj1a5QRykDyePmrDi2i_mOG1pF7IC/pub?output=csv";
+
+    fetch(URL_PUBLICACION)
+        .then(res => res.text())
+        .then(csvTexto => {
+            // Dividimos por filas
+            const lineas = csvTexto.split("\n");
+            
+            // Detectamos si tu Google Sheets usa coma (,) o punto y coma (;) como separador
+            const separador = lineas[0].includes(";") ? ";" : ",";
+            
+            // Convertimos el CSV en filas y columnas limpiando comillas residuales
+            const filas = lineas.map(fila => 
+                fila.split(separador).map(celda => celda.replace(/^"|"$/g, '').trim())
+            );
+
+            // Posiciones en tu pestaña MASTER: Fila 12 (11), Fila 13 (12), Fila 14 (13), Fila 18 (17)
+            // Usamos .replace(",", ".") por si los decimales vienen con coma europea (ej: 0,25)
+            const proteinasB12 = parseFloat(filas[11][1].replace(",", ".")); 
+            const grasasB13 = parseFloat(filas[12][1].replace(",", "."));    
+            const hidratosB14 = parseFloat(filas[13][1].replace(",", "."));   
+            
+            let porcentajeCenaB18 = filasen17 = filas[17][1] ? parseFloat(filas[17][1].replace(",", ".")) : 0.25;
+            // Si el porcentaje viene como "25" en vez de "0.25", lo corregimos de fondo
+            if (porcentajeCenaB18 > 1) { porcentajeCenaB18 = porcentajeCenaB18 / 100; }
+
+            // Si alguno de los datos principales no es un número válido, forzamos el error para revisarlo
+            if (isNaN(proteinasB12) || isNaN(hidratosB14) || isNaN(grasasB13)) {
+                throw new Error("Las celdas leídas no contienen números válidos.");
+            }
+
+            // Mostramos los macros totales diarios en las tarjetas superiores
+            document.getElementById('macro-p').innerText = proteinasB12 + "g al día";
+            document.getElementById('macro-hc').innerText = hidratosB14 + "g al día";
+            document.getElementById('macro-g').innerText = grasasB13 + "g al día";
+
+            // Calculamos los bloques específicos de la CENA (1 Bloque P = 20g, 1 Bloque HC = 20g)
+            const gramosPolloCena = (proteinasB12 * porcentajeCenaB18 / 20) * 100;
+            const gramosArrozCena = (hidratosB14 * porcentajeCenaB18 / 20) * 75;
+
+            // Pintamos los resultados finales redondeados
+            document.getElementById('peso-pollo').innerText = Math.round(gramosPolloCena * 2) / 2;
+            document.getElementById('peso-arroz').innerText = Math.round(gramosArrozCena * 2) / 2;
+
+            // Cambiamos el estado visual a "Conectado" (Verde)
+            document.getElementById('loading-status').innerText = "Conectado al instante";
+            const statusBox = document.getElementById('status-box');
+            statusBox.style.background = "#e6fffa";
+            statusBox.style.color = "#319795";
+        })
+        .catch(error => {
+            console.error("Error detallado en la conexión:", error);
+            document.getElementById('loading-status').innerText = "Error al sincronizar";
+        });
+</script>
+</body>
+</html>
