@@ -148,7 +148,7 @@
             background: var(--white);
             border-radius: 14px;
             padding: 25px;
-            max-width: 600px;
+            max-width: 650px;
             margin: 0 auto;
             border: 1px solid var(--border);
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.02);
@@ -172,7 +172,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 10px 0;
+            padding: 11px 0;
             border-bottom: 1px dashed var(--soft-bg);
         }
 
@@ -182,10 +182,11 @@
             font-size: 10px;
             font-weight: 700;
             text-transform: uppercase;
-            padding: 2px 6px;
+            padding: 3px 7px;
             border-radius: 4px;
             color: white;
             margin-left: 8px;
+            white-space: nowrap;
         }
 
         /* Tabla y Filtros */
@@ -364,7 +365,6 @@
         document.getElementById('sync-status').innerText = "Error de conexión";
     });
 
-    // --- ANALIZADOR DINÁMICO CORREGIDO PARA EXCEL CON DECIMALES Y TEXTO LARGO ---
     function renderMeals(raw) {
         const json = cleanJSON(raw);
         const rows = json.table.rows;
@@ -380,15 +380,12 @@
             
             let pBlocks = 0, hcBlocks = 0, gBlocks = 0;
 
-            // Separamos por líneas para procesar cada macro de forma individual
             const lineas = blocksRaw.split(/[\n,]/);
             lineas.forEach(linea => {
-                // Buscamos cualquier número (entero o decimal con punto/coma) seguido de texto
                 const match = linea.match(/([0-9a-zA-ZáéíóúÁÉÍÓÚñÑ\s:]+):\s*([0-9.,]+)/i) || linea.match(/([0-9.,]+)\s*([0-9a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+)/i);
                 
                 if (match) {
                     let texto = linea.toLowerCase();
-                    // Limpiamos y extraemos el valor numérico sustituyendo comas por puntos
                     let valorStr = linea.replace(/[^0-9.,]/g, '').replace(',', '.');
                     let valor = parseFloat(valorStr) || 0;
 
@@ -402,7 +399,7 @@
                 }
             });
 
-            // Guardamos los bloques decimales procesados correctamente
+            // GUARDAMOS DECIMALES EXACTOS (.5)
             bloquesAsignadosPorIngesta[mealName] = { p: pBlocks, hc: hcBlocks, g: gBlocks };
 
             const blocksStyled = blocksRaw.replace(/\n/g, '<br>');
@@ -511,6 +508,7 @@
         return true; 
     }
 
+    // --- NUEVO GENERADOR MULTIFUENTE CON DECIMALES EXACTOS ---
     function generarPlatoInteligente() {
         const ingestaSeleccionada = document.getElementById('meal-selector').value;
         const bloques = bloquesAsignadosPorIngesta[ingestaSeleccionada];
@@ -528,36 +526,81 @@
 
         let propuestasHTML = "";
 
-        if (bloques.p > 0 && proteinas.length > 0) {
-            const aleatorio = proteinas[Math.floor(Math.random() * proteinas.length)];
-            // Multiplicamos redondeando de forma limpia
-            const totalGramos = Math.round(aleatorio.cantidadBase * bloques.p * 10) / 10;
-            propuestasHTML += `
-                <div class="plate-item">
-                    <span>🍗 <b>${totalGramos}${aleatorio.unidad}</b> de ${aleatorio.nombreCorto}</span>
-                    <span class="item-macro-tag" style="background-color: var(--p-color)">${bloques.p} Blq P</span>
-                </div>`;
+        // FUNCIÓN AUXILIAR PARA COMBINAR 1 O 2 FUENTES DE UN MISMO MACRO
+        function obtenerItemsMacro(listaAlimentos, totalBloques, tagColor, tagSuffix, emoji) {
+            if (totalBloques <= 0 || listaAlimentos.length === 0) return "";
+            
+            let resHTML = "";
+            // Si el bloque es grande (> 1.5) y no es grasa, intentamos combinar dos fuentes distintas
+            if (totalBloques > 1.5 && listaAlimentos.length > 1 && tagSuffix !== "Blq G") {
+                // Dividimos los bloques a la mitad de forma exacta
+                const b1 = Math.round((totalBloques / 2) * 2) / 2;
+                const b2 = Math.round((totalBloques - b1) * 2) / 2;
+
+                let idx1 = Math.floor(Math.random() * listaAlimentos.length);
+                let idx2 = Math.floor(Math.random() * listaAlimentos.length);
+                while(idx1 === idx2 && listaAlimentos.length > 1) {
+                    idx2 = Math.floor(Math.random() * listaAlimentos.length);
+                }
+
+                const a1 = listaAlimentos[idx1];
+                const a2 = listaAlimentos[idx2];
+
+                // Ajuste inteligente para el Huevo Entero: máximo 1 unidad combinada
+                let cant1 = b1;
+                if (a1.nombreCorto.toLowerCase().includes("huevo entero")) cant1 = Math.min(b1, 1);
+                let totalGramos1 = Math.round(a1.cantidadBase * cant1 * 10) / 10;
+                
+                let cant2 = b2 + (b1 - cant1); // Le pasamos el remanente al otro ingrediente
+                if (a2.nombreCorto.toLowerCase().includes("huevo entero")) {
+                    const originalCant2 = cant2;
+                    cant2 = Math.min(cant2, 1);
+                    totalGramos1 = Math.round(a1.cantidadBase * (cant1 + (originalCant2 - cant2)) * 10) / 10; // reajuste inverso
+                    cant1 = cant1 + (originalCant2 - cant2);
+                }
+                let totalGramos2 = Math.round(a2.cantidadBase * cant2 * 10) / 10;
+
+                if(totalGramos1 > 0) {
+                    resHTML += `
+                    <div class="plate-item">
+                        <span>${emoji} <b>${totalGramos1}${a1.unidad}</b> de ${a1.nombreCorto}</span>
+                        <span class="item-macro-tag" style="background-color: ${tagColor}">${cant1} ${tagSuffix}</span>
+                    </div>`;
+                }
+                if(totalGramos2 > 0) {
+                    resHTML += `
+                    <div class="plate-item">
+                        <span>${emoji} <b>${totalGramos2}${a2.unidad}</b> de ${a2.nombreCorto}</span>
+                        <span class="item-macro-tag" style="background-color: ${tagColor}">${cant2} ${tagSuffix}</span>
+                    </div>`;
+                }
+            } else {
+                // Una sola fuente (o grasas que suelen ser independientes como aceite/aguacate)
+                const aleatorio = listaAlimentos[Math.floor(Math.random() * listaAlimentos.length)];
+                let cant = totalBloques;
+                // Si sale huevo entero solo, lo capamos a máximo 2 unidades para evitar los "6 huevos"
+                if (aleatorio.nombreCorto.toLowerCase().includes("huevo entero")) cant = Math.min(totalBloques, 2);
+                
+                let totalGramos = Math.round(aleatorio.cantidadBase * cant * 10) / 10;
+                
+                // Corrección visual estética para el aceite de oliva líquido
+                let textoMostrar = `<b>${totalGramos}${aleatorio.unidad}</b> de ${aleatorio.nombreCorto}`;
+                if (aleatorio.nombreCorto.toLowerCase().includes("aceite") && aleatorio.nombreCompleto.toLowerCase().includes("cucharada")) {
+                    textoMostrar = `<b>${totalBloques} cucharada(s)</b> de ${aleatorio.nombreCorto}`;
+                }
+
+                resHTML += `
+                    <div class="plate-item">
+                        <span>${emoji} ${textoMostrar}</span>
+                        <span class="item-macro-tag" style="background-color: ${tagColor}">${totalBloques} ${tagSuffix}</span>
+                    </div>`;
+            }
+            return resHTML;
         }
 
-        if (bloques.hc > 0 && hidratos.length > 0) {
-            const aleatorio = hidratos[Math.floor(Math.random() * hidratos.length)];
-            const totalGramos = Math.round(aleatorio.cantidadBase * bloques.hc * 10) / 10;
-            propuestasHTML += `
-                <div class="plate-item">
-                    <span>🌾 <b>${totalGramos}${aleatorio.unidad}</b> de ${aleatorio.nombreCorto}</span>
-                    <span class="item-macro-tag" style="background-color: var(--hc-color)">${bloques.hc} Blq HC</span>
-                </div>`;
-        }
-
-        if (bloques.g > 0 && grasas.length > 0) {
-            const aleatorio = grasas[Math.floor(Math.random() * grasas.length)];
-            const totalGramos = Math.round(aleatorio.cantidadBase * bloques.g * 10) / 10;
-            propuestasHTML += `
-                <div class="plate-item">
-                    <span>🥑 <b>${totalGramos}${aleatorio.unidad}</b> de ${aleatorio.nombreCorto}</span>
-                    <span class="item-macro-tag" style="background-color: var(--g-color)">${bloques.g} Blq G</span>
-                </div>`;
-        }
+        propuestasHTML += obtenerItemsMacro(proteinas, bloques.p, "var(--p-color)", "Blq P", "🍗");
+        propuestasHTML += obtenerItemsMacro(hidratos, bloques.hc, "var(--hc-color)", "Blq HC", "🌾");
+        propuestasHTML += obtenerItemsMacro(grasas, bloques.g, "var(--g-color)", "Blq G", "🥑");
 
         outputDiv.style.display = "block";
         outputDiv.innerHTML = `
@@ -566,11 +609,11 @@
                 Propuesta de Menú para tu ${ingestaSeleccionada.toLowerCase()}
             </div>
             <div style="margin-bottom:15px; font-size:13px; color:var(--text-light)">
-                Combinación aleatoria calculada para cubrir tus <b>${bloques.p}P - ${bloques.hc}HC - ${bloques.g}G</b>:
+                Combinación multifuente calculada con decimales exactos para cubrir tus <b>${bloques.p}P - ${bloques.hc}HC - ${bloques.g}G</b>:
             </div>
             ${propuestasHTML}
             <div style="margin-top:15px; font-size:11px; text-align:center; color:var(--text-light); font-style:italic;">
-                ¿No te convence? Dale otra vez al botón para barajar nuevos alimentos.
+                ¿No te convence? Dale otra vez al botón para barajar nuevos alimentos combinados.
             </div>
         `;
     }
