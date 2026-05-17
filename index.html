@@ -217,7 +217,7 @@
 <script>
     // Configuración con tus enlaces reales confirmados
     const SPREADSHEET_ID = '1agPyD1JW34QSqXOeisPSsjXQuIXkwvdP4ZFyRAlvip4';
-    const GID_AJUSTES = '1147936171'; // Pestaña MASTER (A2:A6 y C2:C6)
+    const GID_AJUSTES = '1147936171'; // Pestaña MASTER 
     const GID_EQUIV = '1979658163';   // Pestaña Equivalencias Mercadona
 
     const urlAjustes = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?gid=${GID_AJUSTES}&tqx=out:json`;
@@ -251,15 +251,15 @@
         const grid = document.getElementById('meal-grid');
         let html = "";
 
-        // Lee exactamente las filas de la 2 a la 6 (índices 1 a 5 de Google)
-        for (let i = 1; i <= 5; i++) {
+        // Cambiado a índice 0 para capturar exactamente la Fila 2 de Google (A2 y C2) hasta la Fila 6 (A6 y C6)
+        for (let i = 0; i < 5; i++) {
             if (!rows[i] || !rows[i].c) continue;
             
             const row = rows[i].c;
-            const mealName = row[0] && row[0].v ? row[0].v : `Ingesta ${i}`; // Columna A
+            const mealName = row[0] && row[0].v ? row[0].v : `Ingesta ${i+1}`; // Columna A
             const blocksRaw = row[2] && row[2].v ? String(row[2].v) : 'No asignado'; // Columna C
             
-            // Reemplaza saltos de línea para que se organicen bien dentro de la tarjeta
+            // Organiza los saltos de línea dentro de la tarjeta
             const blocksStyled = blocksRaw.replace(/\n/g, '<br>');
             const icon = mealIcons[mealName.toUpperCase()] || "fa-utensils";
 
