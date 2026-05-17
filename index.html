@@ -341,11 +341,11 @@
 </div>
 
 <script>
-    const SPREADSHEET_ID = '1agPy PyD1JW34QSqXOeisPSsjXQuIXkwvdP4ZFyRAlvip4'; // Nota: Asegúrate de que no haya espacios en tu ID real
+    // CORREGIDO EL ESPACIO EN BLANCO DEL ID DE TU SPREADSHEET
+    const SPREADSHEET_ID = '1agPyD1JW34QSqXOeisPSsjXQuIXkwvdP4ZFyRAlvip4'; 
     const GID_AJUSTES = '1147936171'; 
     const GID_EQUIV = '1979658163';   
 
-    // Corregimos posibles espacios accidentales en el ID del usuario
     const CLEAN_ID = SPREADSHEET_ID.replace(/\s/g, '');
     const urlAjustes = `https://docs.google.com/spreadsheets/d/${CLEAN_ID}/gviz/tq?gid=${GID_AJUSTES}&tqx=out:json`;
     const urlEquiv = `https://docs.google.com/spreadsheets/d/${CLEAN_ID}/gviz/tq?gid=${GID_EQUIV}&tqx=out:json`;
@@ -364,6 +364,7 @@
         renderTableAndObservations(dataEquiv);
         document.getElementById('sync-status').innerText = "Sincronizado";
     }).catch(err => {
+        console.error(err);
         document.getElementById('sync-status').innerText = "Error de conexión";
     });
 
@@ -387,7 +388,6 @@
             lineas.forEach(linea => {
                 const cleanLine = linea.replace(/\s+/g, ' ').trim().toLowerCase();
                 
-                // Extraemos el número decimal aislado transformando la coma en punto
                 let numericoStr = cleanLine.replace(/[^0-9.,]/g, '').replace(',', '.');
                 let valorDecimal = parseFloat(numericoStr) || 0;
 
@@ -400,7 +400,6 @@
                 }
             });
 
-            // Almacenamos el valor decimal exacto leído de la celda
             bloquesAsignadosPorIngesta[mealName] = { p: pBlocks, hc: hcBlocks, g: gBlocks };
 
             const blocksStyled = blocksRaw.replace(/\n/g, '<br>');
@@ -418,7 +417,7 @@
         grid.innerHTML = html;
     }
 
-    // --- PARSER ULTRA PRECISO BASADO EN EL NUEVO FORMATO DE FILA: CON DOS PUNTOS (:) Y RECTAS (|) ---
+    // --- PARSER BASADO EN EL NUEVO FORMATO DE FILA CON DOS PUNTOS (:) Y RECTAS (|) ---
     function renderTableAndObservations(raw) {
         const json = cleanJSON(raw);
         const rows = json.table.rows;
@@ -439,7 +438,6 @@
         let htmlTable = "";
         baseDatosAlimentos = [];
 
-        // Recorremos las celdas que contienen las ristras concatenadas con "|"
         for (let i = 1; i < rows.length; i++) {
             const rowC = rows[i].c;
             if (!rowC) continue;
@@ -448,20 +446,16 @@
                 if(rowC[col] && rowC[col].v !== null && String(rowC[col].v).trim() !== "") {
                     const celdaCompleta = String(rowC[col].v);
                     const typeLabel = typesHeader[col] || "Proteína";
-
-                    // Fragmentamos la celda usando la barra vertical "|"
                     const subAlimentos = celdaCompleta.split('|');
 
                     subAlimentos.forEach(item => {
                         const bloqueTexto = item.trim();
                         if (!bloqueTexto || !bloqueTexto.includes(':')) return;
 
-                        // Separamos limpiamente por el caracter ":" sugerido
                         const partes = bloqueTexto.split(':');
                         const nombreLimpio = partes[0].trim();
-                        const restoValores = partes[1].trim(); // Ejemplo: "100g" o "110g  (2 latas)"
+                        const restoValores = partes[1].trim(); 
 
-                        // Extraemos el número exacto que acompaña a los gramos/unidades iniciales
                         const numMatch = restoValores.match(/^(\d+)\s*(g|ml|ud|unidad|udes)/i);
                         if (numMatch) {
                             const cantidadGramosBase = parseInt(numMatch[1]);
@@ -491,7 +485,6 @@
         }
         tbody.innerHTML = htmlTable || '<tr><td colspan="2">No se encontraron alimentos.</td></tr>';
 
-        // Procesar bloques de notas a la derecha
         const obsGrid = document.getElementById('obs-grid');
         let obsColF = []; let obsColG = [];
         for (let i = 0; i < rows.length; i++) {
@@ -585,20 +578,15 @@
             let numFuentes = listaAlimentos.length;
 
             listaAlimentos.forEach(alimento => {
-                // División exacta del bloque asignado entre el número de fuentes elegidas
                 let fraccionBloque = totalBloquesAsignados / numFuentes;
 
-                // Control estricto de seguridad para huevos enteros (máximo 1.5 udes si va combinado)
                 if (alimento.nombreCorto.toLowerCase().includes("huevo entero") && numFuentes > 1) {
                     fraccionBloque = Math.min(fraccionBloque, 1);
                 }
 
-                // MULTIPLICACIÓN MATEMÁTICA REAL: Bloque Fraccionado * Gramos Base de un Bloque
                 let gramosFinales = fraccionBloque * alimento.cantidadBase;
-                
                 let stringMedida = `<b>${gramosFinales.toFixed(0)}${alimento.unidad}</b>`;
 
-                // Excepción estética para visualización de cucharadas de aceite
                 if (alimento.nombreCorto.toLowerCase().includes("aceite") && alimento.unidad.includes("cuch")) {
                     stringMedida = `<b>${fraccionBloque.toFixed(1)} cucharada(s)</b>`;
                 }
