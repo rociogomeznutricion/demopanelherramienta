@@ -197,7 +197,7 @@
 
         .meal-content { font-size: 13px; color: var(--text-dark); line-height: 1.6; }
 
-        /* SECCIÓN NUEVA INDEPENDIENTE: COMODÍN SALVAVIDAS */
+        /* SECCIÓN COMODÍN SALVAVIDAS */
         .comodin-card {
             background: linear-gradient(135deg, var(--amber-bg) 0%, #fffbeb 100%);
             border: 1px solid var(--amber-border);
@@ -453,7 +453,6 @@
     let poolProteinas = []; let poolCarbohidratos = []; let poolGrasas = []; let poolBuscadorCompleto = [];
     let currentCategoryFilter = 'all';
 
-    // Objeto independiente para guardar los datos pautados del comodín (Columna E)
     let datosComodinFijo = {
         nombreReceta: "Receta Comodín",
         proteinasIds: [],
@@ -573,7 +572,6 @@
             fetch(urlAjustes).then(r => r.text()),
             fetch(urlEquiv).then(r => r.text())
         ]).then(([dataAjustes, dataEquiv]) => {
-            // El orden de ejecución original se mantiene estricto
             procesarPerfilYBloquesPaciente(dataAjustes);
             procesarYRenderizarEquivalencias(dataEquiv);
             
@@ -595,23 +593,31 @@
         exclusionesPaciente.tagsExcluir = [];
         exclusionesPaciente.alimentosOdiados = [];
 
-        // Leer datos de perfil desde la columna E
-        if (rows[0] && rows[0].c && rows[0].c[4] && rows[0].c[4].v) {
-            exclusionesPaciente.estiloVida = String(rows[0].c[4].v).trim().toUpperCase();
-        }
-        if (rows[1] && rows[1].c && rows[1].c[4] && rows[1].c[4].v) {
-            exclusionesPaciente.tagsExcluir = String(rows[1].c[4].v).split(',').map(t => t.trim().toUpperCase()).filter(t => t !== "");
-        }
-        if (rows[2] && rows[2].c && rows[2].c[4] && rows[2].c[4].v) {
-            exclusionesPaciente.alimentosOdiados = String(rows[2].c[4].v).split(',').map(a => a.trim().toLowerCase()).filter(a => a !== "");
+        function getCeldaSegura(filaIdx, colIdx) {
+            if (rows[filaIdx] && rows[filaIdx].c && rows[filaIdx].c[colIdx] && rows[filaIdx].c[colIdx].v !== null) {
+                return String(rows[filaIdx].c[colIdx].v).trim();
+            }
+            return "";
         }
 
-        // COMODÍN SALVAVIDAS: Leer la configuración de la receta fija (Columna E, filas 5 a 9)
-        datosComodinFijo.nombreReceta = rows[4] && rows[4].c && rows[4].c[4] && rows[4].c[4].v ? String(rows[4].c[4].v).trim() : "Receta Comodín";
-        datosComodinFijo.proteinasIds = rows[5] && rows[5].c && rows[5].c[4] && rows[5].c[4].v ? String(rows[5].c[4].v).split(',').map(id => id.trim()).filter(id => id !== "") : [];
-        datosComodinFijo.carbohidratosIds = rows[6] && rows[6].c && rows[6].c[4] && rows[6].c[4].v ? String(rows[6].c[4].v).split(',').map(id => id.trim()).filter(id => id !== "") : [];
-        datosComodinFijo.grasasIds = rows[7] && rows[7].c && rows[7].c[4] && rows[7].c[4].v ? String(rows[7].c[4].v).split(',').map(id => id.trim()).filter(id => id !== "") : [];
-        datosComodinFijo.libresTexto = rows[8] && rows[8].c && rows[8].c[4] && rows[8].c[4].v ? String(rows[8].c[4].v).trim() : "";
+        exclusionesPaciente.estiloVida = getCeldaSegura(0, 4).toUpperCase();
+        let tagsRaw = getCeldaSegura(1, 4);
+        exclusionesPaciente.tagsExcluir = tagsRaw ? tagsRaw.split(',').map(t => t.trim().toUpperCase()).filter(t => t !== "") : [];
+        let odiadosRaw = getCeldaSegura(2, 4);
+        exclusionesPaciente.alimentosOdiados = odiadosRaw ? odiadosRaw.split(',').map(a => a.trim().toLowerCase()).filter(a => a !== "") : [];
+
+        datosComodinFijo.nombreReceta = getCeldaSegura(4, 4) || "Receta Comodín";
+        
+        let pIdsRaw = getCeldaSegura(5, 4);
+        datosComodinFijo.proteinasIds = pIdsRaw ? pIdsRaw.split(',').map(id => id.trim()).filter(id => id !== "") : [];
+        
+        let hcIdsRaw = getCeldaSegura(6, 4);
+        datosComodinFijo.carbohidratosIds = hcIdsRaw ? hcIdsRaw.split(',').map(id => id.trim()).filter(id => id !== "") : [];
+        
+        let gIdsRaw = getCeldaSegura(7, 4);
+        datosComodinFijo.grasasIds = gIdsRaw ? gIdsRaw.split(',').map(id => id.trim()).filter(id => id !== "") : [];
+        
+        datosComodinFijo.libresTexto = getCeldaSegura(8, 4);
 
         const grid = document.getElementById('meal-grid');
         let html = "";
@@ -649,7 +655,6 @@
         const json = cleanJSON(raw);
         const rows = json.table.rows;
 
-        // Limpieza estricta de los pools originales (Tu lógica intacta)
         poolProteinas = []; poolCarbohidratos = []; poolGrasas = []; poolBuscadorCompleto = [];
 
         for (let i = 1; i < rows.length; i++) {
@@ -702,7 +707,6 @@
                 return false;
             }
 
-            // TU LOGICA DE COMPOSICIÓN ORIGINAL POR COLUMNAS (A-B, C-D, E-F, I) TOTALMENTE INTACTA
             // Proteínas (Columnas A y B)
             if (row[0] && row[0].v !== null && String(row[0].v).trim() !== "" && !String(row[0].v).includes("PROTEÍNAS")) {
                 let n = String(row[0].v).trim();
@@ -736,7 +740,6 @@
             }
         }
 
-        // Renderizado visual de la tabla original
         const tbody = document.getElementById('table-body');
         let htmlTable = "";
         poolBuscadorCompleto.forEach(item => {
@@ -752,7 +755,6 @@
         });
         tbody.innerHTML = htmlTable;
 
-        // Renderizado de las observaciones de las columnas G, I, J
         let obsG = [], obsI = [], obsJ = [];
         for (let i = 0; i < rows.length; i++) {
             if(rows[i]?.c) {
@@ -767,8 +769,7 @@
             <div class="obs-card c3"><div class="obs-title">${obsJ[0] || 'Extra'}</div><div class="obs-content">${obsJ.slice(1).join('<br>')}</div></div>`;
     }
 
-    // NUEVA FUNCIÓN INDEPENDIENTE: COMODÍN SALVAVIDAS CON REPARTO EQUITATIVO POR COMAS
-    // Busca los IDs directamente dentro de los arrays existentes de alimentos de forma aislada
+    // FUNCIÓN DEL COMODÍN BLINDADA E INTELIGENTE CONTRA MAYÚSCULAS/EXCLUSIONES CORTADAS
     function calcularComodinSalvavidas() {
         const ingesta = document.getElementById('salvavidas-selector').value;
         const blq = bloquesAsignadosPorIngesta[ingesta];
@@ -787,16 +788,22 @@
 
         let flagTieneIngredientes = false;
 
-        // Función auxiliar aislada que busca por ID parcial dentro de los pools y calcula la porción equitativa
         function procesarMacroComodin(listaIds, bloquesTotales, poolAlimentos, bgClass, emoji) {
-            if (listaIds.length === 0 || bloquesTotales <= 0) return "";
+            if (!listaIds || listaIds.length === 0 || bloquesTotales <= 0) return "";
             
             let bloquesPorAlimento = bloquesTotales / listaIds.length;
             let subHtml = "";
 
             listaIds.forEach(id => {
-                // Buscamos el objeto en el pool cuyo nombre contenga el ID exacto (Ej: "(HC_001)")
-                let alimentoEncontrado = poolAlimentos.find(item => item.nombre.includes(id));
+                let idClean = id.toLowerCase().trim();
+                
+                // Intenta buscar en el pool específico asignado (ej: poolGrasas)
+                let alimentoEncontrado = poolAlimentos.find(item => item.nombre.toLowerCase().includes(idClean));
+                
+                // Si no lo encuentra por culpa de algún corte de filtros, lo busca en el pool maestro de respaldo
+                if (!alimentoEncontrado) {
+                    alimentoEncontrado = poolBuscadorCompleto.find(item => item.nombre.toLowerCase().includes(idClean));
+                }
                 
                 if (alimentoEncontrado && alimentoEncontrado.gramos) {
                     let gramosCalculados = (bloquesPorAlimento * alimentoEncontrado.gramos).toFixed(0);
@@ -807,18 +814,16 @@
                         </div>`;
                     flagTieneIngredientes = true;
                 } else {
-                    subHtml += `<div class="plate-item" style="color:var(--p-color)"><span>⚠️ Código <b>${id}</b> no activo o no disponible para tu perfil</span></div>`;
+                    subHtml += `<div class="plate-item" style="color:var(--p-color)"><span>⚠️ Código <b>${id}</b> no cargado correctamente en las listas base</span></div>`;
                 }
             });
             return subHtml;
         }
 
-        // Calcular de forma independiente cada macro usando los pools puros intactos
         html += procesarMacroComodin(datosComodinFijo.proteinasIds, blq.p, poolProteinas, 'bg-p', '🥩');
         html += procesarMacroComodin(datosComodinFijo.carbohidratosIds, blq.hc, poolCarbohidratos, 'bg-hc', '🌾');
         html += procesarMacroComodin(datosComodinFijo.grasasIds, blq.g, poolGrasas, 'bg-g', '🥑');
 
-        // Condimentos libres (Fila E9)
         if (datosComodinFijo.libresTexto && datosComodinFijo.libresTexto !== "" && datosComodinFijo.libresTexto.toLowerCase() !== "ninguno") {
             html += `
                 <div class="plate-item" style="background-color: #fafafa; padding: 10px; border-radius: 6px; margin-top: 10px;">
@@ -829,14 +834,13 @@
         }
 
         if (!flagTieneIngredientes) {
-            out.innerHTML = `<div class="plate-title" style="color:var(--text-light)">No se encontraron ingredientes válidos pautados en la columna E.</div>`;
+            out.innerHTML = `<div class="plate-title" style="color:var(--text-light); border-bottom: none; margin-bottom: 0;">ℹ️ Comprueba que los códigos introducidos coincidan con los de las listas (ej: G_002, HC_001...)</div>`;
             return;
         }
 
         out.innerHTML = html;
     }
 
-    // ASISTENTE ALEATORIO TRADICIONAL (TOTALMENTE INTACTO)
     function generarPlatoInteligente() {
         const ingesta = document.getElementById('meal-selector').value;
         const blq = bloquesAsignadosPorIngesta[ingesta];
