@@ -39,7 +39,6 @@
 
         .container { max-width: 1100px; margin: 0 auto; }
 
-        /* PANTALLA DE ACCESO */
         .login-wrapper {
             display: flex;
             justify-content: center;
@@ -128,7 +127,6 @@
             border: 1px solid #fee2e2;
         }
 
-        /* DASHBOARD */
         .dashboard-content { display: none; }
 
         .header {
@@ -143,7 +141,7 @@
 
         .header h1 { font-family: 'Poppins', sans-serif; font-size: 26px; margin-bottom: 5px; }
         .header p { font-weight: 300; opacity: 0.8; font-size: 14px; }
-        
+
         .logout-btn {
             position: absolute;
             top: 35px;
@@ -197,7 +195,6 @@
 
         .meal-content { font-size: 13px; color: var(--text-dark); line-height: 1.6; }
 
-        /* SECCIÓN NUEVA: COMODÍN SALVAVIDAS */
         .comodin-card {
             background: linear-gradient(135deg, var(--amber-bg) 0%, #fffbeb 100%);
             border: 1px solid var(--amber-border);
@@ -286,7 +283,6 @@
             margin-left: 8px;
         }
 
-        /* BASE DE DATOS DE EQUIVALENCIAS */
         .card {
             background: var(--white);
             border-radius: 16px;
@@ -346,11 +342,27 @@
         .obs-card.c2 .obs-content { color: #14532d; }
         .obs-card.c3 .obs-content { color: #1e3a8a; }
         .status-pill { font-size: 10px; padding: 4px 10px; border-radius: 20px; background: #dcfce7; color: #15803d; font-weight: 700; }
+
+        /* Debug panel (oculto por defecto, útil en desarrollo) */
+        .debug-panel {
+            background: #1e293b;
+            color: #94a3b8;
+            border-radius: 10px;
+            padding: 15px;
+            font-size: 11px;
+            font-family: monospace;
+            margin-bottom: 20px;
+            display: none;
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow-y: auto;
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
+    <!-- PANTALLA LOGIN -->
     <div class="login-wrapper" id="login-screen">
         <div class="login-card">
             <h2>Área de Clientes</h2>
@@ -370,12 +382,16 @@
         </div>
     </div>
 
+    <!-- DASHBOARD -->
     <div class="dashboard-content" id="dashboard-screen">
         <header class="header">
             <h1 id="main-title">Plan Nutricional por Bloques</h1>
-            <p id="personalized-welcome">Dashboard personalizado para el seguimiento de ingestas y equivalencias</p>
+            <p id="personalized-welcome">Dashboard personalizado</p>
             <button class="logout-btn" onclick="cerrarSesion()"><i class="fa-solid fa-right-from-bracket"></i> Salir</button>
         </header>
+
+        <!-- Panel debug (activar cambiando display:none a display:block si necesitas depurar) -->
+        <div class="debug-panel" id="debug-panel"></div>
 
         <div class="section-title">
             Reparto de Bloques por Ingesta
@@ -448,439 +464,591 @@
 </div>
 
 <script>
-    const MASTER_CONTROL_URL = 'https://docs.google.com/spreadsheets/d/1L7lbZ4JkE7dqO_oizMEDKQabtyUBbR4yaqcrt3LMa6Q/gviz/tq?gid=0&tqx=out:json';
+// ─────────────────────────────────────────────────────────────
+//  CONFIGURACIÓN PRINCIPAL
+//  MASTER_CONTROL_URL: hoja con usuarios y contraseñas
+//  GID_EQUIV: pestaña de equivalencias de alimentos en la hoja del paciente
+//  La hoja del paciente (gid=0, pestaña MASTER) contiene:
+//    - Bloques totales: filas 12,13,14 columna B (P, G, HC)
+//    - Porcentajes por ingesta: filas 16-20 columna B
+//    - Comodín config: filas 5-9 columna E
+//    - Exclusiones: filas 1-3 columna E
+// ─────────────────────────────────────────────────────────────
+const MASTER_CONTROL_URL = 'https://docs.google.com/spreadsheets/d/1L7lbZ4JkE7dqO_oizMEDKQabtyUBbR4yaqcrt3LMa6Q/gviz/tq?gid=0&tqx=out:json';
 
-    const GID_AJUSTES = '1147936171'; 
-    const GID_EQUIV = '1979658163';   
-    const mealIcons = { "DESAYUNO": "fa-coffee", "ALMUERZO": "fa-apple-whole", "COMIDA": "fa-utensils", "MERIENDA": "fa-cookie", "CENA": "fa-moon" };
-    
-    let bloquesAsignadosPorIngesta = {}; 
-    let poolProteinas = []; let poolCarbohidratos = []; let poolGrasas = []; let poolBuscadorCompleto = [];
-    let currentCategoryFilter = 'all';
+// GID de la pestaña MASTER del paciente (gid=0)
+const GID_PACIENTE_MASTER = '0';
+// GID de la pestaña TABLA EQUIVALENCIAS del paciente
+const GID_EQUIV = '1979658163';
 
-    // Estructura global para el Comodín
-    let datosComodinFijo = {
-        nombreReceta: "Receta Comodín",
-        proteinasIds: [],
-        carbohidratosIds: [],
-        grasasIds: [],
-        libresTexto: ""
-    };
+const mealIcons = {
+    "DESAYUNO": "fa-coffee",
+    "ALMUERZO": "fa-apple-whole",
+    "COMIDA": "fa-utensils",
+    "MERIENDA": "fa-cookie",
+    "CENA": "fa-moon"
+};
 
-    let exclusionesPaciente = {
-        estiloVida: "",
-        tagsExcluir: [],
-        alimentosOdiados: []
-    };
+const MEAL_NAMES = ["DESAYUNO", "ALMUERZO", "COMIDA", "MERIENDA", "CENA"];
 
-    function cleanJSON(raw) { return JSON.parse(raw.substring(raw.indexOf('{'), raw.lastIndexOf('}') + 1)); }
+// ─── Estado global ───
+let bloquesAsignadosPorIngesta = {};
+let poolProteinas = [];
+let poolCarbohidratos = [];
+let poolGrasas = [];
+let poolBuscadorCompleto = [];
+let currentCategoryFilter = 'all';
 
-    function limpiarYExtraerId(urlText) {
-        if (!urlText || typeof urlText !== 'string') return null;
-        let p = urlText.indexOf('/d/');
-        if (p === -1) return null;
-        let recortado = urlText.substring(p + 3);
-        let fin = recortado.indexOf('/');
-        if (fin === -1) fin = recortado.indexOf('?');
-        if (fin === -1) return recortado.trim();
-        return recortado.substring(0, fin).trim();
+let datosComodinFijo = {
+    nombreReceta: "",
+    proteinasIds: [],
+    carbohidratosIds: [],
+    grasasIds: [],
+    libresTexto: ""
+};
+
+let exclusionesPaciente = {
+    estiloVida: "",
+    tagsExcluir: [],
+    alimentosOdiados: []
+};
+
+// ─── Helpers ───
+function cleanJSON(raw) {
+    return JSON.parse(raw.substring(raw.indexOf('{'), raw.lastIndexOf('}') + 1));
+}
+
+function limpiarYExtraerId(urlText) {
+    if (!urlText || typeof urlText !== 'string') return null;
+    let p = urlText.indexOf('/d/');
+    if (p === -1) return null;
+    let recortado = urlText.substring(p + 3);
+    let fin = recortado.indexOf('/');
+    if (fin === -1) fin = recortado.indexOf('?');
+    if (fin === -1) return recortado.trim();
+    return recortado.substring(0, fin).trim();
+}
+
+function getCelda(rows, rowIdx, colIdx) {
+    try {
+        const v = rows[rowIdx].c[colIdx]?.v;
+        return v !== null && v !== undefined ? String(v).trim() : '';
+    } catch(e) {
+        return '';
     }
+}
 
-    document.getElementById('username').addEventListener('keydown', function(e) { if (e.key === 'Enter') ejecutarLogin(); });
-    document.getElementById('password').addEventListener('keydown', function(e) { if (e.key === 'Enter') ejecutarLogin(); });
+function debugLog(msg) {
+    const panel = document.getElementById('debug-panel');
+    if (panel) panel.textContent += msg + '\n';
+}
 
-    function ejecutarLogin() {
-        const userIn = document.getElementById('username').value.trim();
-        const passIn = document.getElementById('password').value.trim();
-        const errBox = document.getElementById('error-box');
-        const errTxt = document.getElementById('error-text');
+// ─── Login ───
+document.getElementById('username').addEventListener('keydown', e => { if (e.key === 'Enter') ejecutarLogin(); });
+document.getElementById('password').addEventListener('keydown', e => { if (e.key === 'Enter') ejecutarLogin(); });
 
-        if (!userIn || !passIn) {
-            errTxt.innerText = "Completa todos los campos.";
-            errBox.style.display = "flex";
-            return;
-        }
+function ejecutarLogin() {
+    const userIn = document.getElementById('username').value.trim();
+    const passIn = document.getElementById('password').value.trim();
+    const errBox = document.getElementById('error-box');
+    const errTxt = document.getElementById('error-text');
 
-        errTxt.innerText = "Validando...";
+    if (!userIn || !passIn) {
+        errTxt.innerText = "Completa todos los campos.";
         errBox.style.display = "flex";
+        return;
+    }
 
-        fetch(MASTER_CONTROL_URL)
-            .then(r => r.text())
-            .then(rawData => {
-                const json = cleanJSON(rawData);
-                const filas = json.table.rows;
-                let cuenta = null;
-                let nombrePacienteOriginal = "Paciente";
+    errTxt.innerText = "Validando...";
+    errBox.style.display = "flex";
 
-                for (let i = 1; i < filas.length; i++) {
-                    const c = filas[i].c;
-                    if (!c) continue;
-                    const dbUser = c[1] && c[1].v ? String(c[1].v).trim() : '';
-                    const dbPass = c[2] && c[2].v ? String(c[2].v).trim() : '';
-                    const dbActivo = c[3] && c[3].v ? String(c[3].v).trim().toUpperCase() : 'N';
+    fetch(MASTER_CONTROL_URL)
+        .then(r => r.text())
+        .then(rawData => {
+            const json = cleanJSON(rawData);
+            const filas = json.table.rows;
+            let cuenta = null;
+            let nombrePaciente = "Paciente";
 
-                    if (dbUser.toLowerCase() === userIn.toLowerCase() && dbPass === passIn) {
-                        if (dbActivo !== 'S') {
-                            errTxt.innerText = "Suscripción inactiva. Consulte con su nutricionista.";
-                            return;
-                        }
-                        cuenta = c;
-                        nombrePacienteOriginal = c[0] && c[0].v ? String(c[0].v).trim() : 'Paciente';
-                        break;
+            for (let i = 1; i < filas.length; i++) {
+                const c = filas[i].c;
+                if (!c) continue;
+                const dbUser  = c[1]?.v ? String(c[1].v).trim() : '';
+                const dbPass  = c[2]?.v ? String(c[2].v).trim() : '';
+                const dbActivo = c[3]?.v ? String(c[3].v).trim().toUpperCase() : 'N';
+
+                if (dbUser.toLowerCase() === userIn.toLowerCase() && dbPass === passIn) {
+                    if (dbActivo !== 'S') {
+                        errTxt.innerText = "Suscripción inactiva. Consulte con su nutricionista.";
+                        return;
                     }
+                    cuenta = c;
+                    nombrePaciente = c[0]?.v ? String(c[0].v).trim() : 'Paciente';
+                    break;
                 }
+            }
 
-                if (!cuenta) {
-                    errTxt.innerText = "Usuario o contraseña incorrectos.";
-                    return;
-                }
+            if (!cuenta) {
+                errTxt.innerText = "Usuario o contraseña incorrectos.";
+                return;
+            }
 
-                const urlPaciente = cuenta[4] && cuenta[4].v ? String(cuenta[4].v).trim() : '';
-                const idPaciente = limpiarYExtraerId(urlPaciente);
+            const urlPaciente = cuenta[4]?.v ? String(cuenta[4].v).trim() : '';
+            const idPaciente = limpiarYExtraerId(urlPaciente);
 
-                if (!idPaciente) {
-                    errTxt.innerText = "La URL del paciente en la columna E no es válida.";
-                    return;
-                }
+            if (!idPaciente) {
+                errTxt.innerText = "La URL del paciente en la columna E no es válida.";
+                return;
+            }
 
-                document.getElementById('main-title').innerText = `Plan de Nutrición: ${nombrePacienteOriginal}`;
-                document.getElementById('personalized-welcome').innerText = `Dashboard exclusivo y personalizado para ${nombrePacienteOriginal}`;
+            document.getElementById('main-title').innerText = `Plan de Nutrición: ${nombrePaciente}`;
+            document.getElementById('personalized-welcome').innerText = `Dashboard exclusivo y personalizado para ${nombrePaciente}`;
+            errBox.style.display = "none";
+            document.getElementById('login-screen').style.display = "none";
+            document.getElementById('dashboard-screen').style.display = "block";
 
-                errBox.style.display = "none";
-                document.getElementById('login-screen').style.display = "none";
-                document.getElementById('dashboard-screen').style.display = "block";
-                
-                cargarDatosNutricionales(idPaciente);
-            })
-            .catch(err => {
-                console.error(err);
-                errTxt.innerText = "Error al conectar con la base de datos.";
-            });
-    }
-
-    function cerrarSesion() {
-        document.getElementById('dashboard-screen').style.display = "none";
-        document.getElementById('login-screen').style.display = "flex";
-        document.getElementById('username').value = "";
-        document.getElementById('password').value = "";
-        document.getElementById('plate-output').style.display = "none";
-        document.getElementById('salvavidas-output').style.display = "none";
-    }
-
-    function cargarDatosNutricionales(spreadsheetId) {
-        document.getElementById('sync-status').innerText = "Sincronizando...";
-        document.getElementById('sync-status').style.background = "#fef3c7";
-
-        const urlAjustes = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?gid=${GID_AJUSTES}&tqx=out:json`;
-        const urlEquiv = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?gid=${GID_EQUIV}&tqx=out:json`;
-
-        Promise.all([
-            fetch(urlAjustes).then(r => r.text()),
-            fetch(urlEquiv).then(r => r.text())
-        ]).then(([dataAjustes, dataEquiv]) => {
-            procesarPerfilYBloquesPaciente(dataAjustes);
-            procesarYRenderizarEquivalencias(dataEquiv);
-            
-            document.getElementById('sync-status').innerText = "Sincronizado";
-            document.getElementById('sync-status').style.background = "#dcfce7";
-            document.getElementById('sync-status').style.color = "#15803d";
-        }).catch(err => {
+            cargarDatosNutricionales(idPaciente);
+        })
+        .catch(err => {
             console.error(err);
-            document.getElementById('sync-status').innerText = "Error en pautas";
-            document.getElementById('sync-status').style.background = "#ffeeec";
+            errTxt.innerText = "Error al conectar con la base de datos.";
         });
+}
+
+function cerrarSesion() {
+    document.getElementById('dashboard-screen').style.display = "none";
+    document.getElementById('login-screen').style.display = "flex";
+    document.getElementById('username').value = "";
+    document.getElementById('password').value = "";
+    document.getElementById('plate-output').style.display = "none";
+    document.getElementById('salvavidas-output').style.display = "none";
+    document.getElementById('debug-panel').textContent = "";
+    bloquesAsignadosPorIngesta = {};
+    poolProteinas = []; poolCarbohidratos = []; poolGrasas = []; poolBuscadorCompleto = [];
+}
+
+// ─── Carga de datos ───
+function cargarDatosNutricionales(spreadsheetId) {
+    document.getElementById('sync-status').innerText = "Sincronizando...";
+    document.getElementById('sync-status').style.background = "#fef3c7";
+    document.getElementById('sync-status').style.color = "#92400e";
+
+    // Leemos la pestaña MASTER (gid=0) del paciente para bloques + comodín
+    const urlMaster = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?gid=${GID_PACIENTE_MASTER}&tqx=out:json`;
+    // Leemos la pestaña TABLA EQUIVALENCIAS para la BBDD de alimentos
+    const urlEquiv  = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?gid=${GID_EQUIV}&tqx=out:json`;
+
+    Promise.all([
+        fetch(urlMaster).then(r => r.text()),
+        fetch(urlEquiv).then(r => r.text())
+    ]).then(([dataMaster, dataEquiv]) => {
+        procesarMasterPaciente(dataMaster);
+        procesarYRenderizarEquivalencias(dataEquiv);
+
+        document.getElementById('sync-status').innerText = "Sincronizado ✓";
+        document.getElementById('sync-status').style.background = "#dcfce7";
+        document.getElementById('sync-status').style.color = "#15803d";
+    }).catch(err => {
+        console.error(err);
+        document.getElementById('sync-status').innerText = "Error al cargar";
+        document.getElementById('sync-status').style.background = "#ffeeec";
+        document.getElementById('sync-status').style.color = "#991b1b";
+    });
+}
+
+// ─────────────────────────────────────────────────────────────
+//  PROCESAR PESTAÑA MASTER DEL PACIENTE (gid=0)
+//
+//  Estructura real de la hoja (índices base 0):
+//
+//  Fila 0  (fila 1):  A=Sexo          B=Masculino     D=Estilo de vida       E=(vacío)
+//  Fila 1  (fila 2):  A=Peso          B=80            D=Tags a excluir       E=LACTOSA
+//  Fila 2  (fila 3):  A=Altura        B=174           D=Alimentos odiados    E=Atún
+//  Fila 3  (fila 4):  A=Edad          B=23            D=(vacío)              E=(vacío)
+//  Fila 4  (fila 5):  A=Nivel activ.  B=Sedentario    D=Nombre receta        E=Arroz con...
+//  Fila 5  (fila 6):  A=Objetivo      B=Pérdida...    D=Alimentos proteina   E=P_001
+//  Fila 6  (fila 7):  (vacío)                         D=Alimentos hidratos   E=HC_001
+//  Fila 7  (fila 8):  (vacío)                         D=Alimentos grasa      E=G_003
+//  Fila 8  (fila 9):  A=CONTEO...     B=CANTIDAD...   D=Salsa/condimentos    E=Tomate
+//  Fila 9  (fila 10): A=Gasto energ.  B=2258
+//  Fila 10 (fila 11): A=Calorías obj. B=1806
+//  Fila 11 (fila 12): A=Bloques P     B=8
+//  Fila 12 (fila 13): A=Bloques G     B=5
+//  Fila 13 (fila 14): A=Bloques HC    B=9
+//  Fila 14 (fila 15): (vacío)         C=PORCENTAJES
+//  Fila 15 (fila 16): A=%Desayuno     B=0.2
+//  Fila 16 (fila 17): A=%Almuerzo     B=0.15
+//  Fila 17 (fila 18): A=%Comida       B=0.3
+//  Fila 18 (fila 19): A=%Merienda     B=0.15
+//  Fila 19 (fila 20): A=%Cena         B=0.2
+// ─────────────────────────────────────────────────────────────
+function procesarMasterPaciente(raw) {
+    const json = cleanJSON(raw);
+    const rows = json.table.rows;
+
+    debugLog('[MASTER] Total filas recibidas: ' + rows.length);
+
+    // Volcamos todas las filas al debug para verificar (opcional)
+    rows.forEach((r, i) => {
+        if (r && r.c) {
+            const vals = r.c.map(c => c?.v ?? '').join(' | ');
+            debugLog(`  Fila ${i}: ${vals}`);
+        }
+    });
+
+    // ── 1. Exclusiones (columna E = índice 4) ──
+    // Fila 0 → Estilo de vida (E1)
+    exclusionesPaciente.estiloVida = getCelda(rows, 0, 4).toUpperCase();
+
+    // Fila 1 → Tags a excluir (E2)
+    const tagsRaw = getCelda(rows, 1, 4);
+    exclusionesPaciente.tagsExcluir = tagsRaw
+        ? tagsRaw.split(',').map(t => t.trim().toUpperCase()).filter(t => t !== '')
+        : [];
+
+    // Fila 2 → Alimentos odiados (E3)
+    const odiadosRaw = getCelda(rows, 2, 4);
+    exclusionesPaciente.alimentosOdiados = odiadosRaw
+        ? odiadosRaw.split(',').map(a => a.trim().toLowerCase()).filter(a => a !== '')
+        : [];
+
+    debugLog(`[EXCLUSIONES] Estilo: "${exclusionesPaciente.estiloVida}" | Tags: ${JSON.stringify(exclusionesPaciente.tagsExcluir)} | Odiados: ${JSON.stringify(exclusionesPaciente.alimentosOdiados)}`);
+
+    // ── 2. Comodín salvavidas (columna E = índice 4) ──
+    // Fila 4  → Nombre receta (E5)
+    datosComodinFijo.nombreReceta = getCelda(rows, 4, 4) || "Receta Comodín";
+
+    // Fila 5  → IDs Proteínas (E6)
+    const pRaw = getCelda(rows, 5, 4);
+    datosComodinFijo.proteinasIds = pRaw
+        ? pRaw.split(',').map(id => id.trim().toUpperCase()).filter(id => id !== '')
+        : [];
+
+    // Fila 6  → IDs Carbohidratos (E7)
+    const hcRaw = getCelda(rows, 6, 4);
+    datosComodinFijo.carbohidratosIds = hcRaw
+        ? hcRaw.split(',').map(id => id.trim().toUpperCase()).filter(id => id !== '')
+        : [];
+
+    // Fila 7  → IDs Grasas (E8)
+    const gRaw = getCelda(rows, 7, 4);
+    datosComodinFijo.grasasIds = gRaw
+        ? gRaw.split(',').map(id => id.trim().toUpperCase()).filter(id => id !== '')
+        : [];
+
+    // Fila 8  → Libres/condimentos (E9)
+    datosComodinFijo.libresTexto = getCelda(rows, 8, 4);
+
+    debugLog(`[COMODÍN] Receta: "${datosComodinFijo.nombreReceta}"`);
+    debugLog(`[COMODÍN] P IDs: ${JSON.stringify(datosComodinFijo.proteinasIds)}`);
+    debugLog(`[COMODÍN] HC IDs: ${JSON.stringify(datosComodinFijo.carbohidratosIds)}`);
+    debugLog(`[COMODÍN] G IDs: ${JSON.stringify(datosComodinFijo.grasasIds)}`);
+    debugLog(`[COMODÍN] Libres: "${datosComodinFijo.libresTexto}"`);
+
+    // ── 3. Bloques totales diarios ──
+    // Fila 11 → Bloques Proteína  (B12) → columna B = índice 1
+    // Fila 12 → Bloques Grasa     (B13) → columna B = índice 1
+    // Fila 13 → Bloques HC        (B14) → columna B = índice 1
+    const totalP  = parseFloat(String(getCelda(rows, 11, 1)).replace(',', '.')) || 0;
+    const totalG  = parseFloat(String(getCelda(rows, 12, 1)).replace(',', '.')) || 0;
+    const totalHC = parseFloat(String(getCelda(rows, 13, 1)).replace(',', '.')) || 0;
+
+    debugLog(`[BLOQUES TOTALES] P=${totalP}  G=${totalG}  HC=${totalHC}`);
+
+    // ── 4. Porcentajes por ingesta ──
+    // Fila 15 → %Desayuno  B16
+    // Fila 16 → %Almuerzo  B17
+    // Fila 17 → %Comida    B18
+    // Fila 18 → %Merienda  B19
+    // Fila 19 → %Cena      B20
+    const porcentajes = [];
+    for (let i = 0; i < 5; i++) {
+        const raw = getCelda(rows, 15 + i, 1);
+        // Google Sheets puede devolver 0.2 o "0,2" o "20" — normalizamos
+        let val = parseFloat(String(raw).replace(',', '.')) || 0;
+        // Si viene como porcentaje entero (20, 15, 30...) lo convertimos a decimal
+        if (val > 1) val = val / 100;
+        porcentajes.push(val);
+        debugLog(`[%] ${MEAL_NAMES[i]}: raw="${raw}" → ${val}`);
     }
 
-    function procesarPerfilYBloquesPaciente(raw) {
-        const json = cleanJSON(raw);
-        const rows = json.table.rows;
+    // ── 5. Calcular bloques por ingesta y renderizar tarjetas ──
+    bloquesAsignadosPorIngesta = {};
+    const grid = document.getElementById('meal-grid');
+    let html = "";
 
-        exclusionesPaciente.estiloVida = "";
-        exclusionesPaciente.tagsExcluir = [];
-        exclusionesPaciente.alimentosOdiados = [];
+    MEAL_NAMES.forEach((nombre, i) => {
+        const pct = porcentajes[i] || 0;
+        const p  = parseFloat((totalP  * pct).toFixed(1));
+        const hc = parseFloat((totalHC * pct).toFixed(1));
+        const g  = parseFloat((totalG  * pct).toFixed(1));
 
-        function extraerColumnaE(filaIdx) {
-            if (rows[filaIdx] && rows[filaIdx].c && rows[filaIdx].c[4] && rows[filaIdx].c[4].v !== null) {
-                return String(rows[filaIdx].c[4].v).trim();
-            }
-            return "";
+        bloquesAsignadosPorIngesta[nombre] = { p, hc, g };
+
+        debugLog(`[BLOQUES] ${nombre}: P=${p}  HC=${hc}  G=${g}  (pct=${pct})`);
+
+        const icon = mealIcons[nombre] || "fa-utensils";
+        html += `
+            <div class="meal-card">
+                <div class="meal-name"><i class="fa-solid ${icon}"></i> ${nombre}</div>
+                <div class="meal-content">
+                    🥩 Proteínas: <strong>${p} bloques</strong><br>
+                    🌾 Carbohidratos: <strong>${hc} bloques</strong><br>
+                    🥑 Grasas: <strong>${g} bloques</strong>
+                </div>
+            </div>`;
+    });
+
+    grid.innerHTML = html;
+}
+
+// ─── Equivalencias ───
+function procesarYRenderizarEquivalencias(raw) {
+    const json = cleanJSON(raw);
+    const rows = json.table.rows;
+    poolProteinas = []; poolCarbohidratos = []; poolGrasas = []; poolBuscadorCompleto = [];
+
+    function parsearGramos(celda) {
+        if (!celda || celda.v === null) return null;
+        let str = String(celda.v).replace(/\s+/g, '').toLowerCase();
+        let match = str.match(/(\d+(?:[.,]\d+)?)/);
+        return match ? parseFloat(match[1].replace(',', '.')) : null;
+    }
+
+    function detectarUnidad(celdaStr) {
+        let str = (celdaStr || '').toLowerCase();
+        if (str.includes('ml')) return 'ml';
+        if (str.includes('ud') || str.includes('unidad')) return 'udes';
+        return 'g';
+    }
+
+    function debeExcluirse(nombre, celdaExclusion, celdaEstilo, celdaMomento) {
+        if (!nombre) return true;
+        const nClean = nombre.toLowerCase();
+        if (exclusionesPaciente.alimentosOdiados.some(o => nClean.includes(o))) return true;
+
+        const tags = `
+            ${celdaExclusion?.v ? String(celdaExclusion.v) : ''}
+            ${celdaEstilo?.v   ? String(celdaEstilo.v)   : ''}
+            ${celdaMomento?.v  ? String(celdaMomento.v)  : ''}
+        `.toUpperCase();
+
+        if (['VEGETARIANO', 'VEGANO'].includes(exclusionesPaciente.estiloVida)) {
+            if (tags.includes('ANIMAL') || tags.includes('CARNE') || tags.includes('PESCADO')) return true;
         }
+        for (const tag of exclusionesPaciente.tagsExcluir) {
+            if (tags.includes(tag)) return true;
+        }
+        return false;
+    }
 
-        exclusionesPaciente.estiloVida = extraerColumnaE(0).toUpperCase();
-        let tagsRaw = extraerColumnaE(1);
-        exclusionesPaciente.tagsExcluir = tagsRaw ? tagsRaw.split(',').map(t => t.trim().toUpperCase()).filter(t => t !== "") : [];
-        let odiadosRaw = extraerColumnaE(2);
-        exclusionesPaciente.alimentosOdiados = odiadosRaw ? odiadosRaw.split(',').map(a => a.trim().toLowerCase()).filter(a => a !== "") : [];
+    for (let i = 1; i < rows.length; i++) {
+        const row = rows[i].c;
+        if (!row) continue;
 
-        // MAPEADO EXACTO DE CONFIGURACIÓN DE COMODÍN DESDE COLUMNA E
-        datosComodinFijo.nombreReceta = extraerColumnaE(4) || "Receta Fija"; // E5 -> Título del plato
-        
-        let pRaw = extraerColumnaE(5);                                      // E6 -> IDs Proteínas
-        datosComodinFijo.proteinasIds = pRaw ? pRaw.split(',').map(id => id.trim().toUpperCase()).filter(id => id !== "") : [];
-        
-        let hcRaw = extraerColumnaE(6);                                     // E7 -> IDs Carbohidratos
-        datosComodinFijo.carbohidratosIds = hcRaw ? hcRaw.split(',').map(id => id.trim().toUpperCase()).filter(id => id !== "") : [];
-        
-        let gRaw = extraerColumnaE(7);                                      // E8 -> IDs Grasas
-        datosComodinFijo.grasasIds = gRaw ? gRaw.split(',').map(id => id.trim().toUpperCase()).filter(id => id !== "") : [];
-        
-        datosComodinFijo.libresTexto = extraerColumnaE(8);                  // E9 -> Libres / Extras
+        if (row[0]?.v !== null && String(row[0]?.v || '').trim() !== '' && !String(row[0]?.v || '').includes('PROTEÍNAS')) {
+            const n = String(row[0].v).trim();
+            if (!debeExcluirse(n, row[5], row[6], row[7])) {
+                const item = { nombre: n, gramos: parsearGramos(row[1]), unidad: detectarUnidad(String(row[1]?.v || '')), tipo: 'PROTEÍNAS' };
+                poolProteinas.push(item); poolBuscadorCompleto.push(item);
+            }
+        }
+        if (row[2]?.v !== null && String(row[2]?.v || '').trim() !== '' && !String(row[2]?.v || '').includes('CARBOHIDRATOS')) {
+            let n = String(row[2].v).trim();
+            if (n.endsWith('|')) n = n.slice(0, -1).trim();
+            if (!debeExcluirse(n, row[5], row[6], row[7])) {
+                const item = { nombre: n, gramos: parsearGramos(row[3]), unidad: detectarUnidad(String(row[3]?.v || '')), tipo: 'CARBOHIDRATOS' };
+                poolCarbohidratos.push(item); poolBuscadorCompleto.push(item);
+            }
+        }
+        if (row[4]?.v !== null && String(row[4]?.v || '').trim() !== '' && !String(row[4]?.v || '').includes('GRASAS')) {
+            const n = String(row[4].v).trim();
+            if (!debeExcluirse(n, row[5], row[6], row[7])) {
+                const item = { nombre: n, gramos: parsearGramos(row[5]), unidad: detectarUnidad(String(row[5]?.v || '')), tipo: 'GRASAS' };
+                poolGrasas.push(item); poolBuscadorCompleto.push(item);
+            }
+        }
+        if (row[8]?.v !== null && String(row[8]?.v || '').trim() !== '' && !String(row[8]?.v || '').includes('MIXTO')) {
+            const n = String(row[8].v).trim();
+            if (!debeExcluirse(n, row[5], row[6], row[7])) {
+                poolBuscadorCompleto.push({ nombre: n, gramos: null, unidad: '', tipo: 'ALIMENTOS MIXTOS' });
+            }
+        }
+    }
 
-        const grid = document.getElementById('meal-grid');
-        let html = "";
+    debugLog(`[EQUIV] P=${poolProteinas.length}  HC=${poolCarbohidratos.length}  G=${poolGrasas.length}`);
 
-        for (let i = 0; i < 5; i++) {
-            if (!rows[i] || !rows[i].c) continue;
-            const row = rows[i].c;
-            const mealName = row[0] && row[0].v ? String(row[0].v).toUpperCase() : `INGESTA ${i+1}`; 
-            const blocksRaw = row[2] && row[2].v ? String(row[2].v) : '0'; 
-            
-            let pBlocks = 0, hcBlocks = 0, gBlocks = 0;
-            const lineas = blocksRaw.split(/[\n]/);
-            lineas.forEach(linea => {
-                const cleanLine = linea.replace(/\s+/g, ' ').trim().toLowerCase();
-                let numericoStr = cleanLine.replace(/[^0-9.,]/g, '').replace(',', '.');
-                let valorDecimal = parseFloat(numericoStr) || 0;
-                if (cleanLine.includes('prot')) pBlocks = valorDecimal;
-                else if (cleanLine.includes('carb') || cleanLine.includes('hidr')) hcBlocks = valorDecimal;
-                else if (cleanLine.includes('gras')) gBlocks = valorDecimal;
-            });
+    // Renderizar tabla
+    const tbody = document.getElementById('table-body');
+    let htmlTable = '';
+    poolBuscadorCompleto.forEach(item => {
+        let bClass = 'bg-p';
+        if (item.tipo === 'CARBOHIDRATOS')   bClass = 'bg-hc';
+        else if (item.tipo === 'GRASAS')      bClass = 'bg-g';
+        else if (item.tipo === 'ALIMENTOS MIXTOS') bClass = 'bg-m';
+        htmlTable += `<tr data-type="${item.tipo.toLowerCase()}">
+            <td><strong>${item.nombre}</strong></td>
+            <td>${item.gramos !== null ? item.gramos + item.unidad : 'Ver definición'}</td>
+            <td><span class="badge ${bClass}">${item.tipo}</span></td>
+        </tr>`;
+    });
+    tbody.innerHTML = htmlTable;
 
-            bloquesAsignadosPorIngesta[mealName] = { p: pBlocks, hc: hcBlocks, g: gBlocks };
-            const icon = mealIcons[mealName] || "fa-utensils";
+    // Observaciones (columnas I, J, K = índices 9, 10, 11)
+    let obsG = [], obsI = [], obsJ = [];
+    for (let i = 0; i < rows.length; i++) {
+        if (rows[i]?.c) {
+            if (rows[i].c[9]?.v)  obsG.push(String(rows[i].c[9].v));
+            if (rows[i].c[10]?.v) obsI.push(String(rows[i].c[10].v));
+            if (rows[i].c[11]?.v) obsJ.push(String(rows[i].c[11].v));
+        }
+    }
+    document.getElementById('obs-grid').innerHTML = `
+        <div class="obs-card"><div class="obs-title">${obsG[0] || 'Info'}</div><div class="obs-content">${obsG.slice(1).join('<br>')}</div></div>
+        <div class="obs-card c2"><div class="obs-title">${obsI[0] || 'Pautas'}</div><div class="obs-content">${obsI.slice(1).join('<br>')}</div></div>
+        <div class="obs-card c3"><div class="obs-title">${obsJ[0] || 'Extra'}</div><div class="obs-content">${obsJ.slice(1).join('<br>')}</div></div>`;
+}
 
-            html += `
-                <div class="meal-card">
-                    <div class="meal-name"><i class="fa-solid ${icon}"></i> ${mealName}</div>
-                    <div class="meal-content">${blocksRaw.replace(/\n/g, '<br>')}</div>
+// ─────────────────────────────────────────────────────────────
+//  COMODÍN SALVAVIDAS
+//  Resuelve un ID tipo "P_001" → posición 1 (índice 0) del pool
+//  Resuelve "HC_003" → posición 3 (índice 2) del pool de HC
+//  Resuelve "G_003"  → posición 3 (índice 2) del pool de G
+// ─────────────────────────────────────────────────────────────
+function calcularComodinSalvavidas() {
+    const ingesta = document.getElementById('salvavidas-selector').value;
+    const blq = bloquesAsignadosPorIngesta[ingesta];
+    const out = document.getElementById('salvavidas-output');
+    out.style.display = "block";
+
+    if (!blq || (blq.p === 0 && blq.hc === 0 && blq.g === 0)) {
+        out.innerHTML = `<div class="plate-title">No hay bloques definidos para la ingesta seleccionada.</div>`;
+        return;
+    }
+
+    let html = `<div class="plate-title" style="color: var(--amber-text); border-bottom-color: var(--amber-border)">
+                    <i class="fa-solid fa-utensils"></i> Plato: <b>${datosComodinFijo.nombreReceta}</b><br>
+                    <small style="font-size:12px; color: var(--text-light)">
+                        Cantidades ajustadas para ${ingesta} &nbsp;·&nbsp; 
+                        ${blq.p}P &nbsp;·&nbsp; ${blq.hc}HC &nbsp;·&nbsp; ${blq.g}G
+                    </small>
                 </div>`;
-        }
-        grid.innerHTML = html;
-    }
 
-    function procesarYRenderizarEquivalencias(raw) {
-        const json = cleanJSON(raw);
-        const rows = json.table.rows;
-        poolProteinas = []; poolCarbohidratos = []; poolGrasas = []; poolBuscadorCompleto = [];
+    let hayIngredientes = false;
 
-        function parsearGramos(celda) {
-            if(!celda || celda.v === null) return null;
-            let str = String(celda.v).replace(/\s+/g, '').toLowerCase();
-            let match = str.match(/(\d+(?:[.,]\d+)?)/); 
-            return match ? parseFloat(match[1].replace(',', '.')) : null;
-        }
-        function detectarUnidad(celdaStr) {
-            let str = celdaStr.toLowerCase();
-            if(str.includes('ml')) return 'ml';
-            if(str.includes('ud') || str.includes('unidad')) return 'udes';
-            return 'g';
-        }
+    function procesarMacroComodin(listaIds, bloquesTotales, poolAlimentos, bgClass, emoji) {
+        if (!listaIds || listaIds.length === 0 || bloquesTotales <= 0) return '';
+        const bloquesPorAlimento = bloquesTotales / listaIds.length;
+        let subHtml = '';
 
-        for (let i = 1; i < rows.length; i++) {
-            const row = rows[i].c;
-            if (!row) continue;
+        listaIds.forEach(id => {
+            const idClean = id.replace(/\s+/g, '').toUpperCase();
+            if (idClean === '') return;
 
-            function debeExcluirse(nombre, celdaExclusion, celdaEstilo, celdaMomento) {
-                if (!nombre) return true;
-                let nClean = nombre.toLowerCase();
-                if (exclusionesPaciente.alimentosOdiados.some(odiado => nClean.includes(odiado))) return true; 
-
-                let tagsAlimento = `
-                    ${celdaExclusion && celdaExclusion.v ? String(celdaExclusion.v) : ''} 
-                    ${celdaEstilo && celdaEstilo.v ? String(celdaEstilo.v) : ''} 
-                    ${celdaMomento && celdaMomento.v ? String(celdaMomento.v) : ''}
-                `.toUpperCase();
-
-                if (exclusionesPaciente.estiloVida === "VEGETARIANO" || exclusionesPaciente.estiloVida === "VEGANO") {
-                    if (tagsAlimento.includes("ANIMAL") || tagsAlimento.includes("CARNE") || tagsAlimento.includes("PESCADO")) return true;
-                }
-                for (let tagExcluido of exclusionesPaciente.tagsExcluir) {
-                    if (tagsAlimento.includes(tagExcluido)) return true;
-                }
-                return false;
+            const matchNum = idClean.match(/\d+/);
+            if (!matchNum) {
+                subHtml += `<div class="plate-item" style="color:var(--p-color)">
+                    <span>⚠️ ID "<b>${idClean}</b>" no válido. Formato esperado: P_001, HC_002, G_003</span></div>`;
+                return;
             }
 
-            // Mantenemos intactos tus mapeos por columnas tradicionales de BBDD alimentos
-            if (row[0] && row[0].v !== null && String(row[0].v).trim() !== "" && !String(row[0].v).includes("PROTEÍNAS")) {
-                let n = String(row[0].v).trim();
-                if (!debeExcluirse(n, row[5], row[6], row[7])) {
-                    const item = { nombre: n, gramos: parsearGramos(row[1]), unidad: detectarUnidad(String(row[1]?.v || '')), tipo: "PROTEÍNAS" };
-                    poolProteinas.push(item); poolBuscadorCompleto.push(item);
-                }
-            }
-            if (row[2] && row[2].v !== null && String(row[2].v).trim() !== "" && !String(row[2].v).includes("CARBOHIDRATOS")) {
-                let n = String(row[2].v).trim(); if(n.endsWith('|')) n = n.slice(0, -1).trim();
-                if (!debeExcluirse(n, row[5], row[6], row[7])) {
-                    const item = { nombre: n, gramos: parsearGramos(row[3]), unidad: detectarUnidad(String(row[3]?.v || '')), tipo: "CARBOHIDRATOS" };
-                    poolCarbohidratos.push(item); poolBuscadorCompleto.push(item);
-                }
-            }
-            if (row[4] && row[4].v !== null && String(row[4].v).trim() !== "" && !String(row[4].v).includes("GRASAS")) {
-                let n = String(row[4].v).trim();
-                if (!debeExcluirse(n, row[5], row[6], row[7])) {
-                    const item = { nombre: n, gramos: parsearGramos(row[5]), unidad: detectarUnidad(String(row[5]?.v || '')), tipo: "GRASAS" };
-                    poolGrasas.push(item); poolBuscadorCompleto.push(item);
-                }
-            }
-            if (row[8] && row[8].v !== null && String(row[8].v).trim() !== "" && !String(row[8].v).includes("MIXTO")) {
-                let n = String(row[8].v).trim();
-                if (!debeExcluirse(n, row[5], row[6], row[7])) {
-                    poolBuscadorCompleto.push({ nombre: n, gramos: null, unidad: '', tipo: "ALIMENTOS MIXTOS" });
-                }
-            }
-        }
+            // El número en el ID es 1-based → índice = número - 1
+            const indice = parseInt(matchNum[0], 10) - 1;
+            const alimento = poolAlimentos[indice];
 
-        const tbody = document.getElementById('table-body');
-        let htmlTable = "";
-        poolBuscadorCompleto.forEach(item => {
-            let bClass = "bg-p";
-            if(item.tipo === "CARBOHIDRATOS") bClass = "bg-hc";
-            else if(item.tipo === "GRASAS") bClass = "bg-g";
-            else if(item.tipo === "ALIMENTOS MIXTOS") bClass = "bg-m";
-            htmlTable += `<tr data-type="${item.tipo.toLowerCase()}">
-                <td><strong>${item.nombre}</strong></td>
-                <td>${item.gramos !== null ? item.gramos+item.unidad : 'Ver definición'}</td>
-                <td><span class="badge ${bClass}">${item.tipo}</span></td>
-            </tr>`;
-        });
-        tbody.innerHTML = htmlTable;
-
-        let obsG = [], obsI = [], obsJ = [];
-        for (let i = 0; i < rows.length; i++) {
-            if(rows[i]?.c) {
-                if(rows[i].c[9]?.v) obsG.push(String(rows[i].c[9].v));
-                if(rows[i].c[10]?.v) obsI.push(String(rows[i].c[10].v));
-                if(rows[i].c[11]?.v) obsJ.push(String(rows[i].c[11].v));
-            }
-        }
-        document.getElementById('obs-grid').innerHTML = `
-            <div class="obs-card"><div class="obs-title">${obsG[0] || 'Info'}</div><div class="obs-content">${obsG.slice(1).join('<br>')}</div></div>
-            <div class="obs-card c2"><div class="obs-title">${obsI[0] || 'Pautas'}</div><div class="obs-content">${obsI.slice(1).join('<br>')}</div></div>
-            <div class="obs-card c3"><div class="obs-title">${obsJ[0] || 'Extra'}</div><div class="obs-content">${obsJ.slice(1).join('<br>')}</div></div>`;
-    }
-
-    // MOTOR EXCLUSIVO RESOLUTOR DEL COMODÍN MEDIANTE ÍNDICE DE MATRIZ ASOCIADO AL ID
-    function calcularComodinSalvavidas() {
-        const ingesta = document.getElementById('salvavidas-selector').value;
-        const blq = bloquesAsignadosPorIngesta[ingesta];
-        const out = document.getElementById('salvavidas-output');
-        out.style.display = "block";
-
-        if (!blq || (blq.p === 0 && blq.hc === 0 && blq.g === 0)) {
-            out.innerHTML = `<div class="plate-title">No hay bloques definidos para la ingesta seleccionada.</div>`;
-            return;
-        }
-
-        let html = `<div class="plate-title" style="color: var(--amber-text); border-bottom-color: var(--amber-border)">
-                        <i class="fa-solid fa-utensils"></i> Plato: <b>${datosComodinFijo.nombreReceta}</b><br>
-                        <small style="font-size:12px; color: var(--text-light)">Cantidades ajustadas para ${ingesta} (${blq.p}P - ${blq.hc}HC - ${blq.g}G)</small>
+            if (alimento) {
+                const gBase = alimento.gramos || 0;
+                const gramosCalculados = (bloquesPorAlimento * gBase).toFixed(0);
+                subHtml += `
+                    <div class="plate-item">
+                        <span>${emoji} <b>${gramosCalculados}${alimento.unidad || 'g'}</b> de <b>${alimento.nombre}</b>
+                            <small style="color:var(--text-light); margin-left:6px">(${bloquesPorAlimento.toFixed(1)} blq · ${gBase}${alimento.unidad}/blq)</small>
+                        </span>
+                        <span class="item-macro-tag ${bgClass}">${bgClass.replace('bg-', '').toUpperCase()}</span>
                     </div>`;
-
-        let flagTieneIngredientes = false;
-
-        function procesarMacroComodin(listaIds, bloquesTotales, poolAlimentos, bgClass, emoji) {
-            if (!listaIds || listaIds.length === 0 || bloquesTotales <= 0) return "";
-            
-            let bloquesPorAlimento = bloquesTotales / listaIds.length;
-            let subHtml = "";
-
-            listaIds.forEach(id => {
-                let idClean = id.replace(/\s+/g, '').toUpperCase();
-                if (idClean === "") return;
-                
-                // Extrae el número del ID (ej: de "P_001" saca 1)
-                let matchNumero = idClean.match(/\d+/);
-                if(!matchNumero) {
-                    subHtml += `<div class="plate-item" style="color:var(--p-color)"><span>⚠️ ID "${idClean}" no válido. Use el formato correcto (Ej: P_001).</span></div>`;
-                    return;
-                }
-                
-                // Restamos 1 ya que los índices de los arreglos en JavaScript empiezan en 0
-                let indiceAlimento = parseInt(matchNumero[0], 10) - 1;
-                let alimentoEncontrado = poolAlimentos[indiceAlimento];
-                
-                if (alimentoEncontrado) {
-                    let gBase = alimentoEncontrado.gramos || 0;
-                    let gramosCalculados = (bloquesPorAlimento * gBase).toFixed(0);
-                    subHtml += `
-                        <div class="plate-item">
-                            <span>${emoji} <b>${gramosCalculados}${alimentoEncontrado.unidad || 'g'}</b> de <b>${alimentoEncontrado.nombre}</b> <small style="color:var(--text-light)">(${bloquesPorAlimento.toFixed(1)} blq)</small></span>
-                            <span class="item-macro-tag ${bgClass}">${bgClass.replace('bg-','').toUpperCase()}</span>
-                        </div>`;
-                    flagTieneIngredientes = true;
-                } else {
-                    subHtml += `<div class="plate-item" style="color:var(--p-color)"><span>⚠️ No existe la fila correspondiente al ID <b>"${idClean}"</b> en la lista de equivalencias.</span></div>`;
-                }
-            });
-            return subHtml;
-        }
-
-        html += procesarMacroComodin(datosComodinFijo.proteinasIds, blq.p, poolProteinas, 'bg-p', '🥩');
-        html += procesarMacroComodin(datosComodinFijo.carbohidratosIds, blq.hc, poolCarbohidratos, 'bg-hc', '🌾');
-        html += procesarMacroComodin(datosComodinFijo.grasasIds, blq.g, poolGrasas, 'bg-g', '🥑');
-
-        if (datosComodinFijo.libresTexto && datosComodinFijo.libresTexto !== "" && datosComodinFijo.libresTexto.toLowerCase() !== "ninguno") {
-            html += `
-                <div class="plate-item" style="background-color: #f8fafc; padding: 10px; border-radius: 6px; margin-top: 10px;">
-                    <span>🧂 <b>Extras libres:</b> ${datosComodinFijo.libresTexto}</span>
-                    <span class="badge bg-m">Libre</span>
-                </div>`;
-            flagTieneIngredientes = true;
-        }
-
-        if (!flagTieneIngredientes) {
-            out.innerHTML = `<div class="plate-title" style="color:var(--text-light); border-bottom: none; margin-bottom: 0;">ℹ️ Comprueba los IDs de las celdas E6, E7 y E8 en tu hoja máster del paciente.</div>`;
-            return;
-        }
-
-        out.innerHTML = html;
+                hayIngredientes = true;
+                debugLog(`[COMODÍN CALC] ID=${idClean} → índice ${indice} → "${alimento.nombre}" ${gramosCalculados}${alimento.unidad}`);
+            } else {
+                subHtml += `<div class="plate-item" style="color:var(--p-color)">
+                    <span>⚠️ No existe la fila <b>${parseInt(matchNum[0], 10)}</b> en la lista de 
+                    ${bgClass === 'bg-p' ? 'proteínas' : bgClass === 'bg-hc' ? 'carbohidratos' : 'grasas'} 
+                    (hay ${poolAlimentos.length} alimentos disponibles). ID: <b>${idClean}</b></span></div>`;
+                debugLog(`[COMODÍN ERROR] ID=${idClean} → índice ${indice} no existe en pool (size=${poolAlimentos.length})`);
+            }
+        });
+        return subHtml;
     }
 
-    function generarPlatoInteligente() {
-        const ingesta = document.getElementById('meal-selector').value;
-        const blq = bloquesAsignadosPorIngesta[ingesta];
-        const out = document.getElementById('plate-output');
-        out.style.display = "block";
+    html += procesarMacroComodin(datosComodinFijo.proteinasIds,     blq.p,  poolProteinas,     'bg-p',  '🥩');
+    html += procesarMacroComodin(datosComodinFijo.carbohidratosIds, blq.hc, poolCarbohidratos, 'bg-hc', '🌾');
+    html += procesarMacroComodin(datosComodinFijo.grasasIds,        blq.g,  poolGrasas,        'bg-g',  '🥑');
 
-        if (!blq || (blq.p === 0 && blq.hc === 0 && blq.g === 0)) {
-            out.innerHTML = `<div class="plate-title">No hay bloques definidos para esta ingesta.</div>`;
-            return;
-        }
-
-        let html = `<div class="plate-title">Propuesta adaptada a tus bloques (${blq.p}P - ${blq.hc}HC - ${blq.g}G)</div>`;
-        
-        if(blq.p > 0 && poolProteinas.length > 0) {
-            let p = poolProteinas[Math.floor(Math.random() * poolProteinas.length)];
-            html += `<div class="plate-item"><span>🥩 <b>${(blq.p * (p.gramos || 0)).toFixed(0)}${p.unidad}</b> de <b>${p.nombre}</b></span><span class="item-macro-tag bg-p">P</span></div>`;
-        }
-        if(blq.hc > 0 && poolCarbohidratos.length > 0) {
-            let h = poolCarbohidratos[Math.floor(Math.random() * poolCarbohidratos.length)];
-            html += `<div class="plate-item"><span>🌾 <b>${(blq.hc * (h.gramos || 0)).toFixed(0)}${h.unidad}</b> de <b>${h.nombre}</b></span><span class="item-macro-tag bg-hc">HC</span></div>`;
-        }
-        if(blq.g > 0 && poolGrasas.length > 0) {
-            let g = poolGrasas[Math.floor(Math.random() * poolGrasas.length)];
-            html += `<div class="plate-item"><span>🥑 <b>${(blq.g * (g.gramos || 0)).toFixed(0)}${g.unidad}</b> de <b>${g.nombre}</b></span><span class="item-macro-tag bg-g">G</span></div>`;
-        }
-        out.innerHTML = html;
+    if (datosComodinFijo.libresTexto && datosComodinFijo.libresTexto !== '' && datosComodinFijo.libresTexto.toLowerCase() !== 'ninguno') {
+        html += `
+            <div class="plate-item" style="background-color:#f8fafc; padding:10px; border-radius:6px; margin-top:10px;">
+                <span>🧂 <b>Extras libres:</b> ${datosComodinFijo.libresTexto}</span>
+                <span class="badge bg-m">Libre</span>
+            </div>`;
+        hayIngredientes = true;
     }
 
-    function setCategoryFilter(cat, btn) {
-        currentCategoryFilter = cat;
-        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        ejecutarFiltroCombinado();
+    if (!hayIngredientes) {
+        out.innerHTML = `<div class="plate-title" style="color:var(--text-light); border-bottom:none; margin-bottom:0;">
+            ℹ️ No se encontraron ingredientes. Revisa que los IDs en E6, E7, E8 de tu hoja MASTER sean correctos 
+            (formato P_001, HC_001, G_003) y que existan en la tabla de equivalencias.</div>`;
+        return;
     }
 
-    function ejecutarFiltroCombinado() {
-        const text = document.getElementById('search').value.toLowerCase();
-        const trs = document.getElementById('table-body').getElementsByTagName('tr');
-        for (let i = 0; i < trs.length; i++) {
-            const tr = trs[i];
-            const name = tr.getElementsByTagName('td')[0].textContent.toLowerCase();
-            const type = tr.getAttribute('data-type') || "";
-            tr.style.display = (name.includes(text) && (currentCategoryFilter === 'all' || type === currentCategoryFilter)) ? "" : "none";
-        }
+    out.innerHTML = html;
+}
+
+// ─── Menú aleatorio ───
+function generarPlatoInteligente() {
+    const ingesta = document.getElementById('meal-selector').value;
+    const blq = bloquesAsignadosPorIngesta[ingesta];
+    const out = document.getElementById('plate-output');
+    out.style.display = "block";
+
+    if (!blq || (blq.p === 0 && blq.hc === 0 && blq.g === 0)) {
+        out.innerHTML = `<div class="plate-title">No hay bloques definidos para esta ingesta.</div>`;
+        return;
     }
+
+    let html = `<div class="plate-title">Propuesta adaptada a tus bloques (${blq.p}P · ${blq.hc}HC · ${blq.g}G)</div>`;
+
+    if (blq.p > 0 && poolProteinas.length > 0) {
+        const p = poolProteinas[Math.floor(Math.random() * poolProteinas.length)];
+        html += `<div class="plate-item"><span>🥩 <b>${(blq.p * (p.gramos || 0)).toFixed(0)}${p.unidad}</b> de <b>${p.nombre}</b></span><span class="item-macro-tag bg-p">P</span></div>`;
+    }
+    if (blq.hc > 0 && poolCarbohidratos.length > 0) {
+        const h = poolCarbohidratos[Math.floor(Math.random() * poolCarbohidratos.length)];
+        html += `<div class="plate-item"><span>🌾 <b>${(blq.hc * (h.gramos || 0)).toFixed(0)}${h.unidad}</b> de <b>${h.nombre}</b></span><span class="item-macro-tag bg-hc">HC</span></div>`;
+    }
+    if (blq.g > 0 && poolGrasas.length > 0) {
+        const g = poolGrasas[Math.floor(Math.random() * poolGrasas.length)];
+        html += `<div class="plate-item"><span>🥑 <b>${(blq.g * (g.gramos || 0)).toFixed(0)}${g.unidad}</b> de <b>${g.nombre}</b></span><span class="item-macro-tag bg-g">G</span></div>`;
+    }
+
+    out.innerHTML = html;
+}
+
+// ─── Filtros ───
+function setCategoryFilter(cat, btn) {
+    currentCategoryFilter = cat;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    ejecutarFiltroCombinado();
+}
+
+function ejecutarFiltroCombinado() {
+    const text = document.getElementById('search').value.toLowerCase();
+    const trs = document.getElementById('table-body').getElementsByTagName('tr');
+    for (let tr of trs) {
+        const name = tr.getElementsByTagName('td')[0]?.textContent.toLowerCase() || '';
+        const type = tr.getAttribute('data-type') || '';
+        tr.style.display = (name.includes(text) && (currentCategoryFilter === 'all' || type === currentCategoryFilter)) ? '' : 'none';
+    }
+}
 </script>
 </body>
 </html>
