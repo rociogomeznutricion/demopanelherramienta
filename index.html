@@ -196,11 +196,10 @@
     </div>
 
     <script>
-        // URL de tu control central de clientes
         const MASTER_CONTROL_URL = 'https://docs.google.com/spreadsheets/d/1L7lbZ4JkE7dqO_oizMEDKQabtyUBbR4yaqcrt3LMa6Q/gviz/tq?gid=0&tqx=out:json';
 
-        const GID_AJUSTES = '1147936171'; // Pestaña del perfil del paciente con bloques y exclusiones
-        const GID_EQUIV = '1979658163';   // Pestaña o ID de la base de datos de alimentos
+        const GID_AJUSTES = '1147936171'; 
+        const GID_EQUIV = '1979658163';   
         
         const mealIcons = { "DESAYUNO": "fa-coffee", "ALMUERZO": "fa-apple-whole", "COMIDA": "fa-utensils", "MERIENDA": "fa-cookie", "CENA": "fa-moon" };
         
@@ -295,7 +294,7 @@
                 })
                 .catch(err => {
                     console.error(err);
-                    errTxt.innerText = "Error de sincronización. Asegúrate de que el documento esté 'Publicado en la Web'.";
+                    errTxt.innerText = "Error al conectar con la base de datos.";
                 });
         }
 
@@ -339,58 +338,42 @@
             exclusionesPaciente.tagsExcluir = [];
             exclusionesPaciente.alimentosOdiados = [];
 
-            // 1. Lectura de exclusiones (Celdas E1, E2, E3 de la captura -> Índices 0, 1, 2 en JS)
-            if (rows[0] && rows[0].c && rows[0].c[4] && rows[0].c[4].v) {
-                exclusionesPaciente.estiloVida = String(rows[0].c[4].v).trim().toUpperCase(); // VEGETARIANO
-            }
+            // Versión Original: Lee las celdas E2, E3 y E4 de exclusión (índices 1, 2, 3 en JS, Columna E = índice 4)
             if (rows[1] && rows[1].c && rows[1].c[4] && rows[1].c[4].v) {
-                exclusionesPaciente.tagsExcluir = String(rows[1].c[4].v).split(',').map(t => t.trim().toUpperCase()).filter(t => t !== ""); // LACTOSA, GLUTEN
+                exclusionesPaciente.estiloVida = String(rows[1].c[4].v).trim().toUpperCase();
             }
             if (rows[2] && rows[2].c && rows[2].c[4] && rows[2].c[4].v) {
-                exclusionesPaciente.alimentosOdiados = String(rows[2].c[4].v).split(',').map(a => a.trim().toLowerCase()).filter(a => a !== ""); // Atún
+                exclusionesPaciente.tagsExcluir = String(rows[2].c[4].v).split(',').map(t => t.trim().toUpperCase()).filter(t => t !== "");
+            }
+            if (rows[3] && rows[3].c && rows[3].c[4] && rows[3].c[4].v) {
+                exclusionesPaciente.alimentosOdiados = String(rows[3].c[4].v).split(',').map(a => a.trim().toLowerCase()).filter(a => a !== "");
             }
 
-            // 2. Lectura matemática de Bloques Totales (Filas 12, 13, 14 de Sheets -> Índices 11, 12, 13 en JS, Columna B -> Índice 1)
-            let totalP = (rows[11] && rows[11].c && rows[11].c[1]) ? parseFloat(rows[11].c[1].v) : 0;  // Proteína
-            let totalG = (rows[12] && rows[12].c && rows[12].c[1]) ? parseFloat(rows[12].c[1].v) : 0;  // Grasa
-            let totalHC = (rows[13] && rows[13].c && rows[13].c[1]) ? parseFloat(rows[13].c[1].v) : 0; // Carbohidratos
-
-            // Mapeo correlativo de porcentajes (Filas 16 a 20 de Sheets -> Índices 15 a 19 en JS)
-            const mealsInfo = [
-                { name: "DESAYUNO", rowIndex: 15 },
-                { name: "ALMUERZO", rowIndex: 16 },
-                { name: "COMIDA", rowIndex: 17 },
-                { name: "MERIENDA", rowIndex: 18 },
-                { name: "CENA", rowIndex: 19 }
-            ];
-
+            // Versión Original: Renderiza de forma segura las 5 ingestas utilizando los fallbacks estables
             const grid = document.getElementById('meal-grid');
             let html = "";
 
-            mealsInfo.forEach(meal => {
-                let pct = 0;
-                if (rows[meal.rowIndex] && rows[meal.rowIndex].c && rows[meal.rowIndex].c[1]) {
-                    pct = parseFloat(rows[meal.rowIndex].c[1].v) || 0; // Lee el valor decimal (Ej: 0.2)
-                }
+            for (let i = 0; i < 5; i++) {
+                let mealName = "INGESTA " + (i+1);
+                if (i === 0) mealName = "DESAYUNO";
+                if (i === 1) mealName = "ALMUERZO";
+                if (i === 2) mealName = "COMIDA";
+                if (i === 3) mealName = "MERIENDA";
+                if (i === 4) mealName = "CENA";
 
-                // Cálculo proporcional exacto
-                let pBlocks = parseFloat((totalP * pct).toFixed(1));
-                let hcBlocks = parseFloat((totalHC * pct).toFixed(1));
-                let gBlocks = parseFloat((totalG * pct).toFixed(1));
+                let pBlocks = 1.5, hcBlocks = 2, gBlocks = 1; 
+                if (mealName === "COMIDA") { pBlocks = 2.5; hcBlocks = 2.5; gBlocks = 1.5; }
+                if (mealName === "ALMUERZO" || mealName === "MERIENDA") { pBlocks = 1; hcBlocks = 1.5; gBlocks = 1; }
 
-                bloquesAsignadosPorIngesta[meal.name] = { p: pBlocks, hc: hcBlocks, g: gBlocks };
-                const icon = mealIcons[meal.name] || "fa-utensils";
+                bloquesAsignadosPorIngesta[mealName] = { p: pBlocks, hc: hcBlocks, g: gBlocks };
+                const icon = mealIcons[mealName] || "fa-utensils";
 
                 html += `
                     <div class="meal-card">
-                        <div class="meal-name"><i class="fa-solid ${icon}"></i> ${meal.name}</div>
-                        <div class="meal-content">
-                            Proteína: <b>${pBlocks}</b> blq<br>
-                            Carbohidrato: <b>${hcBlocks}</b> blq<br>
-                            Grasa: <b>${gBlocks}</b> blq
-                        </div>
+                        <div class="meal-name"><i class="fa-solid ${icon}"></i> ${mealName}</div>
+                        <div class="meal-content">Proteína: ${pBlocks} blq<br>Carbohidrato: ${hcBlocks} blq<br>Grasa: ${gBlocks} blq</div>
                     </div>`;
-            });
+            }
             grid.innerHTML = html;
         }
 
@@ -411,7 +394,7 @@
                 let gramosVal = parseFloat(gramosRaw.replace(',', '.')) || 0;
                 let unidadVal = row[4] && row[4].v ? String(row[4].v).trim() : "g";
 
-                // Mapeo exacto de las columnas depuradas: F (Exclusión), G (Estilo vida), H (Momento)
+                // Mapeo adaptado a tus nuevas columnas limpias de la base de datos (F = Exclusiones, G = Estilo Vida, H = Momento)
                 let tagExclusionStr = row[5] && row[5].v ? String(row[5].v).toUpperCase() : ""; 
                 let tagEstiloVidaStr = row[6] && row[6].v ? String(row[6].v).toUpperCase() : ""; 
                 let tagMomentoStr = row[7] && row[7].v ? String(row[7].v).toUpperCase() : "";    
@@ -424,27 +407,26 @@
 
                 let descartarAlimento = false;
 
-                // 1. Filtro Alimentos Odiados (Ej: "Atún")
+                // Filtro 1: Odiados
                 let nombreMinuscula = nombreAlimento.toLowerCase();
                 if (exclusionesPaciente.alimentosOdiados.some(odiado => nombreMinuscula.includes(odiado))) {
                     descartarAlimento = true;
                 }
 
-                // 2. Filtro Alergias / Alérgenos (Ej: "LACTOSA", "GLUTEN")
+                // Filtro 2: Alergias/Exclusiones
                 if (exclusionesPaciente.tagsExcluir.length > 0) {
                     if (todosLosTags.some(tag => exclusionesPaciente.tagsExcluir.includes(tag))) {
                         descartarAlimento = true;
                     }
                 }
 
-                // 3. Filtro Estilo de Vida Estricto (Ej: "VEGETARIANO" o "VEGANO")
+                // Filtro 3: Estilo de vida
                 if (exclusionesPaciente.estiloVida === "VEGETARIANO" || exclusionesPaciente.estiloVida === "VEGANO") {
                     if (todosLosTags.includes("ANIMAL") || todosLosTags.includes("CARNE") || todosLosTags.includes("PESCADO") || tagEstiloVidaStr.includes("OMNIVORO")) {
                         descartarAlimento = true;
                     }
                 }
 
-                // Si incumple cualquier criterio del paciente, se ignora por completo
                 if (descartarAlimento) continue; 
 
                 const itemObjeto = { nombre: nombreAlimento, gramos: gramosVal, unidad: unidadVal, tipo: "" };
@@ -495,7 +477,7 @@
                 return;
             }
 
-            let html = `<div class="plate-title">Propuesta adaptada a tus bloques de ${ingesta} (${blq.p}P - ${blq.hc}HC - ${blq.g}G)</div>`;
+            let html = `<div class="plate-title">Propuesta adaptada a tus bloques (${blq.p}P - ${blq.hc}HC - ${blq.g}G)</div>`;
             
             if(blq.p > 0 && poolProteinas.length > 0) {
                 let p = poolProteinas[Math.floor(Math.random() * poolProteinas.length)];
@@ -507,7 +489,7 @@
             }
             if(blq.g > 0 && poolGrasas.length > 0) {
                 let g = poolGrasas[Math.floor(Math.random() * poolGrasas.length)];
-                html += `<div class="plate-item"><span>🥑 <b>${(blq.g * g.gramos).toFixed(0)} ${g.g_unit || g.unidad}</b> de <b>${g.nombre}</b></span><span class="item-macro-tag bg-g">G</span></div>`;
+                html += `<div class="plate-item"><span>🥑 <b>${(blq.g * g.gramos).toFixed(0)} ${g.unidad}</b> de <b>${g.nombre}</b></span><span class="item-macro-tag bg-g">G</span></div>`;
             }
             out.innerHTML = html;
         }
