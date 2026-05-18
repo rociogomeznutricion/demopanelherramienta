@@ -33,15 +33,15 @@
             line-height: 1.4;
         }
 
-        /* Contenedor principal inicialmente oculto hasta que se valide el login */
+        /* El contenedor del dashboard empieza oculto */
         .container { max-width: 1100px; margin: 0 auto; display: none; }
 
-        /* ESTILOS DE LA PANTALLA DE LOGIN */
+        /* PANTALLA DE LOGIN */
         .login-wrapper {
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 85vh;
+            min-height: 80vh;
         }
 
         .login-card {
@@ -59,18 +59,18 @@
             font-family: 'Poppins', sans-serif;
             color: var(--navy);
             margin-bottom: 8px;
-            font-size: 22px;
+            font-size: 24px;
         }
 
         .login-card p {
             color: var(--text-light);
-            font-size: 13px;
+            font-size: 14px;
             margin-bottom: 25px;
         }
 
         .input-group {
             text-align: left;
-            margin-bottom: 18px;
+            margin-bottom: 20px;
         }
 
         .input-group label {
@@ -80,6 +80,7 @@
             margin-bottom: 6px;
             color: var(--text-dark);
             text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .login-input {
@@ -90,6 +91,11 @@
             font-size: 14px;
             outline: none;
             background: #fcfcfd;
+            transition: border-color 0.2s;
+        }
+
+        .login-input:focus {
+            border-color: var(--blue-accent);
         }
 
         .login-btn {
@@ -100,12 +106,11 @@
             padding: 14px;
             border-radius: 8px;
             font-family: 'Poppins', sans-serif;
-            font-size: 14px;
+            font-size: 15px;
             font-weight: 600;
             cursor: pointer;
             box-shadow: 0 4px 10px rgba(0, 71, 171, 0.2);
             transition: all 0.2s;
-            margin-top: 10px;
         }
 
         .login-btn:hover {
@@ -116,13 +121,12 @@
         .error-msg {
             color: var(--p-color);
             font-size: 13px;
-            margin-top: 12px;
+            margin-top: 15px;
             display: none;
             font-weight: 500;
-            line-height: 1.5;
         }
 
-        /* ESTILOS DEL DASHBOARD INTERNO */
+        /* ESTILOS DEL DASHBOARD */
         .header {
             background-color: var(--navy);
             color: var(--white);
@@ -140,17 +144,17 @@
             position: absolute;
             top: 35px;
             right: 35px;
-            background: rgba(255,255,255,0.1);
+            background: rgba(255, 255, 255, 0.1);
             color: var(--white);
-            border: 1px solid rgba(255,255,255,0.2);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             padding: 8px 14px;
-            border-radius: 6px;
+            border-radius: 8px;
             font-size: 12px;
-            cursor: pointer;
             font-weight: 600;
+            cursor: pointer;
             transition: background 0.2s;
         }
-        .logout-btn:hover { background: rgba(255,255,255,0.2); }
+        .logout-btn:hover { background: rgba(255, 255, 255, 0.2); }
 
         .section-title {
             font-family: 'Poppins', sans-serif;
@@ -197,7 +201,6 @@
 
         .meal-content { font-size: 13px; color: var(--text-dark); line-height: 1.6; }
 
-        /* ASISTENTE DE PLATOS PRECISION */
         .generator-card {
             background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
             border: 2px dashed #cbd5e1;
@@ -294,7 +297,6 @@
             white-space: nowrap;
         }
 
-        /* Tabla y Filtros */
         .card {
             background: var(--white);
             border-radius: 16px;
@@ -384,18 +386,18 @@
 </head>
 <body>
 
-<div class="login-wrapper" id="login-wrapper">
+<div class="login-wrapper" id="login-screen">
     <div class="login-card">
         <h2>Área de Clientes</h2>
         <p>Introduce tus credenciales para acceder a tu plan</p>
         
         <div class="input-group">
             <label for="username">Usuario</label>
-            <input type="text" id="username" class="login-input" placeholder="ej: rociogomez">
+            <input type="text" id="username" class="login-input" placeholder="Ej: JVERDU">
         </div>
         <div class="input-group">
             <label for="password">Contraseña</label>
-            <input type="password" id="password" class="login-input" placeholder="••••••••">
+            <input type="password" id="password" class="login-input" placeholder="••••••">
         </div>
         
         <button class="login-btn" onclick="ejecutarLogin()">Iniciar Sesión</button>
@@ -403,7 +405,7 @@
     </div>
 </div>
 
-<div class="container" id="dashboard-container">
+<div class="container" id="dashboard-screen">
     <header class="header">
         <h1 id="main-title">Plan Nutricional por Bloques</h1>
         <p>Dashboard personalizado para el seguimiento de ingestas y equivalencias</p>
@@ -470,13 +472,16 @@
 </div>
 
 <script>
-    // --- PARÁMETROS DEL SPREADSHEET CONTROL CENTRAL ---
-    const SPREADSHEET_ID_CONTROL = '1L7lbZ4JkE7dqO_oizMEDKQabtyUBbR4yaqcrt3LMa6Q';
-    const GID_CONTROL = '0';
+    // URL de publicación obtenida de tu captura "Publicar en la Web" de CONTROL_PACIENTES
+    const CONTROL_SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS75gCh2s6l8gfsc70u7JPl5l7va778YgFOrckYHjnKSMaUntFTiiOW3frz42ChwcLUNd4fqz7FvGdx/pubhtml";
+    
+    // Extraemos automáticamente el ID limpio del documento de control
+    const SPREADSHEET_ID_CONTROL = "1vS75gCh2s6l8gfsc70u7JPl5l7va778YgFOrckYHjnKSMaUntFTiiOW3frz42ChwcLUNd4fqz7FvGdx"; 
+    const GID_CONTROL = "0"; 
 
-    // --- PARÁMETROS DEL SPREADSHEET MAESTRO DE ALIMENTOS Y EQUIVALENCIAS ---
-    const SPREADSHEET_ID_MAESTRO = '1agPyD1JW34QSqXOeisPSsjXQuIXkwvdP4ZFyRAlvip4'; 
-    const GID_EQUIV_MAESTRO = '1979658163';   
+    // Base maestra global de alimentos
+    const SPREADSHEET_MAESTRO_ID = "1agPyD1JW34QSqXOeisPSsjXQuIXkwvdP4ZFyRAlvip4";
+    const GID_EQUIV_MAESTRO = "1979658163"; 
 
     const mealIcons = { "DESAYUNO": "fa-coffee", "ALMUERZO": "fa-apple-whole", "COMIDA": "fa-utensils", "MERIENDA": "fa-cookie", "CENA": "fa-moon" };
     
@@ -487,16 +492,16 @@
     let poolBuscadorCompleto = [];
     let currentCategoryFilter = 'all';
 
-    // Extrae de forma limpia el ID del Excel del paciente a partir de su URL completa
+    // Procesa URLs para aislar el ID único de cualquier Google Sheet
     function extraerIdDeUrl(urlRaw) {
         if (!urlRaw) return null;
         const matches = urlRaw.match(/\/d\/([a-zA-Z0-9-_]+)/);
         return matches ? matches[1] : urlRaw.trim();
     }
 
-    // --- LÓGICA DE LOGIN DINÁMICO ---
+    // --- FUNCIÓN DE LOGIN CORREGIDA PARA TUS COLUMNAS REALES ---
     function ejecutarLogin() {
-        const userIn = document.getElementById('username').value.trim().toLowerCase();
+        const userIn = document.getElementById('username').value.trim().toUpperCase();
         const passIn = document.getElementById('password').value.trim();
         const errDiv = document.getElementById('error-msg');
 
@@ -506,37 +511,41 @@
             return;
         }
 
-        const urlControl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID_CONTROL}/gviz/tq?gid=${GID_CONTROL}&tqx=out:json`;
+        const urlControlJson = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID_CONTROL}/gviz/tq?gid=${GID_CONTROL}&tqx=out:json`;
 
-        fetch(urlControl)
+        fetch(urlControlJson)
             .then(r => r.text())
             .then(raw => {
                 const json = cleanJSON(raw);
                 const rows = json.table.rows;
                 let idPacienteValidado = null;
-                let estadoSuscripcion = 'S';
+                let estadoActivo = 'S';
 
-                // Buscar credenciales (saltando cabecera en fila index 0)
+                // CORRECCIÓN DE COLUMNAS SEGÚN CAPTURA EXCEL:
+                // Columna A (c[0]) = Nombre Paciente
+                // Columna B (c[1]) = Usuario
+                // Columna C (c[2]) = Contraseña
+                // Columna D (c[3]) = Activo (S/N)
+                // Columna E (c[4]) = URL_Sheets_Paciente
                 for(let i = 1; i < rows.length; i++) {
                     const row = rows[i].c;
-                    if(!row || !row[0] || !row[1]) continue;
+                    if(!row || !row[1] || !row[2]) continue;
 
-                    const dbUser = String(row[0].v).trim().toLowerCase();
-                    // Usamos .w para leer la contraseña de forma literal por si contiene números o letras mixtas
-                    const dbPass = row[1].w ? String(row[1].w).trim() : String(row[1].v).trim();
+                    const dbUser = String(row[1].v).trim().toUpperCase();
+                    const dbPass = row[2].w ? String(row[2].w).trim() : String(row[2].v).trim();
                     const dbActivo = row[3] && row[3].v ? String(row[3].v).trim().toUpperCase() : 'S';
                     const dbUrlPaciente = row[4] && row[4].v ? String(row[4].v).trim() : null;
 
                     if(dbUser === userIn && dbPass === passIn) {
                         idPacienteValidado = extraerIdDeUrl(dbUrlPaciente);
-                        estadoSuscripcion = dbActivo;
+                        estadoActivo = dbActivo;
                         break;
                     }
                 }
 
                 if (idPacienteValidado) {
-                    if (estadoSuscripcion === 'N') {
-                        errDiv.innerText = "❌ Suscripción inactiva, por favor contacte con su nutricionista.";
+                    if (estadoActivo === 'N') {
+                        errDiv.innerText = "❌ Su usuario se encuentra desactivado. Contacte con su administrador.";
                         errDiv.style.display = "block";
                     } else {
                         errDiv.style.display = "none";
@@ -549,17 +558,17 @@
             })
             .catch(err => {
                 console.error(err);
-                errDiv.innerText = "❌ Error de conexión con el sistema central. Comprueba que el Excel de Control esté 'Publicado en la Web'.";
+                errDiv.innerText = "❌ Error de sincronización. Asegúrate de que el documento esté 'Publicado en la Web'.";
                 errDiv.style.display = "block";
             });
     }
 
-    // --- CARGAR DATOS PERSONALIZADOS TRAS LOGIN EXITOSO ---
+    // --- CARGAR DATOS DE PACIENTE DINÁMICO ---
     function inicializarDashboard(spreadsheetIdPaciente) {
-        const GID_AJUSTES_PACIENTE = '1147936171'; // Hoja MASTER dentro del documento del paciente
+        const GID_AJUSTES = '1147936171'; 
 
-        const urlAjustes = `https://docs.google.com/spreadsheets/d/${spreadsheetIdPaciente}/gviz/tq?gid=${GID_AJUSTES_PACIENTE}&tqx=out:json`;
-        const urlEquiv = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID_MAESTRO}/gviz/tq?gid=${GID_EQUIV_MAESTRO}&tqx=out:json`;
+        const urlAjustes = `https://docs.google.com/spreadsheets/d/${spreadsheetIdPaciente}/gviz/tq?gid=${GID_AJUSTES}&tqx=out:json`;
+        const urlEquiv = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_MAESTRO_ID}/gviz/tq?gid=${GID_EQUIV_MAESTRO}&tqx=out:json`;
 
         Promise.all([
             fetch(urlAjustes).then(r => r.text()),
@@ -568,17 +577,16 @@
             renderMealsAndTitle(dataAjustes);
             procesarYRenderizarEquivalencias(dataEquiv);
             
-            // Transición de pantalla
-            document.getElementById('login-wrapper').style.display = "none";
-            document.getElementById('dashboard-container').style.display = "block";
+            // Cambiar de pantalla de Login al Dashboard
+            document.getElementById('login-screen').style.display = "none";
+            document.getElementById('dashboard-screen').style.display = "block";
             document.getElementById('sync-status').innerText = "Sincronizado";
         }).catch(err => {
             console.error(err);
-            alert("Error al cargar tu plan personalizado. Asegúrate de que tu hoja individual esté configurada como 'Publicada en la Web'.");
+            alert("Error al cargar los datos del plan individual. Revisa si la hoja está 'Publicada en la web'.");
         });
     }
 
-    // Carga de la pestaña MASTER del paciente (Bloques + Título desde Celda D2)
     function renderMealsAndTitle(raw) {
         const json = cleanJSON(raw);
         const rows = json.table.rows;
@@ -606,13 +614,9 @@
                 let numericoStr = cleanLine.replace(/[^0-9.,]/g, '').replace(',', '.');
                 let valorDecimal = parseFloat(numericoStr) || 0;
 
-                if (cleanLine.includes('prot')) {
-                    pBlocks = valorDecimal;
-                } else if (cleanLine.includes('carb') || cleanLine.includes('hidr')) {
-                    hcBlocks = valorDecimal;
-                } else if (cleanLine.includes('gras')) {
-                    gBlocks = valorDecimal;
-                }
+                if (cleanLine.includes('prot')) { pBlocks = valorDecimal; } 
+                else if (cleanLine.includes('carb') || cleanLine.includes('hidr')) { hcBlocks = valorDecimal; } 
+                else if (cleanLine.includes('gras')) { gBlocks = valorDecimal; }
             });
 
             bloquesAsignadosPorIngesta[mealName] = { p: pBlocks, hc: hcBlocks, g: gBlocks };
@@ -676,28 +680,22 @@
                     n.includes("pan integral") || n.includes("tost") || n.includes("pavo") || n.includes("jamón") || 
                     n.includes("clara") || n.includes("batido") || n.includes("proteina en polvo") || n.includes("nueces") || 
                     n.includes("almendra") || n.includes("crema de cacahuete") || n.includes("cashew")) {
-                    tags.desayuno = true;
-                    tags.merienda = true;
-                    tags.almuerzo = true;
+                    tags.desayuno = true; tags.merienda = true; tags.almuerzo = true;
                 }
 
-                if (n.includes("atún al natural")) {
-                    tags.almuerzo = true;
-                }
+                if (n.includes("atún al natural")) { tags.almuerzo = true; }
 
                 if (n.includes("arroz") || n.includes("pasta") || n.includes("ñoquis") || n.includes("quinoa") || 
                     n.includes("legumbre") || n.includes("garbanzo") || n.includes("lenteja") || n.includes("boniato") || 
                     n.includes("patata") || n.includes("cuscus") || n.includes("pollo") || n.includes("ternera") || 
                     n.includes("lomo") || n.includes("merluza") || n.includes("pescado") || n.includes("salmón") || 
                     n.includes("atún") || n.includes("aguacate") || n.includes("aceite")) {
-                    tags.comida = true;
-                    tags.cena = true;
+                    tags.comida = true; tags.cena = true;
                 }
 
                 if (!tags.desayuno && !tags.almuerzo && !tags.comida && !tags.merienda && !tags.cena) {
                     tags.desayuno = true; tags.almuerzo = true; tags.comida = true; tags.merienda = true; tags.cena = true;
                 }
-
                 return tags;
             }
 
@@ -707,8 +705,7 @@
                 const unidad = row[1] ? detectarUnidad(String(row[1].v)) : 'g';
                 if(gramos !== null) {
                     const item = { nombre, gramos, unidad, tipo: labelP, momentos: asignarTagsMomentos(nombre) };
-                    poolProteinas.push(item);
-                    poolBuscadorCompleto.push(item);
+                    poolProteinas.push(item); poolBuscadorCompleto.push(item);
                 }
             }
 
@@ -720,8 +717,7 @@
                 const unidad = row[3] ? detectarUnidad(String(row[3].v)) : 'g';
                 if(gramos !== null) {
                     const item = { nombre, gramos, unidad, tipo: labelHC, momentos: asignarTagsMomentos(nombre) };
-                    poolCarbohidratos.push(item);
-                    poolBuscadorCompleto.push(item);
+                    poolCarbohidratos.push(item); poolBuscadorCompleto.push(item);
                 }
             }
 
@@ -731,19 +727,13 @@
                 const unidad = row[5] ? detectarUnidad(String(row[5].v)) : 'g';
                 if(gramos !== null) {
                     const item = { nombre, gramos, unidad, tipo: labelG, momentos: asignarTagsMomentos(nombre) };
-                    poolGrasas.push(item);
-                    poolBuscadorCompleto.push(item);
+                    poolGrasas.push(item); poolBuscadorCompleto.push(item);
                 }
             }
 
             if (row[7] && row[7].v !== null && String(row[7].v).trim() !== "" && !String(row[7].v).includes("MIXTO")) {
                 const nombreCompleto = String(row[7].v).trim();
-                poolBuscadorCompleto.push({
-                    nombre: nombreCompleto,
-                    gramos: null,
-                    unidad: '',
-                    tipo: labelM
-                });
+                poolBuscadorCompleto.push({ nombre: nombreCompleto, gramos: null, unidad: '', tipo: labelM });
             }
         }
 
@@ -768,7 +758,6 @@
 
         tbody.innerHTML = htmlTable || '<tr><td colspan="3">No se encontraron alimentos en la hoja.</td></tr>';
 
-        // Lectura de Observaciones (Columnas G, I y J de la tabla maestro)
         let obsColG = []; let obsColI = []; let obsColJ = [];
         
         for (let i = 0; i < rows.length; i++) {
@@ -779,13 +768,13 @@
             }
         }
         
-        let titleG = "Pautas Generales", contentG = "No hay datos.";
+        let titleG = "Pautas Generales", contentG = "No hay datos adicionales.";
         if(obsColG.length > 0) { titleG = obsColG[0]; contentG = obsColG.slice(1).join("\n").replace(/\n/g, '<br>'); }
         
-        let titleI = "Recomendaciones", contentI = "No hay datos.";
+        let titleI = "Recomendaciones", contentI = "No hay datos adicionales.";
         if(obsColI.length > 0) { titleI = obsColI[0]; contentI = obsColI.slice(1).join("\n").replace(/\n/g, '<br>'); }
 
-        let titleJ = "Suplementación", contentJ = "No hay datos.";
+        let titleJ = "Suplementación Opcional", contentJ = "No hay datos adicionales.";
         if(obsColJ.length > 0) { titleJ = obsColJ[0]; contentJ = obsColJ.slice(1).join("\n").replace(/\n/g, '<br>'); }
 
         const obsGrid = document.getElementById('obs-grid');
