@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Plan Nutricional Inteligente</title>
+    <title>Plan Nutricional por Bloques</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -74,7 +74,7 @@
         .plate-item { display: flex; justify-content: space-between; align-items: center; background: white; padding: 12px 16px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #f1f5f9; font-size: 14px; }
         .item-macro-tag { font-size: 10px; font-weight: 700; padding: 3px 6px; border-radius: 4px; color: white; }
 
-        /* Buscador y Filtros */
+        /* Buscador y Filtros Grandes */
         .search-container { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
         .search-input-wrapper { position: relative; flex-grow: 1; min-width: 250px; }
         .search-input-wrapper i { position: absolute; left: 14px; top: 15px; color: var(--text-light); font-size: 14px; }
@@ -84,7 +84,7 @@
         .filter-btn:hover { background: #f1f5f9; color: var(--text); }
         .filter-btn.active { background: var(--primary); border-color: var(--primary); color: white; }
 
-        /* Tabla */
+        /* Estilo de la Tabla de Equivalencias original */
         .table-wrapper { background: var(--card-bg); border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.02); overflow: hidden; }
         table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
         th { background: #f8fafc; padding: 14px 20px; font-weight: 600; color: var(--text-light); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); }
@@ -338,7 +338,7 @@
             exclusionesPaciente.tagsExcluir = [];
             exclusionesPaciente.alimentosOdiados = [];
 
-            // Versión Original: Lee las celdas E2, E3 y E4 de exclusión (índices 1, 2, 3 en JS, Columna E = índice 4)
+            // Lee de forma segura las celdas E2, E3 y E4 de exclusión de la hoja del paciente
             if (rows[1] && rows[1].c && rows[1].c[4] && rows[1].c[4].v) {
                 exclusionesPaciente.estiloVida = String(rows[1].c[4].v).trim().toUpperCase();
             }
@@ -349,7 +349,7 @@
                 exclusionesPaciente.alimentosOdiados = String(rows[3].c[4].v).split(',').map(a => a.trim().toLowerCase()).filter(a => a !== "");
             }
 
-            // Versión Original: Renderiza de forma segura las 5 ingestas utilizando los fallbacks estables
+            // Renderizado seguro original de bloques por fila
             const grid = document.getElementById('meal-grid');
             let html = "";
 
@@ -431,6 +431,7 @@
 
                 const itemObjeto = { nombre: nombreAlimento, gramos: gramosVal, unidad: unidadVal, tipo: "" };
 
+                // Los nombres de tipos coinciden de forma exacta con la versión original
                 if (macroPrincipal === "P") {
                     itemObjeto.tipo = "PROTEÍNAS";
                     poolProteinas.push(itemObjeto);
@@ -457,6 +458,7 @@
                 else if(item.tipo === "GRASAS") bClass = "bg-g";
                 else if(item.tipo === "ALIMENTOS MIXTOS") bClass = "bg-m";
                 
+                // Imprime los nombres chulos originales
                 htmlTable += `<tr data-type="${item.tipo.toLowerCase()}">
                     <td><strong>${item.nombre}</strong></td>
                     <td>${item.gramos > 0 ? item.gramos + " " + item.unidad : 'Ver definición'}</td>
