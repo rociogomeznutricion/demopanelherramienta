@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Área de Clientes - Login</title>
+    <title>Dashboard Nutricional Inteligente</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         :root {
@@ -17,7 +17,10 @@
             --border: #e2e8f0;
             --text-dark: #1e293b;
             --text-light: #64748b;
-            --danger: #ef4444;
+            --p-color: #ef4444;
+            --hc-color: #f59e0b;
+            --g-color: #10b981;
+            --m-color: #8b5cf6;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -26,35 +29,42 @@
             font-family: 'Inter', sans-serif;
             background-color: var(--soft-bg);
             color: var(--text-dark);
+            padding: 20px;
+            line-height: 1.4;
+            min-height: 100vh;
+        }
+
+        .container { max-width: 1100px; margin: 0 auto; }
+
+        /* PANTALLA DE LOGIN */
+        .login-wrapper {
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
-            padding: 20px;
+            min-height: 80vh;
         }
 
         .login-card {
             background: var(--white);
-            border-radius: 16px;
             padding: 40px;
-            width: 100%;
-            max-width: 450px;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
             border: 1px solid var(--border);
+            width: 100%;
+            max-width: 420px;
             text-align: center;
         }
 
         .login-card h2 {
             font-family: 'Poppins', sans-serif;
-            font-size: 28px;
+            margin-bottom: 10px;
             color: var(--navy);
-            margin-bottom: 8px;
         }
 
         .login-card p {
             color: var(--text-light);
             font-size: 14px;
-            margin-bottom: 30px;
+            margin-bottom: 25px;
         }
 
         .form-group {
@@ -65,35 +75,27 @@
         .form-group label {
             display: block;
             font-size: 12px;
-            font-weight: 700;
+            font-weight: 600;
             text-transform: uppercase;
-            margin-bottom: 8px;
-            color: var(--navy);
+            margin-bottom: 6px;
+            color: var(--text-dark);
             letter-spacing: 0.5px;
         }
 
-        .input-wrapper {
-            position: relative;
-        }
-
-        .input-wrapper input {
+        .form-input {
             width: 100%;
-            padding: 14px 16px;
+            padding: 12px 16px;
             border: 1px solid var(--border);
             border-radius: 10px;
-            font-size: 15px;
+            font-size: 14px;
             outline: none;
             background-color: #fcfcfd;
-            transition: all 0.2s;
+            transition: border-color 0.2s;
         }
 
-        .input-wrapper input:focus {
-            border-color: var(--blue-accent);
-            background-color: var(--white);
-            box-shadow: 0 0 0 3px rgba(0, 71, 171, 0.1);
-        }
+        .form-input:focus { border-color: var(--blue-accent); }
 
-        .btn-login {
+        .login-btn {
             width: 100%;
             background: linear-gradient(135deg, var(--blue-accent) 0%, var(--navy) 100%);
             color: var(--white);
@@ -104,90 +106,324 @@
             font-size: 15px;
             font-weight: 600;
             cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0, 71, 171, 0.2);
             margin-top: 10px;
-            transition: all 0.2s;
+        }
+
+        .error-msg {
+            color: var(--p-color);
+            font-size: 13px;
+            margin-top: 15px;
+            display: none;
+            font-weight: 500;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        /* DASHBOARD (Oculto al principio) */
+        .dashboard-content {
+            display: none;
+        }
+
+        .header {
+            background-color: var(--navy);
+            color: var(--white);
+            padding: 35px;
+            border-radius: 16px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        .header h1 { font-family: 'Poppins', sans-serif; font-size: 26px; margin-bottom: 5px; }
+        .header p { font-weight: 300; opacity: 0.8; font-size: 14px; }
+        
+        .logout-btn {
+            position: absolute;
+            top: 35px;
+            right: 35px;
+            background: rgba(255,255,255,0.1);
+            color: var(--white);
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 8px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .section-title {
+            font-family: 'Poppins', sans-serif;
+            font-size: 18px;
+            margin-top: 30px;
+            margin-bottom: 20px;
+            color: var(--navy);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .meal-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .meal-card {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid var(--border);
+        }
+
+        .meal-name {
+            font-family: 'Poppins', sans-serif;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--blue-accent);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .meal-content { font-size: 13px; color: var(--text-dark); line-height: 1.6; }
+
+        .generator-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
+            border: 2px dashed #cbd5e1;
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .gen-controls {
             display: flex;
             justify-content: center;
-            align-items: center;
-            gap: 10px;
+            gap: 15px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
         }
 
-        .btn-login:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0, 71, 171, 0.2);
+        .gen-select {
+            padding: 12px 20px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            background: var(--white);
         }
 
-        .btn-login:disabled {
-            background: #cbd5e1;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
+        .gen-btn {
+            background: linear-gradient(135deg, var(--blue-accent) 0%, var(--navy) 100%);
+            color: var(--white);
+            border: none;
+            padding: 12px 25px;
+            border-radius: 10px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
         }
 
-        .error-message {
+        .plate-output {
+            background: var(--white);
+            border-radius: 14px;
+            padding: 25px;
+            max-width: 650px;
+            margin: 0 auto;
+            border: 1px solid var(--border);
+            text-align: left;
             display: none;
+        }
+
+        .plate-title {
+            font-family: 'Poppins', sans-serif;
+            font-size: 16px;
+            color: var(--navy);
+            border-bottom: 2px solid var(--soft-bg);
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+
+        .plate-item {
+            display: flex;
+            justify-content: space-between;
             align-items: center;
-            justify-content: center;
-            gap: 8px;
-            color: var(--danger);
-            font-size: 13px;
-            font-weight: 500;
-            margin-top: 20px;
-            padding: 10px;
-            background-color: #fef2f2;
+            padding: 11px 0;
+            border-bottom: 1px dashed var(--soft-bg);
+        }
+
+        .item-macro-tag {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 3px 7px;
+            border-radius: 4px;
+            color: white;
+            margin-left: 8px;
+        }
+
+        .card {
+            background: var(--white);
+            border-radius: 16px;
+            padding: 25px;
+            border: 1px solid var(--border);
+            margin-bottom: 25px;
+        }
+
+        .filter-container { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; }
+
+        .filter-btn {
+            background-color: #f1f5f9;
+            color: var(--text-dark);
+            border: 1px solid var(--border);
+            padding: 8px 16px;
             border-radius: 8px;
-            border: 1px solid #fee2e2;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
         }
 
-        .spinner {
-            display: none;
-            width: 18px;
-            height: 18px;
-            border: 2px solid rgba(255,255,255,0.3);
-            border-radius: 50%;
-            border-top-color: #fff;
-            animation: spin 1s ease-in-out infinite;
+        .filter-btn.active[data-type="all"] { background-color: var(--navy); color: var(--white); }
+        .filter-btn.active[data-type="proteínas"] { background-color: var(--p-color); color: var(--white); }
+        .filter-btn.active[data-type="carbohidratos"] { background-color: var(--hc-color); color: var(--white); }
+        .filter-btn.active[data-type="grasas"] { background-color: var(--g-color); color: var(--white); }
+        .filter-btn.active[data-type="alimentos mixtos"] { background-color: var(--m-color); color: var(--white); }
+
+        .search-area { margin-bottom: 20px; }
+        .search-input {
+            width: 100%;
+            padding: 12px 18px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: 14px;
+            outline: none;
         }
 
-        @keyframes spin { to { transform: rotate(360deg); } }
+        .table-container { width: 100%; overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background-color: #f1f5f9; padding: 14px; text-align: left; font-size: 11px; text-transform: uppercase; color: var(--text-light); }
+        td { padding: 14px; border-bottom: 1px solid var(--border); font-size: 14px; }
+
+        .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; color: var(--white); text-transform: uppercase; }
+        .bg-p { background-color: var(--p-color); }
+        .bg-hc { background-color: var(--hc-color); }
+        .bg-g { background-color: var(--g-color); }
+        .bg-m { background-color: var(--m-color); }
+
+        .obs-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 15px; }
+        .obs-card { background: #fffdf5; border: 1px solid #fef3c7; border-radius: 14px; padding: 22px; }
+        .obs-card.c2 { background: #f0fdf4; border-color: #bbf7d0; }
+        .obs-card.c3 { background: #eff6ff; border-color: #bfdbfe; }
+        .obs-title { font-family: 'Poppins', sans-serif; font-size: 15px; font-weight: 700; color: #b45309; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        .obs-card.c2 .obs-title { color: #15803d; }
+        .obs-card.c3 .obs-title { color: #1d4ed8; }
+        .obs-content { font-size: 13.5px; color: #451a03; line-height: 1.6; white-space: pre-wrap; }
+        .obs-card.c2 .obs-content { color: #14532d; }
+        .obs-card.c3 .obs-content { color: #1e3a8a; }
+        .status-pill { font-size: 10px; padding: 4px 10px; border-radius: 20px; background: #dcfce7; color: #15803d; font-weight: 700; }
     </style>
 </head>
 <body>
 
-<div class="login-card">
-    <h2>Área de Clientes</h2>
-    <p>Introduce tus credenciales para acceder a tu plan</p>
-    
-    <div class="form-group">
-        <label for="username">Usuario</label>
-        <div class="input-wrapper">
-            <input type="text" id="username" placeholder="Ej: JVERDU" autocomplete="off">
+<div class="container">
+    <div class="login-wrapper" id="login-screen">
+        <div class="login-card">
+            <h2>Área de Clientes</h2>
+            <p>Introduce tus credenciales para acceder a tu plan</p>
+            <div class="form-group">
+                <label>Usuario</label>
+                <input type="text" id="username" class="form-input" placeholder="Ej: JVERDU">
+            </div>
+            <div class="form-group">
+                <label>Contraseña</label>
+                <input type="password" id="password" class="form-input" placeholder="•••••">
+            </div>
+            <button class="login-btn" onclick="ejecutarLogin()">Iniciar Sesión</button>
+            <div class="error-msg" id="error-box">
+                <i class="fa-solid fa-circle-xmark"></i> <span id="error-text"></span>
+            </div>
         </div>
     </div>
-    
-    <div class="form-group">
-        <label for="password">Contraseña</label>
-        <div class="input-wrapper">
-            <input type="password" id="password" placeholder="••••••">
-        </div>
-    </div>
-    
-    <button id="btn-submit" class="btn-login" onclick="ejecutarLogin()">
-        <span id="btn-text">Iniciar Sesión</span>
-        <div id="btn-spinner" class="spinner"></div>
-    </button>
 
-    <div id="error-box" class="error-message">
-        <i class="fa-solid fa-circle-xmark"></i>
-        <span id="error-txt">Usuario o contraseña incorrectos.</span>
+    <div class="dashboard-content" id="dashboard-screen">
+        <header class="header">
+            <h1 id="main-title">Plan Nutricional por Bloques</h1>
+            <p>Dashboard personalizado para el seguimiento de ingestas y equivalencias</p>
+            <button class="logout-btn" onclick="cerrarSesion()"><i class="fa-solid fa-right-from-bracket"></i> Salir</button>
+        </header>
+
+        <div class="section-title">
+            Reparto de Bloques por Ingesta
+            <span id="sync-status" class="status-pill">Sincronizando...</span>
+        </div>
+
+        <div class="meal-grid" id="meal-grid"></div>
+
+        <div class="section-title">✨ Asistente de Menú Instantáneo</div>
+        <div class="generator-card">
+            <p style="color: var(--text-light); font-size: 14px; margin-bottom: 15px; font-weight: 500;">
+                Selecciona una ingesta y el sistema armará una combinación adaptada respetando tus bloques.
+            </p>
+            <div class="gen-controls">
+                <select id="meal-selector" class="gen-select">
+                    <option value="DESAYUNO">☕ Desayuno</option>
+                    <option value="ALMUERZO">🍏 Almuerzo (Media Mañana)</option>
+                    <option value="COMIDA">🍳 Comida</option>
+                    <option value="MERIENDA">🍪 Merienda</option>
+                    <option value="CENA">🌙 Cena</option>
+                </select>
+                <button class="gen-btn" onclick="generarPlatoInteligente()">Sugerir Combinación</button>
+            </div>
+            <div class="plate-output" id="plate-output"></div>
+        </div>
+
+        <div class="section-title">Base de Datos de Equivalencias</div>
+        <section class="card">
+            <div class="filter-container">
+                <button class="filter-btn active" data-type="all" onclick="setCategoryFilter('all', this)">⚡ Todos</button>
+                <button class="filter-btn" data-type="proteínas" onclick="setCategoryFilter('proteínas', this)">🥩 Proteínas</button>
+                <button class="filter-btn" data-type="carbohidratos" onclick="setCategoryFilter('carbohidratos', this)">🌾 Carbohidratos</button>
+                <button class="filter-btn" data-type="grasas" onclick="setCategoryFilter('grasas', this)">🥑 Grasas</button>
+                <button class="filter-btn" data-type="alimentos mixtos" onclick="setCategoryFilter('alimentos mixtos', this)">🥣 Mixtos</button>
+            </div>
+            <div class="search-area">
+                <input type="text" id="search" class="search-input" placeholder="🔎 Escribe para buscar..." onkeyup="ejecutarFiltroCombinado()">
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr><th>Alimento</th><th>Cantidad base (1 bloque)</th><th>Tipo</th></tr>
+                    </thead>
+                    <tbody id="table-body"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <div class="section-title">📌 Observaciones y Pautas de Uso</div>
+        <div class="obs-grid" id="obs-grid"></div>
     </div>
 </div>
 
 <script>
-    // URL de tu Control Central de Pacientes proporcionada
+    // Tu Hoja Maestra Central de Control de Acceso
     const MASTER_CONTROL_URL = 'https://docs.google.com/spreadsheets/d/1L7lbZ4JkE7dqO_oizMEDKQabtyUBbR4yaqcrt3LMa6Q/gviz/tq?gid=0&tqx=out:json';
 
-    // Función segura para extraer el ID de cualquier formato de URL de Google Sheets sin expresiones regulares conflictivas
+    const GID_AJUSTES = '1147936171'; // Pestaña MASTER del Paciente
+    const GID_EQUIV = '1979658163';   // Pestaña TABLA EQUIVALENCIAS del Paciente
+    const mealIcons = { "DESAYUNO": "fa-coffee", "ALMUERZO": "fa-apple-whole", "COMIDA": "fa-utensils", "MERIENDA": "fa-cookie", "CENA": "fa-moon" };
+    
+    let bloquesAsignadosPorIngesta = {}; 
+    let poolProteinas = []; let poolCarbohidratos = []; let poolGrasas = []; let poolBuscadorCompleto = [];
+    let currentCategoryFilter = 'all';
+
+    function cleanJSON(raw) { return JSON.parse(raw.substring(raw.indexOf('{'), raw.lastIndexOf('}') + 1)); }
+
     function limpiarYExtraerId(urlText) {
         if (!urlText || typeof urlText !== 'string') return null;
         let p = urlText.indexOf('/d/');
@@ -199,104 +435,260 @@
         return recortado.substring(0, fin).trim();
     }
 
-    function mostrarError(mensaje) {
-        const errorBox = document.getElementById('error-box');
-        const errorTxt = document.getElementById('error-txt');
-        errorTxt.innerText = mensaje;
-        errorBox.style.display = 'flex';
-    }
-
-    function ocultarError() {
-        document.getElementById('error-box').style.display = 'none';
-    }
-
-    function setCargando(estado) {
-        const btn = document.getElementById('btn-submit');
-        const text = document.getElementById('btn-text');
-        const spinner = document.getElementById('btn-spinner');
-        
-        btn.disabled = estado;
-        if (estado) {
-            text.innerText = "Verificando...";
-            spinner.style.display = "block";
-        } else {
-            text.innerText = "Iniciar Sesión";
-            spinner.style.display = "none";
-        }
-    }
-
+    // LÓGICA DE INICIO DE SESIÓN
     function ejecutarLogin() {
-        ocultarError();
-        
-        const userInput = document.getElementById('username').value.trim();
-        const passInput = document.getElementById('password').value.trim();
+        const userIn = document.getElementById('username').value.trim();
+        const passIn = document.getElementById('password').value.trim();
+        const errBox = document.getElementById('error-box');
+        const errTxt = document.getElementById('error-text');
 
-        if (!userInput || !passInput) {
-            mostrarError("Por favor, rellena todos los campos.");
+        if (!userIn || !passIn) {
+            errTxt.innerText = "Completa todos los campos.";
+            errBox.style.display = "flex";
             return;
         }
 
-        setCargando(true);
+        errTxt.innerText = "Validando...";
+        errBox.style.display = "flex";
 
-        // Consultamos la hoja central de control de pacientes
         fetch(MASTER_CONTROL_URL)
-            .then(response => {
-                if (!response.ok) throw new Error("No se pudo conectar con la base de datos.");
-                return response.text();
-            })
+            .then(r => r.text())
             .then(rawData => {
-                // Limpieza del JSON retornado por Google API
-                const inicio = rawData.indexOf('{');
-                const fin = rawData.lastIndexOf('}');
-                const jsonClean = JSON.parse(rawData.substring(inicio, fin + 1));
-                const filas = jsonClean.table.rows;
+                const json = cleanJSON(rawData);
+                const filas = json.table.rows;
+                let cuenta = null;
 
-                let usuarioEncontrado = null;
-
-                // Recorremos las filas (empezando en 1 para saltar las cabeceras)
                 for (let i = 1; i < filas.length; i++) {
-                    const celda = filas[i].c;
-                    if (!celda) continue;
+                    const c = filas[i].c;
+                    if (!c) continue;
+                    const dbUser = c[1] && c[1].v ? String(c[1].v).trim() : '';
+                    const dbPass = c[2] && c[2].v ? String(c[2].v).trim() : '';
+                    const dbActivo = c[3] && c[3].v ? String(c[3].v).trim().toUpperCase() : 'N';
 
-                    // Columna B (índice 1): Usuario | Columna C (índice 2): Contraseña
-                    const dbUser = celda[1] && celda[1].v ? String(celda[1].v).trim() : '';
-                    const dbPass = celda[2] && celda[2].v ? String(celda[2].v).trim() : '';
-                    const dbActivo = celda[3] && celda[3].v ? String(celda[3].v).trim().toUpperCase() : 'N';
-
-                    if (dbUser.toLowerCase() === userInput.toLowerCase() && dbPass === passInput) {
+                    if (dbUser.toLowerCase() === userIn.toLowerCase() && dbPass === passIn) {
                         if (dbActivo !== 'S') {
-                            throw new Error("Tu cuenta se encuentra inactiva. Contacta con tu nutricionista.");
+                            errTxt.innerText = "Cuenta inactiva.";
+                            return;
                         }
-                        usuarioEncontrado = celda;
+                        cuenta = c;
                         break;
                     }
                 }
 
-                if (!usuarioEncontrado) {
-                    throw new Error("Usuario o contraseña incorrectos.");
+                if (!cuenta) {
+                    errTxt.innerText = "Usuario o contraseña incorrectos.";
+                    return;
                 }
 
-                // Columna E (índice 4): URL_Sheets_Paciente
-                const urlFicheroPaciente = usuarioEncontrado[4] && usuarioEncontrado[4].v ? String(usuarioEncontrado[4].v).trim() : '';
-                const idDocumentoPaciente = limpiarYExtraerId(urlFicheroPaciente);
+                const urlPaciente = cuenta[4] && cuenta[4].v ? String(cuenta[4].v).trim() : '';
+                const idPaciente = limpiarYExtraerId(urlPaciente);
 
-                if (!idDocumentoPaciente) {
-                    throw new Error("Error de configuración: El enlace de tu plan no es válido o está vacío.");
+                if (!idPaciente) {
+                    errTxt.innerText = "La URL del paciente en la columna E no es válida.";
+                    return;
                 }
 
-                // Guardamos el ID del paciente en almacenamiento local para que lo lea el index.html del Dashboard
-                localStorage.setItem('PACIENTE_SPREADSHEET_ID', idDocumentoPaciente);
+                // OCULTAMOS LOGIN Y REVELAMOS APLICACIÓN DIRECTAMENTE
+                errBox.style.display = "none";
+                document.getElementById('login-screen').style.display = "none";
+                document.getElementById('dashboard-screen').style.display = "block";
                 
-                // Redirección al Dashboard interno
-                window.location.href = 'index.html';
+                // Cargar datos dinámicos
+                cargarDatosNutricionales(idPaciente);
             })
-            .catch(error => {
-                console.error(error);
-                mostrarError(error.message || "Error al iniciar sesión. Inténtalo de nuevo.");
-                setCargando(false);
+            .catch(err => {
+                console.error(err);
+                errTxt.innerText = "Error al conectar con la base de datos.";
             });
     }
-</script>
 
+    function cerrarSesion() {
+        document.getElementById('dashboard-screen').style.display = "none";
+        document.getElementById('login-screen').style.display = "flex";
+        document.getElementById('username').value = "";
+        document.getElementById('password').value = "";
+        document.getElementById('plate-output').style.display = "none";
+    }
+
+    // CARGAR DATOS DE HOJA INDIVIDUAL
+    function cargarDatosNutricionales(spreadsheetId) {
+        document.getElementById('sync-status').innerText = "Sincronizando...";
+        document.getElementById('sync-status').style.background = "#fef3c7";
+
+        const urlAjustes = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?gid=${GID_AJUSTES}&tqx=out:json`;
+        const urlEquiv = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?gid=${GID_EQUIV}&tqx=out:json`;
+
+        Promise.all([
+            fetch(urlAjustes).then(r => r.text()),
+            fetch(urlEquiv).then(r => r.text())
+        ]).then(([dataAjustes, dataEquiv]) => {
+            renderMealsAndTitle(dataAjustes);
+            procesarYRenderizarEquivalencias(dataEquiv);
+            document.getElementById('sync-status').innerText = "Sincronizado";
+            document.getElementById('sync-status').style.background = "#dcfce7";
+            document.getElementById('sync-status').style.color = "#15803d";
+        }).catch(err => {
+            console.error(err);
+            document.getElementById('sync-status').innerText = "Error en hojas del paciente";
+            document.getElementById('sync-status').style.background = "#ffeeec";
+        });
+    }
+
+    function renderMealsAndTitle(raw) {
+        const json = cleanJSON(raw);
+        const rows = json.table.rows;
+        
+        if (rows[1] && rows[1].c && rows[1].c[3] && rows[1].c[3].v) {
+            document.getElementById('main-title').innerText = `Plan nutricional por bloques de ${String(rows[1].c[3].v).trim()}`;
+        }
+
+        const grid = document.getElementById('meal-grid');
+        let html = "";
+
+        for (let i = 0; i < 5; i++) {
+            if (!rows[i] || !rows[i].c) continue;
+            const row = rows[i].c;
+            const mealName = row[0] && row[0].v ? String(row[0].v).toUpperCase() : `INGESTA ${i+1}`; 
+            const blocksRaw = row[2] && row[2].v ? String(row[2].v) : '0'; 
+            
+            let pBlocks = 0, hcBlocks = 0, gBlocks = 0;
+            const lineas = blocksRaw.split(/[\n]/);
+            lineas.forEach(linea => {
+                const cleanLine = linea.replace(/\s+/g, ' ').trim().toLowerCase();
+                let numericoStr = cleanLine.replace(/[^0-9.,]/g, '').replace(',', '.');
+                let valorDecimal = parseFloat(numericoStr) || 0;
+                if (cleanLine.includes('prot')) pBlocks = valorDecimal;
+                else if (cleanLine.includes('carb') || cleanLine.includes('hidr')) hcBlocks = valorDecimal;
+                else if (cleanLine.includes('gras')) gBlocks = valorDecimal;
+            });
+
+            bloquesAsignadosPorIngesta[mealName] = { p: pBlocks, hc: hcBlocks, g: gBlocks };
+            const icon = mealIcons[mealName] || "fa-utensils";
+
+            html += `
+                <div class="meal-card">
+                    <div class="meal-name"><i class="fa-solid ${icon}"></i> ${mealName}</div>
+                    <div class="meal-content">${blocksRaw.replace(/\n/g, '<br>')}</div>
+                </div>`;
+        }
+        grid.innerHTML = html;
+    }
+
+    function procesarYRenderizarEquivalencias(raw) {
+        const json = cleanJSON(raw);
+        const rows = json.table.rows;
+        poolProteinas = []; poolCarbohidratos = []; poolGrasas = []; poolBuscadorCompleto = [];
+
+        for (let i = 1; i < rows.length; i++) {
+            const row = rows[i].c;
+            if (!row) continue;
+
+            function parsearGramos(celda) {
+                if(!celda || celda.v === null) return null;
+                let str = String(celda.v).replace(/\s+/g, '').toLowerCase();
+                let match = str.match(/(\d+(?:[.,]\d+)?)/); 
+                return match ? parseFloat(match[1].replace(',', '.')) : null;
+            }
+            function detectarUnidad(celdaStr) {
+                let str = celdaStr.toLowerCase();
+                if(str.includes('ml')) return 'ml';
+                if(str.includes('ud') || str.includes('unidad')) return 'udes';
+                return 'g';
+            }
+
+            if (row[0] && row[0].v !== null && String(row[0].v).trim() !== "" && !String(row[0].v).includes("PROTEÍNAS")) {
+                const item = { nombre: String(row[0].v).trim(), gramos: parsearGramos(row[1]), unidad: detectarUnidad(String(row[1]?.v || '')), tipo: "PROTEÍNAS" };
+                poolProteinas.push(item); poolBuscadorCompleto.push(item);
+            }
+            if (row[2] && row[2].v !== null && String(row[2].v).trim() !== "" && !String(row[2].v).includes("CARBOHIDRATOS")) {
+                let n = String(row[2].v).trim(); if(n.endsWith('|')) n = n.slice(0, -1).trim();
+                const item = { nombre: n, gramos: parsearGramos(row[3]), unidad: detectarUnidad(String(row[3]?.v || '')), tipo: "CARBOHIDRATOS" };
+                poolCarbohidratos.push(item); poolBuscadorCompleto.push(item);
+            }
+            if (row[4] && row[4].v !== null && String(row[4].v).trim() !== "" && !String(row[4].v).includes("GRASAS")) {
+                const item = { nombre: String(row[4].v).trim(), gramos: parsearGramos(row[5]), unidad: detectarUnidad(String(row[5]?.v || '')), tipo: "GRASAS" };
+                poolGrasas.push(item); poolBuscadorCompleto.push(item);
+            }
+            if (row[7] && row[7].v !== null && String(row[7].v).trim() !== "" && !String(row[7].v).includes("MIXTO")) {
+                poolBuscadorCompleto.push({ nombre: String(row[7].v).trim(), gramos: null, unidad: '', tipo: "ALIMENTOS MIXTOS" });
+            }
+        }
+
+        const tbody = document.getElementById('table-body');
+        let htmlTable = "";
+        poolBuscadorCompleto.forEach(item => {
+            let bClass = "bg-p";
+            if(item.tipo === "CARBOHIDRATOS") bClass = "bg-hc";
+            else if(item.tipo === "GRASAS") bClass = "bg-g";
+            else if(item.tipo === "ALIMENTOS MIXTOS") bClass = "bg-m";
+            htmlTable += `<tr data-type="${item.tipo.toLowerCase()}">
+                <td><strong>${item.nombre}</strong></td>
+                <td>${item.gramos !== null ? item.gramos+item.unidad : 'Ver definición'}</td>
+                <td><span class="badge ${bClass}">${item.tipo}</span></td>
+            </tr>`;
+        });
+        tbody.innerHTML = htmlTable;
+
+        // Pautas
+        let obsG = [], obsI = [], obsJ = [];
+        for (let i = 0; i < rows.length; i++) {
+            if(rows[i]?.c) {
+                if(rows[i].c[6]?.v) obsG.push(String(rows[i].c[6].v));
+                if(rows[i].c[8]?.v) obsI.push(String(rows[i].c[8].v));
+                if(rows[i].c[9]?.v) obsJ.push(String(rows[i].c[9].v));
+            }
+        }
+        document.getElementById('obs-grid').innerHTML = `
+            <div class="obs-card"><div class="obs-title">${obsG[0] || 'Info'}</div><div class="obs-content">${obsG.slice(1).join('<br>')}</div></div>
+            <div class="obs-card c2"><div class="obs-title">${obsI[0] || 'Pautas'}</div><div class="obs-content">${obsI.slice(1).join('<br>')}</div></div>
+            <div class="obs-card c3"><div class="obs-title">${obsJ[0] || 'Extra'}</div><div class="obs-content">${obsJ.slice(1).join('<br>')}</div></div>`;
+    }
+
+    function generarPlatoInteligente() {
+        const ingesta = document.getElementById('meal-selector').value;
+        const blq = bloquesAsignadosPorIngesta[ingesta];
+        const out = document.getElementById('plate-output');
+        out.style.display = "block";
+
+        if (!blq || (blq.p === 0 && blq.hc === 0 && blq.g === 0)) {
+            out.innerHTML = `<div class="plate-title">No hay bloques definidos para esta ingesta.</div>`;
+            return;
+        }
+
+        let html = `<div class="plate-title">Propuesta adaptada a tus bloques (${blq.p}P - ${blq.hc}HC - ${blq.g}G)</div>`;
+        
+        if(blq.p > 0 && poolProteinas.length > 0) {
+            let p = poolProteinas[Math.floor(Math.random() * poolProteinas.length)];
+            html += `<div class="plate-item"><span>🥩 <b>${(blq.p * (p.gramos || 0)).toFixed(0)}${p.unidad}</b> de <b>${p.nombre}</b></span><span class="item-macro-tag bg-p">P</span></div>`;
+        }
+        if(blq.hc > 0 && poolCarbohidratos.length > 0) {
+            let h = poolCarbohidratos[Math.floor(Math.random() * poolCarbohidratos.length)];
+            html += `<div class="plate-item"><span>🌾 <b>${(blq.hc * (h.gramos || 0)).toFixed(0)}${h.unidad}</b> de <b>${h.nombre}</b></span><span class="item-macro-tag bg-hc">HC</span></div>`;
+        }
+        if(blq.g > 0 && poolGrasas.length > 0) {
+            let g = poolGrasas[Math.floor(Math.random() * poolGrasas.length)];
+            html += `<div class="plate-item"><span>🥑 <b>${(blq.g * (g.gramos || 0)).toFixed(0)}${g.unidad}</b> de <b>${g.nombre}</b></span><span class="item-macro-tag bg-g">G</span></div>`;
+        }
+        out.innerHTML = html;
+    }
+
+    function setCategoryFilter(cat, btn) {
+        currentCategoryFilter = cat;
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        ejecutarFiltroCombinado();
+    }
+
+    function ejecutarFiltroCombinado() {
+        const text = document.getElementById('search').value.toLowerCase();
+        const trs = document.getElementById('table-body').getElementsByTagName('tr');
+        for (let i = 0; i < trs.length; i++) {
+            const tr = trs[i];
+            const name = tr.getElementsByTagName('td')[0].textContent.toLowerCase();
+            const type = tr.getAttribute('data-type') || "";
+            tr.style.display = (name.includes(text) && (currentCategoryFilter === 'all' || type === currentCategoryFilter)) ? "" : "none";
+        }
+    }
+</script>
 </body>
 </html>
