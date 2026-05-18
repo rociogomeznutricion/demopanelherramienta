@@ -21,7 +21,7 @@
             --hc-color: #f59e0b;
             --g-color: #10b981;
             --m-color: #8b5cf6;
-            --amber-bg: #fef3c7;
+            --amber-bg: #fffdf5;
             --amber-border: #fcd34d;
             --amber-text: #92400e;
         }
@@ -197,19 +197,13 @@
 
         .meal-content { font-size: 13px; color: var(--text-dark); line-height: 1.6; }
 
-        /* SECCIONES DE ASISTENTES (TARJETAS PRINCIPALES) */
-        .generator-card {
-            background: var(--white);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 30px;
-            margin-bottom: 25px;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
-        }
-
-        .generator-card.salvavidas {
-            background: linear-gradient(135deg, #fffdf5 0%, #fffbeb 100%);
+        /* SECCIÓN NUEVA INDEPENDIENTE: COMODÍN SALVAVIDAS */
+        .comodin-card {
+            background: linear-gradient(135deg, var(--amber-bg) 0%, #fffbeb 100%);
             border: 1px solid var(--amber-border);
+            border-radius: 16px;
+            padding: 25px;
+            margin-bottom: 25px;
         }
 
         .gen-controls {
@@ -218,7 +212,7 @@
             align-items: center;
             gap: 15px;
             margin-top: 15px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             flex-wrap: wrap;
         }
 
@@ -229,7 +223,7 @@
             font-family: 'Inter', sans-serif;
             font-weight: 600;
             background: var(--white);
-            min-width: 200px;
+            min-width: 220px;
         }
 
         .gen-btn {
@@ -287,6 +281,7 @@
             margin-left: 8px;
         }
 
+        /* BASE DE DATOS Y OTROS */
         .card {
             background: var(--white);
             border-radius: 16px;
@@ -384,10 +379,10 @@
 
         <div class="meal-grid" id="meal-grid"></div>
 
-        <div class="section-title" style="color: #b45309;"><i class="fa-solid fa-life-ring"></i> Comodín Salvavidas Pautado</div>
-        <div class="generator-card salvavidas">
+        <div class="section-title" style="color: var(--amber-text);"><i class="fa-solid fa-life-ring"></i> Comodín Salvavidas Pautado</div>
+        <div class="comodin-card">
             <p style="color: var(--amber-text); font-size: 14px; font-weight: 500;">
-                ¿Vas con prisa o quieres preparar la receta sugerida por tu nutricionista? Selecciona qué ingesta vas a realizar y el sistema calculará al instante los gramos exactos de cada ingrediente, repartiendo proporcionalmente los bloques si hay más de un alimento.
+                Calcula los gramos exactos de tu receta comodín fija para la ingesta seleccionada. Si hay más de un ID separado por comas, los bloques se repartirán de forma equitativa de manera automática.
             </p>
             <div class="gen-controls">
                 <select id="salvavidas-selector" class="gen-select">
@@ -403,8 +398,8 @@
         </div>
 
         <div class="section-title">✨ Asistente de Menú Instantáneo (Variedad)</div>
-        <div class="generator-card">
-            <p style="color: var(--text-light); font-size: 14px; font-weight: 500;">
+        <div class="card" style="padding: 30px;">
+            <p style="color: var(--text-light); font-size: 14px; font-weight: 500; margin-bottom: 15px;">
                 ¿Quieres variar? Selecciona una ingesta y el sistema armará una combinación totalmente aleatoria respetando tus bloques.
             </p>
             <div class="gen-controls">
@@ -450,18 +445,17 @@
 <script>
     const MASTER_CONTROL_URL = 'https://docs.google.com/spreadsheets/d/1L7lbZ4JkE7dqO_oizMEDKQabtyUBbR4yaqcrt3LMa6Q/gviz/tq?gid=0&tqx=out:json';
 
-    const GID_AJUSTES = '1147936171'; // Pestaña MASTER del Paciente
-    const GID_EQUIV = '1979658163';   // Pestaña TABLA EQUIVALENCIAS del Paciente
+    const GID_AJUSTES = '1147936171'; 
+    const GID_EQUIV = '1979658163';   
     const mealIcons = { "DESAYUNO": "fa-coffee", "ALMUERZO": "fa-apple-whole", "COMIDA": "fa-utensils", "MERIENDA": "fa-cookie", "CENA": "fa-moon" };
     
     let bloquesAsignadosPorIngesta = {}; 
     let poolProteinas = []; let poolCarbohidratos = []; let poolGrasas = []; let poolBuscadorCompleto = [];
-    let diccionarioAlimentosCompleto = {}; // Para buscar rápido por ID (ej: diccionarioAlimentosCompleto["HC_001"])
     let currentCategoryFilter = 'all';
 
-    // Objeto global de pautas fijas de la receta comodín (Columna E)
-    let recetaComodin = {
-        nombre: "Receta no definida",
+    // Objeto independiente para guardar los datos pautados del comodín (Columna E)
+    let datosComodinFijo = {
+        nombreReceta: "Receta Comodín",
         proteinasIds: [],
         carbohidratosIds: [],
         grasasIds: [],
@@ -579,11 +573,9 @@
             fetch(urlAjustes).then(r => r.text()),
             fetch(urlEquiv).then(r => r.text())
         ]).then(([dataAjustes, dataEquiv]) => {
-            // 1. Procesamos primero la pestaña de Equivalencias para tener el mapa completo indexado por ID
-            procesarYRenderizarEquivalencias(dataEquiv);
-            
-            // 2. Procesamos el perfil del paciente y la receta fija de la columna E
+            // El orden de ejecución original se mantiene estricto
             procesarPerfilYBloquesPaciente(dataAjustes);
+            procesarYRenderizarEquivalencias(dataEquiv);
             
             document.getElementById('sync-status').innerText = "Sincronizado";
             document.getElementById('sync-status').style.background = "#dcfce7";
@@ -603,43 +595,27 @@
         exclusionesPaciente.tagsExcluir = [];
         exclusionesPaciente.alimentosOdiados = [];
 
-        // LEER DESDE LA COLUMNA E (Índice de celda 4)
-        // Celda E1 -> Estilo de vida
+        // Leer datos de perfil desde la columna E
         if (rows[0] && rows[0].c && rows[0].c[4] && rows[0].c[4].v) {
             exclusionesPaciente.estiloVida = String(rows[0].c[4].v).trim().toUpperCase();
         }
-        // Celda E2 -> Alergias / Tags a descartar
         if (rows[1] && rows[1].c && rows[1].c[4] && rows[1].c[4].v) {
             exclusionesPaciente.tagsExcluir = String(rows[1].c[4].v).split(',').map(t => t.trim().toUpperCase()).filter(t => t !== "");
         }
-        // Celda E3 -> Alimentos No Deseados
         if (rows[2] && rows[2].c && rows[2].c[4] && rows[2].c[4].v) {
             exclusionesPaciente.alimentosOdiados = String(rows[2].c[4].v).split(',').map(a => a.trim().toLowerCase()).filter(a => a !== "");
         }
 
-        // NUEVO: LEER CONFIGURACIÓN DE LA RECETA COMODÍN EN LA COLUMNA E (Filas 5 a 9, índices 4 a 8)
-        // E5 (Fila 4) -> Nombre de la Receta
-        recetaComodin.nombre = rows[4] && rows[4].c && rows[4].c[4] && rows[4].c[4].v ? String(rows[4].c[4].v).trim() : "Receta Comodín Personalizada";
-        
-        // E6 (Fila 5) -> IDs Proteína (Ej: P_004 o P_001,P_002)
-        recetaComodin.proteinasIds = rows[5] && rows[5].c && rows[5].c[4] && rows[5].c[4].v ? 
-            String(rows[5].c[4].v).split(',').map(id => id.trim()).filter(id => id !== "") : [];
-            
-        // E7 (Fila 6) -> IDs Carbohidrato (Ej: HC_001,HC_002)
-        recetaComodin.carbohidratosIds = rows[6] && rows[6].c && rows[6].c[4] && rows[6].c[4].v ? 
-            String(rows[6].c[4].v).split(',').map(id => id.trim()).filter(id => id !== "") : [];
-            
-        // E8 (Fila 7) -> IDs Grasa (Ej: G_003)
-        recetaComodin.grasasIds = rows[7] && rows[7].c && rows[7].c[4] && rows[7].c[4].v ? 
-            String(rows[7].c[4].v).split(',').map(id => id.trim()).filter(id => id !== "") : [];
-            
-        // E9 (Fila 8) -> Condimentos / Libres
-        recetaComodin.libresTexto = rows[8] && rows[8].c && rows[8].c[4] && rows[8].c[4].v ? String(rows[8].c[4].v).trim() : "";
+        // COMODÍN SALVAVIDAS: Leer la configuración de la receta fija (Columna E, filas 5 a 9)
+        datosComodinFijo.nombreReceta = rows[4] && rows[4].c && rows[4].c[4] && rows[4].c[4].v ? String(rows[4].c[4].v).trim() : "Receta Comodín";
+        datosComodinFijo.proteinasIds = rows[5] && rows[5].c && rows[5].c[4] && rows[5].c[4].v ? String(rows[5].c[4].v).split(',').map(id => id.trim()).filter(id => id !== "") : [];
+        datosComodinFijo.carbohidratosIds = rows[6] && rows[6].c && rows[6].c[4] && rows[6].c[4].v ? String(rows[6].c[4].v).split(',').map(id => id.trim()).filter(id => id !== "") : [];
+        datosComodinFijo.grasasIds = rows[7] && rows[7].c && rows[7].c[4] && rows[7].c[4].v ? String(rows[7].c[4].v).split(',').map(id => id.trim()).filter(id => id !== "") : [];
+        datosComodinFijo.libresTexto = rows[8] && rows[8].c && rows[8].c[4] && rows[8].c[4].v ? String(rows[8].c[4].v).trim() : "";
 
         const grid = document.getElementById('meal-grid');
         let html = "";
 
-        // Renderizar bloques tradicionales de ingestas (Filas 1 a 5 de las columnas A, B, C)
         for (let i = 0; i < 5; i++) {
             if (!rows[i] || !rows[i].c) continue;
             const row = rows[i].c;
@@ -672,9 +648,9 @@
     function procesarYRenderizarEquivalencias(raw) {
         const json = cleanJSON(raw);
         const rows = json.table.rows;
-        
+
+        // Limpieza estricta de los pools originales (Tu lógica intacta)
         poolProteinas = []; poolCarbohidratos = []; poolGrasas = []; poolBuscadorCompleto = [];
-        diccionarioAlimentosCompleto = {}; // Inicializar mapa
 
         for (let i = 1; i < rows.length; i++) {
             const row = rows[i].c;
@@ -701,20 +677,24 @@
                     return true; 
                 }
 
-                let tagsAlimento = `
-                    ${celdaExclusion && celdaExclusion.v ? String(celdaExclusion.v) : ''} 
-                    ${celdaEstilo && celdaEstilo.v ? String(celdaEstilo.v) : ''} 
-                    ${celdaMomento && celdaMomento.v ? String(celdaMomento.v) : ''}
-                `.toUpperCase();
+                let tagExclusionStr = celdaExclusion && celdaExclusion.v ? String(celdaExclusion.v).toUpperCase() : "";
+                let tagEstiloStr = celdaEstilo && celdaEstilo.v ? String(celdaEstilo.v).toUpperCase() : "";
+                let tagMomentoStr = celdaMomento && celdaMomento.v ? String(celdaMomento.v).toUpperCase() : "";
+
+                let tagsAlimentoArray = [
+                    ...tagExclusionStr.split(',').map(t => t.trim()),
+                    ...tagEstiloStr.split(',').map(t => t.trim()),
+                    ...tagMomentoStr.split(',').map(t => t.trim())
+                ].filter(t => t !== "");
 
                 if (exclusionesPaciente.estiloVida === "VEGETARIANO" || exclusionesPaciente.estiloVida === "VEGANO") {
-                    if (tagsAlimento.includes("ANIMAL") || tagsAlimento.includes("CARNE") || tagsAlimento.includes("PESCADO")) {
+                    if (tagsAlimentoArray.includes("ANIMAL") || tagsAlimentoArray.includes("CARNE") || tagsAlimentoArray.includes("PESCADO") || tagEstiloStr.includes("OMNIVORO")) {
                         return true;
                     }
                 }
 
-                for (let tagExcluido of exclusionesPaciente.tagsExcluir) {
-                    if (tagsAlimento.includes(tagExcluido)) {
+                if (exclusionesPaciente.tagsExcluir.length > 0) {
+                    if (tagsAlimentoArray.some(tag => exclusionesPaciente.tagsExcluir.includes(tag))) {
                         return true;
                     }
                 }
@@ -722,44 +702,41 @@
                 return false;
             }
 
-            // A = ID_Alimento, B = Alimento, C = Macro, D = Gramos_bloque, E = Unidad
-            // Procesar fila unificada por columnas de la base de datos real (Col A, Col B, Col C, Col D, Col E)
-            if (row[0] && row[0].v !== null) {
-                const rawId = String(row[0].v).trim();
-                const nombreAlimento = row[1] && row[1].v ? String(row[1].v).trim() : '';
-                const macroPrincipal = row[2] && row[2].v ? String(row[2].v).trim().toUpperCase() : '';
-                const gramosBase = parsearGramos(row[3]);
-                const unidadBase = row[4] && row[4].v ? String(row[4].v).trim() : detectarUnidad(String(row[3]?.v || ''));
-
-                if (nombreAlimento !== "" && macroPrincipal !== "") {
-                    // Ignorar cabeceras accidentales si existen
-                    if (!rawId.includes("ID_")) {
-                        
-                        const item = { 
-                            id: rawId, 
-                            nombre: nombreAlimento, 
-                            gramos: gramosBase, 
-                            unidad: unidadBase, 
-                            tipo: macroPrincipal === "HC" ? "CARBOHIDRATOS" : (macroPrincipal === "P" ? "PROTEÍNAS" : (macroPrincipal === "G" ? "GRASAS" : "ALIMENTOS MIXTOS")) 
-                        };
-
-                        // Guardar en el diccionario global para indexación directa por ID (Comodín)
-                        diccionarioAlimentosCompleto[rawId] = item;
-
-                        // Filtrar y meter a los pools del buscador visual / aleatorio según exclusiones
-                        if (!debeExcluirse(nombreAlimento, row[5], row[6], row[7])) {
-                            if (item.tipo === "PROTEÍNAS") poolProteinas.push(item);
-                            else if (item.tipo === "CARBOHIDRATOS") poolCarbohidratos.push(item);
-                            else if (item.tipo === "GRASAS") poolGrasas.push(item);
-                            
-                            poolBuscadorCompleto.push(item);
-                        }
-                    }
+            // TU LOGICA DE COMPOSICIÓN ORIGINAL POR COLUMNAS (A-B, C-D, E-F, I) TOTALMENTE INTACTA
+            // Proteínas (Columnas A y B)
+            if (row[0] && row[0].v !== null && String(row[0].v).trim() !== "" && !String(row[0].v).includes("PROTEÍNAS")) {
+                let n = String(row[0].v).trim();
+                if (!debeExcluirse(n, row[5], row[6], row[7])) {
+                    let item = { nombre: n, gramos: parsearGramos(row[1]), unidad: detectarUnidad(String(row[1]?.v || '')), tipo: "PROTEÍNAS" };
+                    poolProteinas.push(item); poolBuscadorCompleto.push(item);
+                }
+            }
+            // Carbohidratos (Columnas C y D)
+            if (row[2] && row[2].v !== null && String(row[2].v).trim() !== "" && !String(row[2].v).includes("CARBOHIDRATOS")) {
+                let n = String(row[2].v).trim(); if(n.endsWith('|')) n = n.slice(0, -1).trim();
+                if (!debeExcluirse(n, row[5], row[6], row[7])) {
+                    let item = { nombre: n, gramos: parsearGramos(row[3]), unidad: detectarUnidad(String(row[3]?.v || '')), tipo: "CARBOHIDRATOS" };
+                    poolCarbohidratos.push(item); poolBuscadorCompleto.push(item);
+                }
+            }
+            // Grasas (Columnas E y F)
+            if (row[4] && row[4].v !== null && String(row[4].v).trim() !== "" && !String(row[4].v).includes("GRASAS")) {
+                let n = String(row[4].v).trim();
+                if (!debeExcluirse(n, row[5], row[6], row[7])) {
+                    let item = { nombre: n, gramos: parsearGramos(row[5]), unidad: detectarUnidad(String(row[5]?.v || '')), tipo: "GRASAS" };
+                    poolGrasas.push(item); poolBuscadorCompleto.push(item);
+                }
+            }
+            // Mixtos (Columna I)
+            if (row[8] && row[8].v !== null && String(row[8].v).trim() !== "" && !String(row[8].v).includes("MIXTO")) {
+                let n = String(row[8].v).trim();
+                if (!debeExcluirse(n, row[5], row[6], row[7])) {
+                    poolBuscadorCompleto.push({ nombre: n, gramos: null, unidad: '', tipo: "ALIMENTOS MIXTOS" });
                 }
             }
         }
 
-        // Renderizar tabla visual de equivalencias
+        // Renderizado visual de la tabla original
         const tbody = document.getElementById('table-body');
         let htmlTable = "";
         poolBuscadorCompleto.forEach(item => {
@@ -768,14 +745,14 @@
             else if(item.tipo === "GRASAS") bClass = "bg-g";
             else if(item.tipo === "ALIMENTOS MIXTOS") bClass = "bg-m";
             htmlTable += `<tr data-type="${item.tipo.toLowerCase()}">
-                <td><strong>${item.nombre}</strong> <small style="color:var(--text-light)">(${item.id})</small></td>
-                <td>${item.gramos !== null ? item.gramos + ' ' + item.unidad : 'Ver definición'}</td>
+                <td><strong>${item.nombre}</strong></td>
+                <td>${item.gramos !== null ? item.gramos + " " + item.unidad : 'Ver definición'}</td>
                 <td><span class="badge ${bClass}">${item.tipo}</span></td>
             </tr>`;
         });
         tbody.innerHTML = htmlTable;
 
-        // Renderizar notas marginales
+        // Renderizado de las observaciones de las columnas G, I, J
         let obsG = [], obsI = [], obsJ = [];
         for (let i = 0; i < rows.length; i++) {
             if(rows[i]?.c) {
@@ -790,7 +767,8 @@
             <div class="obs-card c3"><div class="obs-title">${obsJ[0] || 'Extra'}</div><div class="obs-content">${obsJ.slice(1).join('<br>')}</div></div>`;
     }
 
-    // NUEVA FUNCIÓN MÁGICA: CÁLCULO DINÁMICO DEL COMODÍN SALVAVIDAS CON REPARTO EQUITATIVO
+    // NUEVA FUNCIÓN INDEPENDIENTE: COMODÍN SALVAVIDAS CON REPARTO EQUITATIVO POR COMAS
+    // Busca los IDs directamente dentro de los arrays existentes de alimentos de forma aislada
     function calcularComodinSalvavidas() {
         const ingesta = document.getElementById('salvavidas-selector').value;
         const blq = bloquesAsignadosPorIngesta[ingesta];
@@ -798,98 +776,67 @@
         out.style.display = "block";
 
         if (!blq || (blq.p === 0 && blq.hc === 0 && blq.g === 0)) {
-            out.innerHTML = `<div class="plate-title" style="color:var(--p-color)">No hay bloques definidos para la ingesta seleccionada.</div>`;
+            out.innerHTML = `<div class="plate-title">No hay bloques definidos para la ingesta seleccionada.</div>`;
             return;
         }
 
         let html = `<div class="plate-title" style="color: var(--amber-text); border-bottom-color: var(--amber-border)">
-                        <i class="fa-solid fa-utensils"></i> Receta: <b>${recetaComodin.nombre}</b><br>
-                        <small style="font-size:12px; color: var(--text-light)">Pauta calculada para ${ingesta} (${blq.p}P - ${blq.hc}HC - ${blq.g}G)</small>
+                        <i class="fa-solid fa-utensils"></i> Receta: <b>${datosComodinFijo.nombreReceta}</b><br>
+                        <small style="font-size:12px; color: var(--text-light)">Ajustado para ${ingesta} (${blq.p}P - ${blq.hc}HC - ${blq.g}G)</small>
                     </div>`;
 
-        let totalIngredientesCalculados = 0;
+        let flagTieneIngredientes = false;
 
-        // 1. Procesar Proteínas
-        if (blq.p > 0 && recetaComodin.proteinasIds.length > 0) {
-            const numAlimentos = recetaComodin.proteinasIds.length;
-            const bloquesPorAlimento = blq.p / numAlimentos; // Reparto proporcional
+        // Función auxiliar aislada que busca por ID parcial dentro de los pools y calcula la porción equitativa
+        function procesarMacroComodin(listaIds, bloquesTotales, poolAlimentos, bgClass, emoji) {
+            if (listaIds.length === 0 || bloquesTotales <= 0) return "";
+            
+            let bloquesPorAlimento = bloquesTotales / listaIds.length;
+            let subHtml = "";
 
-            recetaComodin.proteinasIds.forEach(id => {
-                const alimento = diccionarioAlimentosCompleto[id];
-                if (alimento && alimento.gramos) {
-                    const gramosTotales = (bloquesPorAlimento * alimento.gramos).toFixed(0);
-                    html += `
+            listaIds.forEach(id => {
+                // Buscamos el objeto en el pool cuyo nombre contenga el ID exacto (Ej: "(HC_001)")
+                let alimentoEncontrado = poolAlimentos.find(item => item.nombre.includes(id));
+                
+                if (alimentoEncontrado && alimentoEncontrado.gramos) {
+                    let gramosCalculados = (bloquesPorAlimento * alimentoEncontrado.gramos).toFixed(0);
+                    subHtml += `
                         <div class="plate-item">
-                            <span>🥩 <b>${gramosTotales}${alimento.unidad}</b> de <b>${alimento.nombre}</b> <small style="color:var(--text-light)">(${bloquesPorAlimento.toFixed(1)} blq)</small></span>
-                            <span class="item-macro-tag bg-p">P</span>
+                            <span>${emoji} <b>${gramosCalculados} ${alimentoEncontrado.unidad}</b> de <b>${alimentoEncontrado.nombre}</b> <small style="color:var(--text-light)">(${bloquesPorAlimento.toFixed(1)} blq)</small></span>
+                            <span class="item-macro-tag ${bgClass}">${bgClass.replace('bg-','').toUpperCase()}</span>
                         </div>`;
-                    totalIngredientesCalculados++;
+                    flagTieneIngredientes = true;
                 } else {
-                    html += `<div class="plate-item" style="color:var(--p-color)"><span>⚠️ ID de Proteína no encontrado: <b>${id}</b></span></div>`;
+                    subHtml += `<div class="plate-item" style="color:var(--p-color)"><span>⚠️ Código <b>${id}</b> no activo o no disponible para tu perfil</span></div>`;
                 }
             });
+            return subHtml;
         }
 
-        // 2. Procesar Carbohidratos (Soporta múltiples separados por comas)
-        if (blq.hc > 0 && recetaComodin.carbohidratosIds.length > 0) {
-            const numAlimentos = recetaComodin.carbohidratosIds.length;
-            const bloquesPorAlimento = blq.hc / numAlimentos; // Reparto proporcional
+        // Calcular de forma independiente cada macro usando los pools puros intactos
+        html += procesarMacroComodin(datosComodinFijo.proteinasIds, blq.p, poolProteinas, 'bg-p', '🥩');
+        html += procesarMacroComodin(datosComodinFijo.carbohidratosIds, blq.hc, poolCarbohidratos, 'bg-hc', '🌾');
+        html += procesarMacroComodin(datosComodinFijo.grasasIds, blq.g, poolGrasas, 'bg-g', '🥑');
 
-            recetaComodin.carbohidratosIds.forEach(id => {
-                const alimento = diccionarioAlimentosCompleto[id];
-                if (alimento && alimento.gramos) {
-                    const gramosTotales = (bloquesPorAlimento * alimento.gramos).toFixed(0);
-                    html += `
-                        <div class="plate-item">
-                            <span>🌾 <b>${gramosTotales}${alimento.unidad}</b> de <b>${alimento.nombre}</b> <small style="color:var(--text-light)">(${bloquesPorAlimento.toFixed(1)} blq)</small></span>
-                            <span class="item-macro-tag bg-hc">HC</span>
-                        </div>`;
-                    totalIngredientesCalculados++;
-                } else {
-                    html += `<div class="plate-item" style="color:var(--p-color)"><span>⚠️ ID de Carbohidrato no encontrado: <b>${id}</b></span></div>`;
-                }
-            });
-        }
-
-        // 3. Procesar Grasas
-        if (blq.g > 0 && recetaComodin.grasasIds.length > 0) {
-            const numAlimentos = recetaComodin.grasasIds.length;
-            const bloquesPorAlimento = blq.g / numAlimentos; // Reparto proporcional
-
-            recetaComodin.grasasIds.forEach(id => {
-                const alimento = diccionarioAlimentosCompleto[id];
-                if (alimento && alimento.gramos) {
-                    const gramosTotales = (bloquesPorAlimento * alimento.gramos).toFixed(0);
-                    html += `
-                        <div class="plate-item">
-                            <span>🥑 <b>${gramosTotales}${alimento.unidad}</b> de <b>${alimento.nombre}</b> <small style="color:var(--text-light)">(${bloquesPorAlimento.toFixed(1)} blq)</small></span>
-                            <span class="item-macro-tag bg-g">G</span>
-                        </div>`;
-                    totalIngredientesCalculados++;
-                } else {
-                    html += `<div class="plate-item" style="color:var(--p-color)"><span>⚠️ ID de Grasa no encontrado: <b>${id}</b></span></div>`;
-                }
-            });
-        }
-
-        // 4. Agregar extras o condimentos libres (Fila E9)
-        if (recetaComodin.libresTexto !== "" && recetaComodin.libresTexto.toLowerCase() !== "ninguno") {
+        // Condimentos libres (Fila E9)
+        if (datosComodinFijo.libresTexto && datosComodinFijo.libresTexto !== "" && datosComodinFijo.libresTexto.toLowerCase() !== "ninguno") {
             html += `
                 <div class="plate-item" style="background-color: #fafafa; padding: 10px; border-radius: 6px; margin-top: 10px;">
-                    <span>🧂 <b>Extras libres:</b> ${recetaComodin.libresTexto}</span>
+                    <span>🧂 <b>Extras libres:</b> ${datosComodinFijo.libresTexto}</span>
                     <span class="badge bg-m">Libre</span>
                 </div>`;
+            flagTieneIngredientes = true;
         }
 
-        if (totalIngredientesCalculados === 0) {
-            out.innerHTML = `<div class="plate-title" style="color:var(--text-light)">La receta está vacía o los IDs cargados no coinciden con la base de datos de equivalencias.</div>`;
+        if (!flagTieneIngredientes) {
+            out.innerHTML = `<div class="plate-title" style="color:var(--text-light)">No se encontraron ingredientes válidos pautados en la columna E.</div>`;
             return;
         }
 
         out.innerHTML = html;
     }
 
-    // ASISTENTE COMPLEMENTARIO (SUGERENCIA TOTALMENTE ALEATORIA)
+    // ASISTENTE ALEATORIO TRADICIONAL (TOTALMENTE INTACTO)
     function generarPlatoInteligente() {
         const ingesta = document.getElementById('meal-selector').value;
         const blq = bloquesAsignadosPorIngesta[ingesta];
@@ -905,15 +852,15 @@
         
         if(blq.p > 0 && poolProteinas.length > 0) {
             let p = poolProteinas[Math.floor(Math.random() * poolProteinas.length)];
-            html += `<div class="plate-item"><span>🥩 <b>${(blq.p * (p.gramos || 0)).toFixed(0)}${p.unidad}</b> de <b>${p.nombre}</b></span><span class="item-macro-tag bg-p">P</span></div>`;
+            html += `<div class="plate-item"><span>🥩 <b>${(blq.p * (p.gramos || 0)).toFixed(0)} ${p.unidad}</b> de <b>${p.nombre}</b></span><span class="item-macro-tag bg-p">P</span></div>`;
         }
         if(blq.hc > 0 && poolCarbohidratos.length > 0) {
             let h = poolCarbohidratos[Math.floor(Math.random() * poolCarbohidratos.length)];
-            html += `<div class="plate-item"><span>🌾 <b>${(blq.hc * (h.gramos || 0)).toFixed(0)}${h.unidad}</b> de <b>${h.nombre}</b></span><span class="item-macro-tag bg-hc">HC</span></div>`;
+            html += `<div class="plate-item"><span>🌾 <b>${(blq.hc * (h.gramos || 0)).toFixed(0)} ${h.unidad}</b> de <b>${h.nombre}</b></span><span class="item-macro-tag bg-hc">HC</span></div>`;
         }
         if(blq.g > 0 && poolGrasas.length > 0) {
             let g = poolGrasas[Math.floor(Math.random() * poolGrasas.length)];
-            html += `<div class="plate-item"><span>🥑 <b>${(blq.g * (g.gramos || 0)).toFixed(0)}${g.unidad}</b> de <b>${g.nombre}</b></span><span class="item-macro-tag bg-g">G</span></div>`;
+            html += `<div class="plate-item"><span>🥑 <b>${(blq.g * (g.gramos || 0)).toFixed(0)} ${g.unidad}</b> de <b>${g.nombre}</b></span><span class="item-macro-tag bg-g">G</span></div>`;
         }
         out.innerHTML = html;
     }
