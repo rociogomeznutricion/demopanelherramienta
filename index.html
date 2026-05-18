@@ -425,7 +425,7 @@
     let poolProteinas = []; let poolCarbohidratos = []; let poolGrasas = []; let poolBuscadorCompleto = [];
     let currentCategoryFilter = 'all';
 
-    // Objeto global de exclusiones del paciente conectado
+    // Estado de exclusiones perfectamente normalizado
     let exclusionesPaciente = {
         estiloVida: "",
         tagsExcluir: [],
@@ -536,9 +536,7 @@
             fetch(urlAjustes).then(r => r.text()),
             fetch(urlEquiv).then(r => r.text())
         ]).then(([dataAjustes, dataEquiv]) => {
-            // Procesamos la columna E de la pestaña MASTER del paciente
             procesarPerfilYBloquesPaciente(dataAjustes);
-            // Dibujamos las equivalencias aplicando el filtro
             procesarYRenderizarEquivalencias(dataEquiv);
             
             document.getElementById('sync-status').innerText = "Sincronizado";
@@ -555,29 +553,37 @@
         const json = cleanJSON(raw);
         const rows = json.table.rows;
 
-        // Limpiar estados anteriores
         exclusionesPaciente.estiloVida = "";
         exclusionesPaciente.tagsExcluir = [];
         exclusionesPaciente.alimentosOdiados = [];
 
-        // LEER DESDE LA COLUMNA E (Índice de celda 4)
-        // Celda E1 (Fila 0, Columna 4) -> Estilo de vida
-        if (rows[0] && rows[0].c && rows[0].c[4] && rows[0].c[4].v) {
-            exclusionesPaciente.estiloVida = String(rows[0].c[4].v).trim().toUpperCase();
+        // FUNCIÓN AUXILIAR PARA EXTRAER SEGURO EL CONTENIDO DE LA COLUMNA E
+        function obtenerTextoCeldaE(filaIndex) {
+            if (rows[filaIndex] && rows[filaIndex].c && rows[filaIndex].c[4] && rows[filaIndex].c[4].v !== null) {
+                return String(rows[filaIndex].c[4].v).trim();
+            }
+            return "";
         }
-        // Celda E2 (Fila 1, Columna 4) -> Alergias / Tags a descartar
-        if (rows[1] && rows[1].c && rows[1].c[4] && rows[1].c[4].v) {
-            exclusionesPaciente.tagsExcluir = String(rows[1].c[4].v).split(',').map(t => t.trim().toUpperCase()).filter(t => t !== "");
+
+        // 1. E1 -> Estilo de vida (Normalizado a mayúsculas)
+        exclusionesPaciente.estiloVida = obtenerTextoCeldaE(0).toUpperCase();
+
+        // 2. E2 -> Alergias/Tags a excluir (Se limpia de espacios y pasa a Array en Mayúsculas)
+        let rawTags = obtenerTextoCeldaE(1);
+        if (rawTags) {
+            exclusionesPaciente.tagsExcluir = rawTags.split(',').map(t => t.trim().toUpperCase()).filter(t => t !== "");
         }
-        // Celda E3 (Fila 2, Columna 4) -> Alimentos que no le gustan
-        if (rows[2] && rows[2].c && rows[2].c[4] && rows[2].c[4].v) {
-            exclusionesPaciente.alimentosOdiados = String(rows[2].c[4].v).split(',').map(a => a.trim().toLowerCase()).filter(a => a !== "");
+
+        // 3. E3 -> Alimentos Odiados (Se limpia y pasa a Array en Minúsculas para buscar coincidencias parciales)
+        let rawOdiados = obtenerTextoCeldaE(2);
+        if (rawOdiados) {
+            exclusionesPaciente.alimentosOdiados = rawOdiados.split(',').map(a => a.trim().toLowerCase()).filter(a => a !== "");
         }
 
         const grid = document.getElementById('meal-grid');
         let html = "";
 
-        // Renderizar bloques de ingestas tradicionales (Filas 1 a 5 de las columnas A, B, C)
+        // Renderizar bloques de ingestas (Filas 1 a 5 de las columnas A, B, C)
         for (let i = 0; i < 5; i++) {
             if (!rows[i] || !rows[i].c) continue;
             const row = rows[i].c;
@@ -629,33 +635,39 @@
                 return 'g';
             }
 
-            // DETECTOR DE EXCLUSIÓN INTELIGENTE
+            // MOTOR ULTRA-FILTRADO BLINDADO (No importa mayúsculas/minúsculas ni espacios)
             function debeExcluirse(nombre, celdaExclusion, celdaEstilo, celdaMomento) {
                 if (!nombre) return true;
-                let nClean = nombre.toLowerCase();
+                let nClean = nombre.toLowerCase().trim();
 
-                // 1. Validar si el nombre contiene alguna palabra de los alimentos odiados (Celda E3)
+                // 1. Validar Alimentos Odiados (Coincidencia de texto parcial)
                 if (exclusionesPaciente.alimentosOdiados.some(odiado => nClean.includes(odiado))) {
                     return true; 
                 }
 
-                // Concatenar todos los tags del alimento de la base de datos (Columnas F, G, H)
-                let tagsAlimento = `
-                    ${celdaExclusion && celdaExclusion.v ? String(celdaExclusion.v) : ''} 
-                    ${celdaEstilo && celdaEstilo.v ? String(celdaEstilo.v) : ''} 
-                    ${celdaMomento && celdaMomento.v ? String(celdaMomento.v) : ''}
-                `.toUpperCase();
+                // Extraer y limpiar las tres celdas de tags del alimento de la fila actual
+                let tExclusionStr = celdaExclusion && celdaExclusion.v ? String(celdaExclusion.v).toUpperCase() : "";
+                let tEstiloStr = celdaEstilo && celdaEstilo.v ? String(celdaEstilo.v).toUpperCase() : "";
+                let tMomentoStr = celdaMomento && celdaMomento.v ? String(celdaMomento.v).toUpperCase() : "";
 
-                // 2. Validar estilo de vida vegetariano/vegano (Celda E1)
+                // Unificar todos los tags individuales en un listado limpio
+                let todosLosTagsDelAlimento = [
+                    ...tExclusionStr.split(','),
+                    ...tEstiloStr.split(','),
+                    ...tMomentoStr.split(',')
+                ].map(tag => tag.trim()).filter(tag => tag !== "");
+
+                // 2. Validar Filtro por Estilo de Vida (Vegetariano / Vegano)
                 if (exclusionesPaciente.estiloVida === "VEGETARIANO" || exclusionesPaciente.estiloVida === "VEGANO") {
-                    if (tagsAlimento.includes("ANIMAL") || tagsAlimento.includes("CARNE") || tagsAlimento.includes("PESCADO")) {
+                    // Si el alimento tiene explícitamente palabras prohibidas en su lista de tags
+                    if (todosLosTagsDelAlimento.some(tag => tag === "ANIMAL" || tag === "CARNE" || tag === "PESCADO")) {
                         return true;
                     }
                 }
 
-                // 3. Validar exclusión por tags / Alergias específicos (Celda E2)
-                for (let tagExcluido of exclusionesPaciente.tagsExcluir) {
-                    if (tagsAlimento.includes(tagExcluido)) {
+                // 3. Validar Filtro por Tags de Alergias específicos (Gluten, Lactosa, etc.)
+                if (exclusionesPaciente.tagsExcluir.length > 0) {
+                    if (todosLosTagsDelAlimento.some(tag => exclusionesPaciente.tagsExcluir.includes(tag))) {
                         return true;
                     }
                 }
@@ -663,7 +675,7 @@
                 return false;
             }
 
-            // Procesar fila de Proteínas (Columna A=0, B=1. Tags F=5, G=6, H=7)
+            // Procesar fila de Proteínas (A y B) -> Tags F(5), G(6), H(7)
             if (row[0] && row[0].v !== null && String(row[0].v).trim() !== "" && !String(row[0].v).includes("PROTEÍNAS")) {
                 let n = String(row[0].v).trim();
                 if (!debeExcluirse(n, row[5], row[6], row[7])) {
@@ -671,7 +683,7 @@
                     poolProteinas.push(item); poolBuscadorCompleto.push(item);
                 }
             }
-            // Procesar fila de Carbohidratos (Columna C=2, D=3)
+            // Procesar fila de Carbohidratos (C y D) -> Tags F(5), G(6), H(7)
             if (row[2] && row[2].v !== null && String(row[2].v).trim() !== "" && !String(row[2].v).includes("CARBOHIDRATOS")) {
                 let n = String(row[2].v).trim(); if(n.endsWith('|')) n = n.slice(0, -1).trim();
                 if (!debeExcluirse(n, row[5], row[6], row[7])) {
@@ -679,7 +691,7 @@
                     poolCarbohidratos.push(item); poolBuscadorCompleto.push(item);
                 }
             }
-            // Procesar fila de Grasas (Columna E=4, F=5 en visual, pero leídas en índices correctos)
+            // Procesar fila de Grasas (E y F) -> Tags F(5), G(6), H(7)
             if (row[4] && row[4].v !== null && String(row[4].v).trim() !== "" && !String(row[4].v).includes("GRASAS")) {
                 let n = String(row[4].v).trim();
                 if (!debeExcluirse(n, row[5], row[6], row[7])) {
@@ -687,7 +699,7 @@
                     poolGrasas.push(item); poolBuscadorCompleto.push(item);
                 }
             }
-            // Procesar fila de Mixtos (Columna I en hojas, índice de celda 8)
+            // Procesar fila de Mixtos (I) -> Índice 8
             if (row[8] && row[8].v !== null && String(row[8].v).trim() !== "" && !String(row[8].v).includes("MIXTO")) {
                 let n = String(row[8].v).trim();
                 if (!debeExcluirse(n, row[5], row[6], row[7])) {
@@ -711,7 +723,7 @@
         });
         tbody.innerHTML = htmlTable;
 
-        // Renderizar bloques de notas marginales/Pautas de las últimas columnas
+        // Notas marginales de pautas fijas al final
         let obsG = [], obsI = [], obsJ = [];
         for (let i = 0; i < rows.length; i++) {
             if(rows[i]?.c) {
