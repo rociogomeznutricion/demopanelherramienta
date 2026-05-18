@@ -215,10 +215,10 @@
 
         .filter-btn:hover { background-color: #e2e8f0; }
         .filter-btn.active[data-type="all"] { background-color: var(--navy); color: var(--white); border-color: var(--navy); }
-        .filter-btn.active[data-type="proteínas"] { background-color: var(--p-color); color: var(--white); border-color: var(--p-color); }
-        .filter-btn.active[data-type="carbohidratos"] { background-color: var(--hc-color); color: var(--white); border-color: var(--hc-color); }
-        .filter-btn.active[data-type="grasas"] { background-color: var(--g-color); color: var(--white); border-color: var(--g-color); }
-        .filter-btn.active[data-type="alimentos mixtos"] { background-color: var(--m-color); color: var(--white); border-color: var(--m-color); }
+        .filter-btn.active[data-type="p"] { background-color: var(--p-color); color: var(--white); border-color: var(--p-color); }
+        .filter-btn.active[data-type="hc"] { background-color: var(--hc-color); color: var(--white); border-color: var(--hc-color); }
+        .filter-btn.active[data-type="g"] { background-color: var(--g-color); color: var(--white); border-color: var(--g-color); }
+        .filter-btn.active[data-type="mixto"] { background-color: var(--m-color); color: var(--white); border-color: var(--m-color); }
 
         .search-area { margin-bottom: 20px; }
         .search-input {
@@ -318,10 +318,10 @@
     <section class="card">
         <div class="filter-container">
             <button class="filter-btn active" data-type="all" onclick="setCategoryFilter('all', this)">⚡ Todos</button>
-            <button class="filter-btn" data-type="proteínas" onclick="setCategoryFilter('proteínas', this)">🥩 Proteínas</button>
-            <button class="filter-btn" data-type="carbohidratos" onclick="setCategoryFilter('carbohidratos', this)">🌾 Carbohidratos</button>
-            <button class="filter-btn" data-type="grasas" onclick="setCategoryFilter('grasas', this)">🥑 Grasas</button>
-            <button class="filter-btn" data-type="alimentos mixtos" onclick="setCategoryFilter('alimentos mixtos', this)">🥣 Mixtos</button>
+            <button class="filter-btn" data-type="p" onclick="setCategoryFilter('p', this)">🥩 Proteínas</button>
+            <button class="filter-btn" data-type="hc" onclick="setCategoryFilter('hc', this)">🌾 Carbohidratos</button>
+            <button class="filter-btn" data-type="g" onclick="setCategoryFilter('g', this)">🥑 Grasas</button>
+            <button class="filter-btn" data-type="mixto" onclick="setCategoryFilter('mixto', this)">🥣 Mixtos</button>
         </div>
 
         <div class="search-area">
@@ -350,7 +350,7 @@
     const SPREADSHEET_ID_PACIENTE = '1agPyD1JW34QSqXOeisPSsjXQuIXkwvdP4ZFyRAlvip4'; 
     const GID_AJUSTES_PACIENTE = '1147936171'; // Pestaña MASTER (Bloques, Nombre y Pautas finales de las columnas G, I, J)
 
-    // --- PARÁMETROS ARCHIVO MAESTRO CENTRAL ---
+    // --- PARÁMETROS ARCHIVO MAESTRO CENTRAL (NUEVA ESTRUCTURA) ---
     const SPREADSHEET_ID_MAESTRO = '1qxe-uHMw7rba6CVV3TDY38aA1kULHm3FInrSyYcK4Oo';
     const GID_EQUIV_MAESTRO = '1979658163';   // Pestaña ROCIOGOMEZ_BBDD_ALIMENTOS
 
@@ -379,7 +379,7 @@
         document.getElementById('sync-status').innerText = "Error de conexión";
     });
 
-    // Carga de la pestaña MASTER (Bloques + Título desde Celda D2)
+    // Carga de la pestaña MASTER del Paciente (Bloques + Título)
     function renderMealsAndTitle(raw) {
         const json = cleanJSON(raw);
         const rows = json.table.rows;
@@ -459,144 +459,78 @@
         `;
     }
 
-    // Carga de la pestaña ROCIOGOMEZ_BBDD_ALIMENTOS del archivo MAESTRO
+    // Adaptado al nuevo formato secuencial vertical (image_db022d.png)
     function procesarYRenderizarEquivalencias(raw) {
         const json = cleanJSON(raw);
         const rows = json.table.rows;
         
         poolProteinas = []; poolCarbohidratos = []; poolGrasas = []; poolBuscadorCompleto = [];
 
-        const labelP = "PROTEÍNAS";
-        const labelHC = "CARBOHIDRATOS";
-        const labelG = "GRASAS";
-        const labelM = "ALIMENTOS MIXTOS";
-
+        // Empezamos en i = 1 para saltarnos la fila de cabeceras (ID_Alimento, Alimento...)
         for (let i = 1; i < rows.length; i++) {
             const row = rows[i].c;
             if (!row) continue;
 
-            function parsearGramos(celda) {
-                if(!celda || celda.v === null) return null;
-                let str = String(celda.v).replace(/\s+/g, '').toLowerCase();
-                let match = str.match(/(\d+(?:[.,]\d+)?)/); 
-                if(match) return parseFloat(match[1].replace(',', '.')) || null;
-                return null;
-            }
+            // Columna B (índice 1): Nombre del alimento
+            if (!row[1] || row[1].v === null || String(row[1].v).trim() === "") continue;
+            const nombre = String(row[1].v).trim();
 
-            function detectarUnidad(celdaStr) {
-                let str = celdaStr.toLowerCase();
-                if(str.includes('ml')) return 'ml';
-                if(str.includes('udes') || str.includes('ud') || str.includes('unidad')) return 'udes';
-                return 'g';
-            }
+            // Columna C (índice 2): Macro Principal (P, HC, G, MIXTO)
+            const macro = row[2] && row[2].v ? String(row[2].v).trim().toUpperCase() : 'MIXTO';
 
-            function asignarTagsMomentos(nombreAlimento) {
-                let n = nombreAlimento.toLowerCase();
-                let tags = { desayuno: false, almuerzo: false, comida: false, merienda: false, cena: false };
+            // Columna D (índice 3): Gramos_bloque
+            const gramos = row[3] && row[3].v !== null ? parseFloat(row[3].v) : null;
 
-                if (n.includes("huevo")) {
-                    tags.desayuno = true; tags.almuerzo = true; tags.comida = true; tags.merienda = true; tags.cena = true;
-                    return tags;
-                }
+            // Columna E (índice 4): Unidad
+            const unidad = row[4] && row[4].v ? String(row[4].v).trim() : 'g';
 
-                if (n.includes("yogur") || n.includes("queso fresco") || n.includes("avena") || n.includes("fruta") || 
-                    n.includes("plátano") || n.includes("manzana") || n.includes("pera") || n.includes("fresa") || 
-                    n.includes("pan integral") || n.includes("tost") || n.includes("pavo") || n.includes("jamón") || 
-                    n.includes("clara") || n.includes("batido") || n.includes("proteina en polvo") || n.includes("nueces") || 
-                    n.includes("almendra") || n.includes("crema de cacahuete") || n.includes("cashew")) {
-                    tags.desayuno = true;
-                    tags.merienda = true;
-                    tags.almuerzo = true;
-                }
+            // Columna H (índice 7): Tags_momento (Desayuno, Almuerzo, Cena...)
+            const momentosRaw = row[7] && row[7].v ? String(row[7].v).toLowerCase() : 'cualquiera';
+            
+            const momentos = {
+                desayuno: momentosRaw.includes('desayuno') || momentosRaw.includes('cualquiera'),
+                almuerzo: momentosRaw.includes('almuerzo') || momentosRaw.includes('media mañana') || momentosRaw.includes('cualquiera'),
+                comida: momentosRaw.includes('comida') || momentosRaw.includes('cualquiera'),
+                merienda: momentosRaw.includes('merienda') || momentosRaw.includes('cualquiera'),
+                cena: momentosRaw.includes('cena') || momentosRaw.includes('cualquiera')
+            };
 
-                if (n.includes("atún al natural")) {
-                    tags.almuerzo = true;
-                }
+            const item = { nombre, gramos, unidad, tipo: macro, momentos };
 
-                if (n.includes("arroz") || n.includes("pasta") || n.includes("ñoquis") || n.includes("quinoa") || 
-                    n.includes("legumbre") || n.includes("garbanzo") || n.includes("lenteja") || n.includes("boniato") || 
-                    n.includes("patata") || n.includes("cuscus") || n.includes("pollo") || n.includes("ternera") || 
-                    n.includes("lomo") || n.includes("merluza") || n.includes("pescado") || n.includes("salmón") || 
-                    n.includes("atún") || n.includes("aguacate") || n.includes("aceite")) {
-                    tags.comida = true;
-                    tags.cena = true;
-                }
+            // Clasificar en los pools internos para el generador aleatorio de platos
+            if (macro === 'P') poolProteinas.push(item);
+            else if (macro === 'HC') poolCarbohidratos.push(item);
+            else if (macro === 'G') poolGrasas.push(item);
 
-                if (!tags.desayuno && !tags.almuerzo && !tags.comida && !tags.merienda && !tags.cena) {
-                    tags.desayuno = true; tags.almuerzo = true; tags.comida = true; tags.merienda = true; tags.cena = true;
-                }
-
-                return tags;
-            }
-
-            if (row[0] && row[0].v !== null && String(row[0].v).trim() !== "" && !String(row[0].v).includes("PROTEÍNAS")) {
-                const nombre = String(row[0].v).trim();
-                const gramos = parsearGramos(row[1]);
-                const unidad = row[1] ? detectarUnidad(String(row[1].v)) : 'g';
-                if(gramos !== null) {
-                    const item = { nombre, gramos, unidad, tipo: labelP, momentos: asignarTagsMomentos(nombre) };
-                    poolProteinas.push(item);
-                    poolBuscadorCompleto.push(item);
-                }
-            }
-
-            if (row[2] && row[2].v !== null && String(row[2].v).trim() !== "" && !String(row[2].v).includes("CARBOHIDRATOS")) {
-                let nombre = String(row[2].v).trim();
-                if(nombre.endsWith('|')) nombre = nombre.slice(0, -1).trim();
-
-                const gramos = parsearGramos(row[3]);
-                const unidad = row[3] ? detectarUnidad(String(row[3].v)) : 'g';
-                if(gramos !== null) {
-                    const item = { nombre, gramos, unidad, tipo: labelHC, momentos: asignarTagsMomentos(nombre) };
-                    poolCarbohidratos.push(item);
-                    poolBuscadorCompleto.push(item);
-                }
-            }
-
-            if (row[4] && row[4].v !== null && String(row[4].v).trim() !== "" && !String(row[4].v).includes("GRASAS")) {
-                const nombre = String(row[4].v).trim();
-                const gramos = parsearGramos(row[5]);
-                const unidad = row[5] ? detectarUnidad(String(row[5].v)) : 'g';
-                if(gramos !== null) {
-                    const item = { nombre, gramos, unidad, tipo: labelG, momentos: asignarTagsMomentos(nombre) };
-                    poolGrasas.push(item);
-                    poolBuscadorCompleto.push(item);
-                }
-            }
-
-            if (row[7] && row[7].v !== null && String(row[7].v).trim() !== "" && !String(row[7].v).includes("MIXTO")) {
-                const nombreCompleto = String(row[7].v).trim();
-                poolBuscadorCompleto.push({
-                    nombre: nombreCompleto,
-                    gramos: null,
-                    unidad: '',
-                    tipo: labelM
-                });
-            }
+            poolBuscadorCompleto.push(item);
         }
 
+        // Renderizar en la interfaz gráfica
         const tbody = document.getElementById('table-body');
         let htmlTable = "";
 
         poolBuscadorCompleto.forEach(item => {
             let badgeClass = "bg-default";
-            if(item.tipo === labelP) badgeClass = "bg-p";
-            else if(item.tipo === labelHC) badgeClass = "bg-hc";
-            else if(item.tipo === labelG) badgeClass = "bg-g";
-            else if(item.tipo === labelM) badgeClass = "bg-m";
+            let textoBadge = "MIXTO";
+            
+            if(item.tipo === 'P') { badgeClass = "bg-p"; textoBadge = "PROTEÍNAS"; }
+            else if(item.tipo === 'HC') { badgeClass = "bg-hc"; textoBadge = "CARBOHIDRATOS"; }
+            else if(item.tipo === 'G') { badgeClass = "bg-g"; textoBadge = "GRASAS"; }
+            else if(item.tipo === 'MIXTO') { badgeClass = "bg-m"; textoBadge = "ALIMENTOS MIXTOS"; }
 
-            const displayCantidad = item.gramos !== null ? `${item.gramos}${item.unidad}` : 'Ver descripción';
+            const displayCantidad = item.gramos !== null ? `${item.gramos}${item.unidad}` : 'Ver pautas';
 
             htmlTable += `<tr data-type="${item.tipo.toLowerCase()}">
                 <td><strong>${item.nombre}</strong></td>
                 <td>${displayCantidad}</td>
-                <td><span class="badge ${badgeClass}">${item.tipo}</span></td>
+                <td><span class="badge ${badgeClass}">${textoBadge}</span></td>
             </tr>`;
         });
 
-        tbody.innerHTML = htmlTable || '<tr><td colspan="3">No se encontraron alimentos en la hoja.</td></tr>';
+        tbody.innerHTML = htmlTable || '<tr><td colspan="3">No se encontraron alimentos en la base de datos central.</td></tr>';
     }
 
+    // Algoritmo refinado utilizando los mapeos de tus columnas reales
     function generarPlatoInteligente() {
         const ingestaSeleccionada = document.getElementById('meal-selector').value;
         const bloques = bloquesAsignadosPorIngesta[ingestaSeleccionada];
@@ -604,12 +538,13 @@
 
         if (!bloques || (bloques.p === 0 && bloques.hc === 0 && bloques.g === 0)) {
             outputDiv.style.display = "block";
-            outputDiv.innerHTML = `<div class="plate-title">❌ Ajustes de bloques no detectados</div><p style="font-size:13px; color:var(--text-light)">Revisa tu hoja de Ajustes.</p>`;
+            outputDiv.innerHTML = `<div class="plate-title">❌ Ajustes de bloques no detectados</div><p style="font-size:13px; color:var(--text-light)">Revisa la hoja del paciente.</p>`;
             return;
         }
 
         const mKey = ingestaSeleccionada.toLowerCase();
 
+        // Filtramos usando tus tags reales de base de datos
         let listaP = poolProteinas.filter(a => a.momentos && a.momentos[mKey] === true);
         let listaHC = poolCarbohidratos.filter(a => a.momentos && a.momentos[mKey] === true);
         let listaG = poolGrasas.filter(a => a.momentos && a.momentos[mKey] === true);
@@ -620,13 +555,14 @@
 
         let seleccionados = { p: [], hc: [], g: [] };
 
+        // Ajustes lógicos inteligentes para Desayunos/Meriendas habituales si existen
         if ((ingestaSeleccionada === "DESAYUNO" || ingestaSeleccionada === "MERIENDA") && listaHC.length > 0) {
             let hcElegido = listaHC[Math.floor(Math.random() * listaHC.length)];
             seleccionados.hc.push(hcElegido);
             const nombreHc = hcElegido.nombre.toLowerCase();
 
-            if (nombreHc.includes("avena") || nombreHc.includes("fruta") || nameHc.includes("plátano")) {
-                let pCompatibles = listaP.filter(p => p.nombre.toLowerCase().includes("yogur") || p.nombre.toLowerCase().includes("batido") || p.nombre.toLowerCase().includes("clara") || p.nombre.toLowerCase().includes("queso"));
+            if (nombreHc.includes("avena") || nombreHc.includes("fruta") || nombreHc.includes("plátano")) {
+                let pCompatibles = listaP.filter(p => p.nombre.toLowerCase().includes("yogur") || p.nombre.toLowerCase().includes("queso") || p.nombre.toLowerCase().includes("clara"));
                 if(pCompatibles.length > 0) listaP = pCompatibles;
             } else if (nombreHc.includes("pan") || nombreHc.includes("tost")) {
                 let pCompatibles = listaP.filter(p => p.nombre.toLowerCase().includes("pavo") || p.nombre.toLowerCase().includes("jamón") || p.nombre.toLowerCase().includes("huevo"));
@@ -643,6 +579,7 @@
         if (bloques.p > 0 && listaP.length > 0) {
             proteinaElegida = listaP[Math.floor(Math.random() * listaP.length)];
             
+            // Lógica especial para huevos enteros (para no sugerir cantidades absurdas)
             if (proteinaElegida.nombre.toLowerCase().includes("huevo entero")) {
                 esCasoHuevo = true;
                 bloquesParaHuevo = 0.67; 
@@ -676,18 +613,15 @@
                 let gramosHuevoEquiv = (bloquesParaHuevo * proteinaElegida.gramos).toFixed(0);
                 htmlFinal += `
                     <div class="plate-item" style="border-left: 3px solid var(--p-color); padding-left: 8px; margin-bottom: 4px;">
-                        <span>🍳 <b>2 udes</b> (aprox. ${gramosHuevoEquiv}g) de <b>Huevo entero</b></span>
+                        <span>🍳 <b>2 udes</b> de <b>Huevo entero</b></span>
                         <span class="item-macro-tag" style="background-color: var(--p-color)">0.7 BLQ P</span>
                     </div>`;
                 
                 if (complementoProteina && bloquesParaComplemento > 0) {
                     let gramosComp = (bloquesParaComplemento * complementoProteina.gramos).toFixed(0);
-                    let esLacteo = complementoProteina.nombre.toLowerCase().includes("yogur") || complementoProteina.nombre.toLowerCase().includes("queso");
-                    let notaExtra = esLacteo ? " <i>(¡Ideal para tomar como postre!)</i>" : " <i>(Añadido al plato)</i>";
-                    
                     htmlFinal += `
                         <div class="plate-item" style="border-left: 3px solid var(--p-color); padding-left: 8px; margin-bottom: 12px; background: #fffafb;">
-                            <span>🍗 Complemento: <b>${gramosComp}${complementoProteina.unidad}</b> de <b>${complementoProteina.nombre}</b>${notaExtra}</span>
+                            <span>🍗 Complemento: <b>${gramosComp}${complementoProteina.unidad}</b> de <b>${complementoProteina.nombre}</b></span>
                             <span class="item-macro-tag" style="background-color: #df2c2c">${bloquesParaComplemento.toFixed(1)} BLQ P</span>
                         </div>`;
                 }
@@ -713,7 +647,7 @@
         seleccionados.g.forEach(alimento => {
             let gramosFinales = (bloques.g * alimento.gramos).toFixed(0);
             let stringMedida = `<b>${gramosFinales}${alimento.unidad}</b>`;
-            if (alimento.nombre.toLowerCase().includes("aceite") && alimento.unidad.includes("cuch")) {
+            if (alimento.nombre.toLowerCase().includes("aceite") && alimento.unidad.toLowerCase().includes("cuch")) {
                 stringMedida = `<b>${bloques.g.toFixed(1)} cucharada(s)</b>`;
             }
             htmlFinal += `
