@@ -1,336 +1,534 @@
-<script>
-    // URL de tu control central de clientes
-    const MASTER_CONTROL_URL = 'https://docs.google.com/spreadsheets/d/1L7lbZ4JkE7dqO_oizMEDKQabtyUBbR4yaqcrt3LMa6Q/gviz/tq?gid=0&tqx=out:json';
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plan Nutricional Inteligente</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-    const GID_AJUSTES = '1147936171'; // Pestaña del perfil del paciente con bloques y exclusiones
-    const GID_EQUIV = '1979658163';   // Pestaña o ID de la base de datos de alimentos
-    
-    const mealIcons = { "DESAYUNO": "fa-coffee", "ALMUERZO": "fa-apple-whole", "COMIDA": "fa-utensils", "MERIENDA": "fa-cookie", "CENA": "fa-moon" };
-    
-    let bloquesAsignadosPorIngesta = {}; 
-    let poolProteinas = []; let poolCarbohidratos = []; let poolGrasas = []; let poolBuscadorCompleto = [];
-    let currentCategoryFilter = 'all';
-
-    let exclusionesPaciente = {
-        estiloVida: "",
-        tagsExcluir: [],
-        alimentosOdiados: []
-    };
-
-    function cleanJSON(raw) { return JSON.parse(raw.substring(raw.indexOf('{'), raw.lastIndexOf('}') + 1)); }
-
-    function limpiarYExtraerId(urlText) {
-        if (!urlText || typeof urlText !== 'string') return null;
-        let p = urlText.indexOf('/d/');
-        if (p === -1) return null;
-        let recortado = urlText.substring(p + 3);
-        let fin = recortado.indexOf('/');
-        if (fin === -1) fin = recortado.indexOf('?');
-        if (fin === -1) return recortado.trim();
-        return recortado.substring(0, fin).trim();
-    }
-
-    document.getElementById('username').addEventListener('keydown', function(e) { if (e.key === 'Enter') ejecutarLogin(); });
-    document.getElementById('password').addEventListener('keydown', function(e) { if (e.key === 'Enter') ejecutarLogin(); });
-
-    function ejecutarLogin() {
-        const userIn = document.getElementById('username').value.trim();
-        const passIn = document.getElementById('password').value.trim();
-        const errBox = document.getElementById('error-box');
-        const errTxt = document.getElementById('error-text');
-
-        if (!userIn || !passIn) {
-            errTxt.innerText = "Completa todos los campos.";
-            errBox.style.display = "flex";
-            return;
+    <style>
+        :root {
+            --primary: #0f172a;
+            --primary-light: #1e293b;
+            --accent: #2563eb;
+            --accent-hover: #1d4ed8;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #334155;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+            
+            --color-p: #ef4444;
+            --color-hc: #f59e0b;
+            --color-g: #10b981;
+            --color-m: #8b5cf6;
         }
 
-        errTxt.innerText = "Validando...";
-        errBox.style.display = "flex";
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+        body { background-color: var(--bg); color: var(--text); padding: 20px; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 
-        fetch(MASTER_CONTROL_URL)
-            .then(r => r.text())
-            .then(rawData => {
-                const json = cleanJSON(rawData);
-                const filas = json.table.rows;
-                let cuenta = null;
-                let nombrePacienteOriginal = "Paciente";
+        /* --- PANTALLA LOGIN --- */
+        #login-screen { background: var(--card-bg); padding: 40px; border-radius: 24px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05); width: 100%; max-width: 450px; text-align: center; border: 1px solid var(--border); }
+        .login-header h2 { font-size: 28px; font-weight: 700; color: var(--primary); margin-bottom: 8px; }
+        .login-header p { color: var(--text-light); font-size: 14px; margin-bottom: 32px; }
+        .input-group { text-align: left; margin-bottom: 20px; }
+        .input-group label { display: block; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; color: var(--primary-light); }
+        .input-group input { width: 100%; padding: 14px 16px; border-radius: 12px; border: 1px solid var(--border); background: #fafafa; font-size: 15px; transition: all 0.2s; }
+        .input-group input:focus { border-color: var(--accent); background: #fff; outline: none; box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1); }
+        .btn-login { width: 100%; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%); color: white; border: none; padding: 15px; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; transition: transform 0.1s, opacity 0.2s; margin-top: 10px; }
+        .btn-login:active { transform: scale(0.98); }
+        
+        .error-box { background-color: #fef2f2; border: 1px solid #fee2e2; padding: 12px; border-radius: 10px; display: none; align-items: center; justify-content: center; gap: 8px; color: #b91c1c; font-size: 14px; margin-top: 20px; font-weight: 500; }
 
-                for (let i = 1; i < filas.length; i++) {
-                    const c = filas[i].c;
-                    if (!c) continue;
-                    const dbUser = c[1] && c[1].v ? String(c[1].v).trim() : '';
-                    const dbPass = c[2] && c[2].v ? String(c[2].v).trim() : '';
-                    const dbActivo = c[3] && c[3].v ? String(c[3].v).trim().toUpperCase() : 'N';
+        /* --- DASHBOARD PRINCIPAL --- */
+        #dashboard-screen { width: 100%; max-width: 1100px; display: none; }
+        .header-panel { background: var(--primary); color: white; padding: 32px; border-radius: 20px; margin-bottom: 24px; position: relative; display: flex; justify-content: space-between; align-items: center; }
+        .header-panel h1 { font-size: 26px; font-weight: 700; margin-bottom: 6px; letter-spacing: -0.5px; }
+        .header-panel p { color: #94a3b8; font-size: 14px; }
+        .btn-logout { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); color: white; padding: 10px 16px; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 8px; transition: background 0.2s; }
+        .btn-logout:hover { background: rgba(255,255,255,0.2); }
 
-                    if (dbUser.toLowerCase() === userIn.toLowerCase() && dbPass === passIn) {
-                        if (dbActivo !== 'S') {
-                            errTxt.innerText = "Suscripción inactiva. Consulte con su nutricionista.";
-                            return;
+        .section-title { font-size: 18px; font-weight: 700; color: var(--primary); margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+        .sync-badge { font-size: 11px; padding: 4px 10px; border-radius: 20px; font-weight: 600; }
+
+        /* Bloques de ingesta */
+        .meal-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px; margin-bottom: 32px; }
+        .meal-card { background: var(--card-bg); padding: 20px; border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+        .meal-name { font-size: 14px; font-weight: 700; color: var(--accent); margin-bottom: 10px; display: flex; align-items: center; gap: 6px; text-transform: uppercase; letter-spacing: 0.3px; }
+        .meal-content { font-size: 13.5px; color: var(--text); line-height: 1.6; }
+
+        /* Asistente */
+        .assistant-box { background: var(--card-bg); border: 1px dashed #cbd5e1; border-radius: 16px; padding: 24px; text-align: center; margin-bottom: 32px; }
+        .assistant-box p { color: var(--text-light); font-size: 14px; margin-bottom: 16px; }
+        .control-row { display: flex; justify-content: center; gap: 12px; max-width: 500px; margin: 0 auto; }
+        select { padding: 12px 16px; border-radius: 10px; border: 1px solid var(--border); background: #fff; font-size: 14px; font-weight: 500; outline: none; flex-grow: 1; }
+        .btn-action { background: var(--accent); color: white; border: none; padding: 12px 24px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+        .btn-action:hover { background: var(--accent-hover); }
+
+        /* Output del Plato Sugerido */
+        .plate-output { background: #f8fafc; border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-top: 20px; display: none; text-align: left; }
+        .plate-title { font-size: 14px; font-weight: 700; color: var(--primary); margin-bottom: 14px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+        .plate-item { display: flex; justify-content: space-between; align-items: center; background: white; padding: 12px 16px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #f1f5f9; font-size: 14px; }
+        .item-macro-tag { font-size: 10px; font-weight: 700; padding: 3px 6px; border-radius: 4px; color: white; }
+
+        /* Buscador y Filtros */
+        .search-container { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+        .search-input-wrapper { position: relative; flex-grow: 1; min-width: 250px; }
+        .search-input-wrapper i { position: absolute; left: 14px; top: 15px; color: var(--text-light); font-size: 14px; }
+        .search-input-wrapper input { width: 100%; padding: 12px 16px 12px 40px; border-radius: 10px; border: 1px solid var(--border); font-size: 14px; }
+        .filter-buttons { display: flex; gap: 6px; }
+        .filter-btn { background: white; border: 1px solid var(--border); padding: 10px 16px; border-radius: 10px; font-size: 13px; font-weight: 500; cursor: pointer; color: var(--text-light); transition: all 0.2s; }
+        .filter-btn:hover { background: #f1f5f9; color: var(--text); }
+        .filter-btn.active { background: var(--primary); border-color: var(--primary); color: white; }
+
+        /* Tabla */
+        .table-wrapper { background: var(--card-bg); border-radius: 16px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.02); overflow: hidden; }
+        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+        th { background: #f8fafc; padding: 14px 20px; font-weight: 600; color: var(--text-light); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); }
+        td { padding: 14px 20px; border-bottom: 1px solid var(--border); color: var(--text); }
+        tr:last-child td { border-bottom: none; }
+        
+        .badge { font-size: 11px; padding: 4px 8px; border-radius: 6px; font-weight: 600; color: white; display: inline-block; }
+        .bg-p { background-color: var(--color-p); }
+        .bg-hc { background-color: var(--color-hc); }
+        .bg-g { background-color: var(--color-g); }
+        .bg-m { background-color: var(--color-m); }
+
+        @media(max-width: 768px) {
+            .header-panel { flex-direction: column; align-items: flex-start; gap: 16px; }
+            .btn-logout { width: 100%; justify-content: center; }
+            .control-row { flex-direction: column; }
+            .search-container { flex-direction: column; }
+            .filter-buttons { width: 100%; overflow-x: auto; padding-bottom: 4px; }
+            .filter-btn { flex-grow: 1; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="login-screen">
+        <div class="login-header">
+            <h2>Área de Clientes</h2>
+            <p>Introduce tus credenciales para acceder a tu plan</p>
+        </div>
+        <div class="input-group">
+            <label for="username">Usuario</label>
+            <input type="text" id="username" placeholder="Ej: JVERDU">
+        </div>
+        <div class="input-group">
+            <label for="password">Contraseña</label>
+            <input type="password" id="password" placeholder="••••••">
+        </div>
+        <button class="btn-login" onclick="ejecutarLogin()">Iniciar Sesión</button>
+        
+        <div class="error-box" id="error-box">
+            <i class="fa-solid fa-circle-xmark"></i>
+            <span id="error-text">Usuario o contraseña incorrectos.</span>
+        </div>
+    </div>
+
+    <div id="dashboard-screen">
+        <div class="header-panel">
+            <div>
+                <h1 id="main-title">Plan Nutricional por Bloques</h1>
+                <p id="personalized-welcome">Dashboard personalizado para el seguimiento de ingestas y equivalencias</p>
+            </div>
+            <button class="btn-logout" onclick="cerrarSesion()">
+                <i class="fa-solid fa-arrow-right-from-bracket"></i> Salir
+            </button>
+        </div>
+
+        <div class="section-title">
+            <span>Reparto de Bloques por Ingesta</span>
+            <span class="sync-badge" id="sync-status">Sincronizando...</span>
+        </div>
+
+        <div class="meal-grid" id="meal-grid"></div>
+
+        <div class="section-title">✨ Asistente de Menú Instantáneo</div>
+        <div class="assistant-box">
+            <p>Selecciona una ingesta y el sistema armará una combinación adaptada respetando tus bloques.</p>
+            <div class="control-row">
+                <select id="meal-selector">
+                    <option value="DESAYUNO">☕ Desayuno</option>
+                    <option value="ALMUERZO">🍏 Almuerzo</option>
+                    <option value="COMIDA">🍴 Comida</option>
+                    <option value="MERIENDA">🍪 Merienda</option>
+                    <option value="CENA">🌙 Cena</option>
+                </select>
+                <button class="btn-action" onclick="generarPlatoInteligente()">Sugerir Combinación</button>
+            </div>
+
+            <div class="plate-output" id="plate-output"></div>
+        </div>
+
+        <div class="section-title">📋 Lista de Alimentos y Equivalencias Permitidas</div>
+        
+        <div class="search-container">
+            <div class="search-input-wrapper">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="search" onkeyup="ejecutarFiltroCombinado()" placeholder="Buscar alimento de tu catálogo...">
+            </div>
+            <div class="filter-buttons">
+                <button class="filter-btn active" onclick="setCategoryFilter('all', this)">Todos</button>
+                <button class="filter-btn" onclick="setCategoryFilter('proteínas', this)">Proteínas</button>
+                <button class="filter-btn" onclick="setCategoryFilter('carbohidratos', this)">Carbohidratos</button>
+                <button class="filter-btn" onclick="setCategoryFilter('grasas', this)">Grasas</button>
+            </div>
+        </div>
+
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Alimento</th>
+                        <th>Cantidad por Bloque</th>
+                        <th>Categoría</th>
+                    </tr>
+                </thead>
+                <tbody id="table-body">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // URL de tu control central de clientes
+        const MASTER_CONTROL_URL = 'https://docs.google.com/spreadsheets/d/1L7lbZ4JkE7dqO_oizMEDKQabtyUBbR4yaqcrt3LMa6Q/gviz/tq?gid=0&tqx=out:json';
+
+        const GID_AJUSTES = '1147936171'; // Pestaña del perfil del paciente con bloques y exclusiones
+        const GID_EQUIV = '1979658163';   // Pestaña o ID de la base de datos de alimentos
+        
+        const mealIcons = { "DESAYUNO": "fa-coffee", "ALMUERZO": "fa-apple-whole", "COMIDA": "fa-utensils", "MERIENDA": "fa-cookie", "CENA": "fa-moon" };
+        
+        let bloquesAsignadosPorIngesta = {}; 
+        let poolProteinas = []; let poolCarbohidratos = []; let poolGrasas = []; let poolBuscadorCompleto = [];
+        let currentCategoryFilter = 'all';
+
+        let exclusionesPaciente = {
+            estiloVida: "",
+            tagsExcluir: [],
+            alimentosOdiados: []
+        };
+
+        function cleanJSON(raw) { return JSON.parse(raw.substring(raw.indexOf('{'), raw.lastIndexOf('}') + 1)); }
+
+        function limpiarYExtraerId(urlText) {
+            if (!urlText || typeof urlText !== 'string') return null;
+            let p = urlText.indexOf('/d/');
+            if (p === -1) return null;
+            let recortado = urlText.substring(p + 3);
+            let fin = recortado.indexOf('/');
+            if (fin === -1) fin = recortado.indexOf('?');
+            if (fin === -1) return recortado.trim();
+            return recortado.substring(0, fin).trim();
+        }
+
+        document.getElementById('username').addEventListener('keydown', function(e) { if (e.key === 'Enter') ejecutarLogin(); });
+        document.getElementById('password').addEventListener('keydown', function(e) { if (e.key === 'Enter') ejecutarLogin(); });
+
+        function ejecutarLogin() {
+            const userIn = document.getElementById('username').value.trim();
+            const passIn = document.getElementById('password').value.trim();
+            const errBox = document.getElementById('error-box');
+            const errTxt = document.getElementById('error-text');
+
+            if (!userIn || !passIn) {
+                errTxt.innerText = "Completa todos los campos.";
+                errBox.style.display = "flex";
+                return;
+            }
+
+            errTxt.innerText = "Validando...";
+            errBox.style.display = "flex";
+
+            fetch(MASTER_CONTROL_URL)
+                .then(r => r.text())
+                .then(rawData => {
+                    const json = cleanJSON(rawData);
+                    const filas = json.table.rows;
+                    let cuenta = null;
+                    let nombrePacienteOriginal = "Paciente";
+
+                    for (let i = 1; i < filas.length; i++) {
+                        const c = filas[i].c;
+                        if (!c) continue;
+                        const dbUser = c[1] && c[1].v ? String(c[1].v).trim() : '';
+                        const dbPass = c[2] && c[2].v ? String(c[2].v).trim() : '';
+                        const dbActivo = c[3] && c[3].v ? String(c[3].v).trim().toUpperCase() : 'N';
+
+                        if (dbUser.toLowerCase() === userIn.toLowerCase() && dbPass === passIn) {
+                            if (dbActivo !== 'S') {
+                                errTxt.innerText = "Suscripción inactiva. Consulte con su nutricionista.";
+                                return;
+                            }
+                            cuenta = c;
+                            nombrePacienteOriginal = c[0] && c[0].v ? String(c[0].v).trim() : 'Paciente';
+                            break;
                         }
-                        cuenta = c;
-                        nombrePacienteOriginal = c[0] && c[0].v ? String(c[0].v).trim() : 'Paciente';
-                        break;
+                    }
+
+                    if (!cuenta) {
+                        errTxt.innerText = "Usuario o contraseña incorrectos.";
+                        return;
+                    }
+
+                    const urlPaciente = cuenta[4] && cuenta[4].v ? String(cuenta[4].v).trim() : '';
+                    const idPaciente = limpiarYExtraerId(urlPaciente);
+
+                    if (!idPaciente) {
+                        errTxt.innerText = "La URL del paciente en la columna E no es válida.";
+                        return;
+                    }
+
+                    document.getElementById('main-title').innerText = `Plan de Nutrición: ${nombrePacienteOriginal}`;
+                    document.getElementById('personalized-welcome').innerText = `Dashboard exclusivo para ${nombrePacienteOriginal}`;
+
+                    errBox.style.display = "none";
+                    document.getElementById('login-screen').style.display = "none";
+                    document.getElementById('dashboard-screen').style.display = "block";
+                    
+                    cargarDatosNutricionales(idPaciente);
+                })
+                .catch(err => {
+                    console.error(err);
+                    errTxt.innerText = "Error de sincronización. Asegúrate de que el documento esté 'Publicado en la Web'.";
+                });
+        }
+
+        function cerrarSesion() {
+            document.getElementById('dashboard-screen').style.display = "none";
+            document.getElementById('login-screen').style.display = "flex";
+            document.getElementById('username').value = "";
+            document.getElementById('password').value = "";
+            document.getElementById('plate-output').style.display = "none";
+        }
+
+        function cargarDatosNutricionales(spreadsheetId) {
+            document.getElementById('sync-status').innerText = "Sincronizando...";
+            document.getElementById('sync-status').style.background = "#fef3c7";
+
+            const urlAjustes = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?gid=${GID_AJUSTES}&tqx=out:json`;
+            const urlEquiv = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?gid=${GID_EQUIV}&tqx=out:json`;
+
+            Promise.all([
+                fetch(urlAjustes).then(r => r.text()),
+                fetch(urlEquiv).then(r => r.text())
+            ]).then(([dataAjustes, dataEquiv]) => {
+                procesarPerfilYBloquesPaciente(dataAjustes);
+                procesarYRenderizarEquivalencias(dataEquiv);
+                
+                document.getElementById('sync-status').innerText = "Sincronizado";
+                document.getElementById('sync-status').style.background = "#dcfce7";
+                document.getElementById('sync-status').style.color = "#15803d";
+            }).catch(err => {
+                console.error(err);
+                document.getElementById('sync-status').innerText = "Error en sincronización";
+                document.getElementById('sync-status').style.background = "#ffeeec";
+            });
+        }
+
+        function procesarPerfilYBloquesPaciente(raw) {
+            const json = cleanJSON(raw);
+            const rows = json.table.rows;
+
+            exclusionesPaciente.estiloVida = "";
+            exclusionesPaciente.tagsExcluir = [];
+            exclusionesPaciente.alimentosOdiados = [];
+
+            // 1. Lectura de exclusiones (Celdas E1, E2, E3 de la captura -> Índices 0, 1, 2 en JS)
+            if (rows[0] && rows[0].c && rows[0].c[4] && rows[0].c[4].v) {
+                exclusionesPaciente.estiloVida = String(rows[0].c[4].v).trim().toUpperCase(); // VEGETARIANO
+            }
+            if (rows[1] && rows[1].c && rows[1].c[4] && rows[1].c[4].v) {
+                exclusionesPaciente.tagsExcluir = String(rows[1].c[4].v).split(',').map(t => t.trim().toUpperCase()).filter(t => t !== ""); // LACTOSA, GLUTEN
+            }
+            if (rows[2] && rows[2].c && rows[2].c[4] && rows[2].c[4].v) {
+                exclusionesPaciente.alimentosOdiados = String(rows[2].c[4].v).split(',').map(a => a.trim().toLowerCase()).filter(a => a !== ""); // Atún
+            }
+
+            // 2. Lectura matemática de Bloques Totales (Filas 12, 13, 14 de Sheets -> Índices 11, 12, 13 en JS, Columna B -> Índice 1)
+            let totalP = (rows[11] && rows[11].c && rows[11].c[1]) ? parseFloat(rows[11].c[1].v) : 0;  // Proteína
+            let totalG = (rows[12] && rows[12].c && rows[12].c[1]) ? parseFloat(rows[12].c[1].v) : 0;  // Grasa
+            let totalHC = (rows[13] && rows[13].c && rows[13].c[1]) ? parseFloat(rows[13].c[1].v) : 0; // Carbohidratos
+
+            // Mapeo correlativo de porcentajes (Filas 16 a 20 de Sheets -> Índices 15 a 19 en JS)
+            const mealsInfo = [
+                { name: "DESAYUNO", rowIndex: 15 },
+                { name: "ALMUERZO", rowIndex: 16 },
+                { name: "COMIDA", rowIndex: 17 },
+                { name: "MERIENDA", rowIndex: 18 },
+                { name: "CENA", rowIndex: 19 }
+            ];
+
+            const grid = document.getElementById('meal-grid');
+            let html = "";
+
+            mealsInfo.forEach(meal => {
+                let pct = 0;
+                if (rows[meal.rowIndex] && rows[meal.rowIndex].c && rows[meal.rowIndex].c[1]) {
+                    pct = parseFloat(rows[meal.rowIndex].c[1].v) || 0; // Lee el valor decimal (Ej: 0.2)
+                }
+
+                // Cálculo proporcional exacto
+                let pBlocks = parseFloat((totalP * pct).toFixed(1));
+                let hcBlocks = parseFloat((totalHC * pct).toFixed(1));
+                let gBlocks = parseFloat((totalG * pct).toFixed(1));
+
+                bloquesAsignadosPorIngesta[meal.name] = { p: pBlocks, hc: hcBlocks, g: gBlocks };
+                const icon = mealIcons[meal.name] || "fa-utensils";
+
+                html += `
+                    <div class="meal-card">
+                        <div class="meal-name"><i class="fa-solid ${icon}"></i> ${meal.name}</div>
+                        <div class="meal-content">
+                            Proteína: <b>${pBlocks}</b> blq<br>
+                            Carbohidrato: <b>${hcBlocks}</b> blq<br>
+                            Grasa: <b>${gBlocks}</b> blq
+                        </div>
+                    </div>`;
+            });
+            grid.innerHTML = html;
+        }
+
+        function procesarYRenderizarEquivalencias(raw) {
+            const json = cleanJSON(raw);
+            const rows = json.table.rows;
+            
+            poolProteinas = []; poolCarbohidratos = []; poolGrasas = []; poolBuscadorCompleto = [];
+
+            for (let i = 1; i < rows.length; i++) {
+                const row = rows[i].c;
+                if (!row || !row[1] || row[1].v === null) continue; 
+
+                let nombreAlimento = String(row[1].v).trim();
+                let macroPrincipal = row[2] && row[2].v ? String(row[2].v).toUpperCase().trim() : "";
+                
+                let gramosRaw = row[3] && row[3].v !== null ? String(row[3].v) : "0";
+                let gramosVal = parseFloat(gramosRaw.replace(',', '.')) || 0;
+                let unidadVal = row[4] && row[4].v ? String(row[4].v).trim() : "g";
+
+                // Mapeo exacto de las columnas depuradas: F (Exclusión), G (Estilo vida), H (Momento)
+                let tagExclusionStr = row[5] && row[5].v ? String(row[5].v).toUpperCase() : ""; 
+                let tagEstiloVidaStr = row[6] && row[6].v ? String(row[6].v).toUpperCase() : ""; 
+                let tagMomentoStr = row[7] && row[7].v ? String(row[7].v).toUpperCase() : "";    
+
+                let todosLosTags = [
+                    ...tagExclusionStr.split(','),
+                    ...tagEstiloVidaStr.split(','),
+                    ...tagMomentoStr.split(',')
+                ].map(t => t.trim()).filter(t => t !== "");
+
+                let descartarAlimento = false;
+
+                // 1. Filtro Alimentos Odiados (Ej: "Atún")
+                let nombreMinuscula = nombreAlimento.toLowerCase();
+                if (exclusionesPaciente.alimentosOdiados.some(odiado => nombreMinuscula.includes(odiado))) {
+                    descartarAlimento = true;
+                }
+
+                // 2. Filtro Alergias / Alérgenos (Ej: "LACTOSA", "GLUTEN")
+                if (exclusionesPaciente.tagsExcluir.length > 0) {
+                    if (todosLosTags.some(tag => exclusionesPaciente.tagsExcluir.includes(tag))) {
+                        descartarAlimento = true;
                     }
                 }
 
-                if (!cuenta) {
-                    errTxt.innerText = "Usuario o contraseña incorrectos.";
-                    return;
+                // 3. Filtro Estilo de Vida Estricto (Ej: "VEGETARIANO" o "VEGANO")
+                if (exclusionesPaciente.estiloVida === "VEGETARIANO" || exclusionesPaciente.estiloVida === "VEGANO") {
+                    if (todosLosTags.includes("ANIMAL") || todosLosTags.includes("CARNE") || todosLosTags.includes("PESCADO") || tagEstiloVidaStr.includes("OMNIVORO")) {
+                        descartarAlimento = true;
+                    }
                 }
 
-                const urlPaciente = cuenta[4] && cuenta[4].v ? String(cuenta[4].v).trim() : '';
-                const idPaciente = limpiarYExtraerId(urlPaciente);
+                // Si incumple cualquier criterio del paciente, se ignora por completo
+                if (descartarAlimento) continue; 
 
-                if (!idPaciente) {
-                    errTxt.innerText = "La URL del paciente en la columna E no es válida.";
-                    return;
+                const itemObjeto = { nombre: nombreAlimento, gramos: gramosVal, unidad: unidadVal, tipo: "" };
+
+                if (macroPrincipal === "P") {
+                    itemObjeto.tipo = "PROTEÍNAS";
+                    poolProteinas.push(itemObjeto);
+                } else if (macroPrincipal === "HC") {
+                    itemObjeto.tipo = "CARBOHIDRATOS";
+                    poolCarbohidratos.push(itemObjeto);
+                } else if (macroPrincipal === "G") {
+                    itemObjeto.tipo = "GRASAS";
+                    poolGrasas.push(itemObjeto);
+                } else if (macroPrincipal === "MIXTO") {
+                    itemObjeto.tipo = "ALIMENTOS MIXTOS";
                 }
 
-                document.getElementById('main-title').innerText = `Plan de Nutrición: ${nombrePacienteOriginal}`;
-                document.getElementById('personalized-welcome').innerText = `Dashboard exclusivo para ${nombrePacienteOriginal}`;
+                if (itemObjeto.tipo !== "") {
+                    poolBuscadorCompleto.push(itemObjeto);
+                }
+            }
 
-                errBox.style.display = "none";
-                document.getElementById('login-screen').style.display = "none";
-                document.getElementById('dashboard-screen').style.display = "block";
+            const tbody = document.getElementById('table-body');
+            let htmlTable = "";
+            poolBuscadorCompleto.forEach(item => {
+                let bClass = "bg-p";
+                if(item.tipo === "CARBOHIDRATOS") bClass = "bg-hc";
+                else if(item.tipo === "GRASAS") bClass = "bg-g";
+                else if(item.tipo === "ALIMENTOS MIXTOS") bClass = "bg-m";
                 
-                cargarDatosNutricionales(idPaciente);
-            })
-            .catch(err => {
-                console.error(err);
-                errTxt.innerText = "Error al conectar con la base de datos.";
+                htmlTable += `<tr data-type="${item.tipo.toLowerCase()}">
+                    <td><strong>${item.nombre}</strong></td>
+                    <td>${item.gramos > 0 ? item.gramos + " " + item.unidad : 'Ver definición'}</td>
+                    <td><span class="badge ${bClass}">${item.tipo}</span></td>
+                </tr>`;
             });
-    }
+            tbody.innerHTML = htmlTable;
+        }
 
-    function cerrarSesion() {
-        document.getElementById('dashboard-screen').style.display = "none";
-        document.getElementById('login-screen').style.display = "flex";
-        document.getElementById('username').value = "";
-        document.getElementById('password').value = "";
-        document.getElementById('plate-output').style.display = "none";
-    }
+        function generarPlatoInteligente() {
+            const ingesta = document.getElementById('meal-selector').value;
+            const blq = bloquesAsignadosPorIngesta[ingesta];
+            const out = document.getElementById('plate-output');
+            out.style.display = "block";
 
-    function cargarDatosNutricionales(spreadsheetId) {
-        document.getElementById('sync-status').innerText = "Sincronizando...";
-        document.getElementById('sync-status').style.background = "#fef3c7";
+            if (!blq || (blq.p === 0 && blq.hc === 0 && blq.g === 0)) {
+                out.innerHTML = `<div class="plate-title">No hay bloques definidos para esta ingesta.</div>`;
+                return;
+            }
 
-        const urlAjustes = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?gid=${GID_AJUSTES}&tqx=out:json`;
-        const urlEquiv = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?gid=${GID_EQUIV}&tqx=out:json`;
-
-        Promise.all([
-            fetch(urlAjustes).then(r => r.text()),
-            fetch(urlEquiv).then(r => r.text())
-        ]).then(([dataAjustes, dataEquiv]) => {
-            procesarPerfilYBloquesPaciente(dataAjustes);
-            procesarYRenderizarEquivalencias(dataEquiv);
+            let html = `<div class="plate-title">Propuesta adaptada a tus bloques de ${ingesta} (${blq.p}P - ${blq.hc}HC - ${blq.g}G)</div>`;
             
-            document.getElementById('sync-status').innerText = "Sincronizado";
-            document.getElementById('sync-status').style.background = "#dcfce7";
-            document.getElementById('sync-status').style.color = "#15803d";
-        }).catch(err => {
-            console.error(err);
-            document.getElementById('sync-status').innerText = "Error en sincronización";
-            document.getElementById('sync-status').style.background = "#ffeeec";
-        });
-    }
-
-    function procesarPerfilYBloquesPaciente(raw) {
-        const json = cleanJSON(raw);
-        const rows = json.table.rows;
-
-        exclusionesPaciente.estiloVida = "";
-        exclusionesPaciente.tagsExcluir = [];
-        exclusionesPaciente.alimentosOdiados = [];
-
-        // 1. Lectura de exclusiones del perfil (Celdas E1, E2, E3 de tu captura -> Índices 0, 1, 2 en JS)
-        if (rows[0] && rows[0].c && rows[0].c[4] && rows[0].c[4].v) {
-            exclusionesPaciente.estiloVida = String(rows[0].c[4].v).trim().toUpperCase();
-        }
-        if (rows[1] && rows[1].c && rows[1].c[4] && rows[1].c[4].v) {
-            exclusionesPaciente.tagsExcluir = String(rows[1].c[4].v).split(',').map(t => t.trim().toUpperCase()).filter(t => t !== "");
-        }
-        if (rows[2] && rows[2].c && rows[2].c[4] && rows[2].c[4].v) {
-            exclusionesPaciente.alimentosOdiados = String(rows[2].c[4].v).split(',').map(a => a.trim().toLowerCase()).filter(a => a !== "");
+            if(blq.p > 0 && poolProteinas.length > 0) {
+                let p = poolProteinas[Math.floor(Math.random() * poolProteinas.length)];
+                html += `<div class="plate-item"><span>🥩 <b>${(blq.p * p.gramos).toFixed(0)} ${p.unidad}</b> de <b>${p.nombre}</b></span><span class="item-macro-tag bg-p">P</span></div>`;
+            }
+            if(blq.hc > 0 && poolCarbohidratos.length > 0) {
+                let h = poolCarbohidratos[Math.floor(Math.random() * poolCarbohidratos.length)];
+                html += `<div class="plate-item"><span>🌾 <b>${(blq.hc * h.gramos).toFixed(0)} ${h.unidad}</b> de <b>${h.nombre}</b></span><span class="item-macro-tag bg-hc">HC</span></div>`;
+            }
+            if(blq.g > 0 && poolGrasas.length > 0) {
+                let g = poolGrasas[Math.floor(Math.random() * poolGrasas.length)];
+                html += `<div class="plate-item"><span>🥑 <b>${(blq.g * g.gramos).toFixed(0)} ${g.g_unit || g.unidad}</b> de <b>${g.nombre}</b></span><span class="item-macro-tag bg-g">G</span></div>`;
+            }
+            out.innerHTML = html;
         }
 
-        // 2. Lectura matemática de Bloques Totales (Filas 12, 13, 14 -> Índices 11, 12, 13 en JS, Columna B -> Índice 1)
-        let totalP = (rows[11] && rows[11].c && rows[11].c[1]) ? parseFloat(rows[11].c[1].v) : 0;
-        let totalG = (rows[12] && rows[12].c && rows[12].c[1]) ? parseFloat(rows[12].c[1].v) : 0;
-        let totalHC = (rows[13] && rows[13].c && rows[13].c[1]) ? parseFloat(rows[13].c[1].v) : 0;
+        function setCategoryFilter(cat, btn) {
+            currentCategoryFilter = cat;
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            ejecutarFiltroCombinado();
+        }
 
-        // Nombres de las ingestas alineadas con las filas de porcentajes (Filas 16 a 20)
-        const mealsInfo = [
-            { name: "DESAYUNO", rowIndex: 15 },
-            { name: "ALMUERZO", rowIndex: 16 },
-            { name: "COMIDA", rowIndex: 17 },
-            { name: "MERIENDA", rowIndex: 18 },
-            { name: "CENA", rowIndex: 19 }
-        ];
-
-        const grid = document.getElementById('meal-grid');
-        let html = "";
-
-        mealsInfo.forEach(meal => {
-            let pct = 0;
-            // Leer porcentaje de la columna B (Índice 1)
-            if (rows[meal.rowIndex] && rows[meal.rowIndex].c && rows[meal.rowIndex].c[1]) {
-                pct = parseFloat(rows[meal.rowIndex].c[1].v) || 0;
-            }
-
-            // Cálculo dinámico por ingesta respetando el porcentaje
-            let pBlocks = parseFloat((totalP * pct).toFixed(2));
-            let hcBlocks = parseFloat((totalHC * pct).toFixed(2));
-            let gBlocks = parseFloat((totalG * pct).toFixed(2));
-
-            // Guardar en memoria global para el generador de platos
-            bloquesAsignadosPorIngesta[meal.name] = { p: pBlocks, hc: hcBlocks, g: gBlocks };
-            const icon = mealIcons[meal.name] || "fa-utensils";
-
-            html += `
-                <div class="meal-card">
-                    <div class="meal-name"><i class="fa-solid ${icon}"></i> ${meal.name}</div>
-                    <div class="meal-content">
-                        Proteína: <b>${pBlocks}</b> blq<br>
-                        Carbohidrato: <b>${hcBlocks}</b> blq<br>
-                        Grasa: <b>${gBlocks}</b> blq
-                    </div>
-                </div>`;
-        });
-        grid.innerHTML = html;
-    }
-
-    function procesarYRenderizarEquivalencias(raw) {
-        const json = cleanJSON(raw);
-        const rows = json.table.rows;
-        
-        poolProteinas = []; poolCarbohidratos = []; poolGrasas = []; poolBuscadorCompleto = [];
-
-        for (let i = 1; i < rows.length; i++) {
-            const row = rows[i].c;
-            if (!row || !row[1] || row[1].v === null) continue; 
-
-            let nombreAlimento = String(row[1].v).trim();
-            let macroPrincipal = row[2] && row[2].v ? String(row[2].v).toUpperCase().trim() : "";
-            
-            let gramosRaw = row[3] && row[3].v !== null ? String(row[3].v) : "0";
-            let gramosVal = parseFloat(gramosRaw.replace(',', '.')) || 0;
-            let unidadVal = row[4] && row[4].v ? String(row[4].v).trim() : "g";
-
-            // Lectura exacta alineada a tus nuevas columnas limpias:
-            let tagExclusionStr = row[5] && row[5].v ? String(row[5].v).toUpperCase() : ""; // Columna F
-            let tagEstiloVidaStr = row[6] && row[6].v ? String(row[6].v).toUpperCase() : ""; // Columna G
-            let tagMomentoStr = row[7] && row[7].v ? String(row[7].v).toUpperCase() : "";    // Columna H
-
-            let todosLosTags = [
-                ...tagExclusionStr.split(','),
-                ...tagEstiloVidaStr.split(','),
-                ...tagMomentoStr.split(',')
-            ].map(t => t.trim()).filter(t => t !== "");
-
-            let descartarAlimento = false;
-
-            // 1. Filtro Alimentos Odiados
-            let nombreMinuscula = nombreAlimento.toLowerCase();
-            if (exclusionesPaciente.alimentosOdiados.some(odiado => nombreMinuscula.includes(odiado))) {
-                descartarAlimento = true;
-            }
-
-            // 2. Filtro Alergias / Exclusiones
-            if (exclusionesPaciente.tagsExcluir.length > 0) {
-                if (todosLosTags.some(tag => exclusionesPaciente.tagsExcluir.includes(tag))) {
-                    descartarAlimento = true;
-                }
-            }
-
-            // 3. Filtro Estilo de Vida Estricto
-            if (exclusionesPaciente.estiloVida === "VEGETARIANO" || exclusionesPaciente.estiloVida === "VEGANO") {
-                if (todosLosTags.includes("ANIMAL") || todosLosTags.includes("CARNE") || todosLosTags.includes("PESCADO") || tagEstiloVidaStr.includes("OMNIVORO")) {
-                    descartarAlimento = true;
-                }
-            }
-
-            if (descartarAlimento) continue; 
-
-            const itemObjeto = { nombre: nombreAlimento, gramos: gramosVal, unidad: unidadVal, tipo: "" };
-
-            if (macroPrincipal === "P") {
-                itemObjeto.tipo = "PROTEÍNAS";
-                poolProteinas.push(itemObjeto);
-            } else if (macroPrincipal === "HC") {
-                itemObjeto.tipo = "CARBOHIDRATOS";
-                poolCarbohidratos.push(itemObjeto);
-            } else if (macroPrincipal === "G") {
-                itemObjeto.tipo = "GRASAS";
-                poolGrasas.push(itemObjeto);
-            } else if (macroPrincipal === "MIXTO") {
-                itemObjeto.tipo = "ALIMENTOS MIXTOS";
-            }
-
-            if (itemObjeto.tipo !== "") {
-                poolBuscadorCompleto.push(itemObjeto);
+        function ejecutarFiltroCombinado() {
+            const text = document.getElementById('search').value.toLowerCase();
+            const trs = document.getElementById('table-body').getElementsByTagName('tr');
+            for (let i = 0; i < trs.length; i++) {
+                const tr = trs[i];
+                const name = tr.getElementsByTagName('td')[0].textContent.toLowerCase();
+                const type = tr.getAttribute('data-type') || "";
+                tr.style.display = (name.includes(text) && (currentCategoryFilter === 'all' || type === currentCategoryFilter)) ? "" : "none";
             }
         }
-
-        const tbody = document.getElementById('table-body');
-        let htmlTable = "";
-        poolBuscadorCompleto.forEach(item => {
-            let bClass = "bg-p";
-            if(item.tipo === "CARBOHIDRATOS") bClass = "bg-hc";
-            else if(item.tipo === "GRASAS") bClass = "bg-g";
-            else if(item.tipo === "ALIMENTOS MIXTOS") bClass = "bg-m";
-            
-            htmlTable += `<tr data-type="${item.tipo.toLowerCase()}">
-                <td><strong>${item.nombre}</strong></td>
-                <td>${item.gramos > 0 ? item.gramos + " " + item.unidad : 'Ver definición'}</td>
-                <td><span class="badge ${bClass}">${item.tipo}</span></td>
-            </tr>`;
-        });
-        tbody.innerHTML = htmlTable;
-    }
-
-    function generarPlatoInteligente() {
-        const ingesta = document.getElementById('meal-selector').value;
-        const blq = bloquesAsignadosPorIngesta[ingesta];
-        const out = document.getElementById('plate-output');
-        out.style.display = "block";
-
-        if (!blq || (blq.p === 0 && blq.hc === 0 && blq.g === 0)) {
-            out.innerHTML = `<div class="plate-title">No hay bloques definidos para esta ingesta.</div>`;
-            return;
-        }
-
-        let html = `<div class="plate-title">Propuesta adaptada a tus bloques (${blq.p}P - ${blq.hc}HC - ${blq.g}G)</div>`;
-        
-        if(blq.p > 0 && poolProteinas.length > 0) {
-            let p = poolProteinas[Math.floor(Math.random() * poolProteinas.length)];
-            html += `<div class="plate-item"><span>🥩 <b>${(blq.p * p.gramos).toFixed(0)} ${p.unidad}</b> de <b>${p.nombre}</b></span><span class="item-macro-tag bg-p">P</span></div>`;
-        }
-        if(blq.hc > 0 && poolCarbohidratos.length > 0) {
-            let h = poolCarbohidratos[Math.floor(Math.random() * poolCarbohidratos.length)];
-            html += `<div class="plate-item"><span>🌾 <b>${(blq.hc * h.gramos).toFixed(0)} ${h.unidad}</b> de <b>${h.nombre}</b></span><span class="item-macro-tag bg-hc">HC</span></div>`;
-        }
-        if(blq.g > 0 && poolGrasas.length > 0) {
-            let g = poolGrasas[Math.floor(Math.random() * poolGrasas.length)];
-            html += `<div class="plate-item"><span>🥑 <b>${(blq.g * g.gramos).toFixed(0)} ${g.unidad}</b> de <b>${g.nombre}</b></span><span class="item-macro-tag bg-g">G</span></div>`;
-        }
-        out.innerHTML = html;
-    }
-
-    function setCategoryFilter(cat, btn) {
-        currentCategoryFilter = cat;
-        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        ejecutarFiltroCombinado();
-    }
-
-    function ejecutarFiltroCombinado() {
-        const text = document.getElementById('search').value.toLowerCase();
-        const trs = document.getElementById('table-body').getElementsByTagName('tr');
-        for (let i = 0; i < trs.length; i++) {
-            const tr = trs[i];
-            const name = tr.getElementsByTagName('td')[0].textContent.toLowerCase();
-            const type = tr.getAttribute('data-type') || "";
-            tr.style.display = (name.includes(text) && (currentCategoryFilter === 'all' || type === currentCategoryFilter)) ? "" : "none";
-        }
-    }
-</script>
+    </script>
+</body>
+</html>
