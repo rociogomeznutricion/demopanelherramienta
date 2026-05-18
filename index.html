@@ -197,7 +197,7 @@
 
         .meal-content { font-size: 13px; color: var(--text-dark); line-height: 1.6; }
 
-        /* SECCIÓN COMODÍN SALVAVIDAS */
+        /* SECCIÓN NUEVA: COMODÍN SALVAVIDAS */
         .comodin-card {
             background: linear-gradient(135deg, var(--amber-bg) 0%, #fffbeb 100%);
             border: 1px solid var(--amber-border);
@@ -387,7 +387,7 @@
         <div class="section-title" style="color: var(--amber-text);"><i class="fa-solid fa-life-ring"></i> Receta Comodín Salvavidas</div>
         <div class="comodin-card">
             <p style="color: var(--amber-text); font-size: 14px; margin-bottom: 15px; font-weight: 500;">
-                Calcula las cantidades de tu receta fija pautada para la ingesta seleccionada utilizando los IDs de tus alimentos preferidos.
+                Calcula las cantidades exactas de tu plato preferido pautado usando los códigos asignados en tu ficha.
             </p>
             <div class="gen-controls">
                 <select id="salvavidas-selector" class="gen-select">
@@ -458,7 +458,7 @@
     let poolProteinas = []; let poolCarbohidratos = []; let poolGrasas = []; let poolBuscadorCompleto = [];
     let currentCategoryFilter = 'all';
 
-    // Almacén para la configuración del Comodín desde la columna E
+    // Estructura global para el Comodín
     let datosComodinFijo = {
         nombreReceta: "Receta Comodín",
         proteinasIds: [],
@@ -599,7 +599,6 @@
         exclusionesPaciente.tagsExcluir = [];
         exclusionesPaciente.alimentosOdiados = [];
 
-        // Función segura para leer de la columna E (índice 4)
         function extraerColumnaE(filaIdx) {
             if (rows[filaIdx] && rows[filaIdx].c && rows[filaIdx].c[4] && rows[filaIdx].c[4].v !== null) {
                 return String(rows[filaIdx].c[4].v).trim();
@@ -613,19 +612,19 @@
         let odiadosRaw = extraerColumnaE(2);
         exclusionesPaciente.alimentosOdiados = odiadosRaw ? odiadosRaw.split(',').map(a => a.trim().toLowerCase()).filter(a => a !== "") : [];
 
-        // EXTRACCIÓN DE LOS IDS DEL COMODÍN SALVAVIDAS DESDE LA COLUMNA E
-        datosComodinFijo.nombreReceta = extraerColumnaE(4) || "Receta Comodín";
+        // MAPEADO EXACTO DE CONFIGURACIÓN DE COMODÍN DESDE COLUMNA E
+        datosComodinFijo.nombreReceta = extraerColumnaE(4) || "Receta Fija"; // E5 -> Título del plato
         
-        let pRaw = extraerColumnaE(5);
-        datosComodinFijo.proteinasIds = pRaw ? pRaw.split(',').map(id => id.trim()).filter(id => id !== "") : [];
+        let pRaw = extraerColumnaE(5);                                      // E6 -> IDs Proteínas
+        datosComodinFijo.proteinasIds = pRaw ? pRaw.split(',').map(id => id.trim().toUpperCase()).filter(id => id !== "") : [];
         
-        let hcRaw = extraerColumnaE(6);
-        datosComodinFijo.carbohidratosIds = hcRaw ? hcRaw.split(',').map(id => id.trim()).filter(id => id !== "") : [];
+        let hcRaw = extraerColumnaE(6);                                     // E7 -> IDs Carbohidratos
+        datosComodinFijo.carbohidratosIds = hcRaw ? hcRaw.split(',').map(id => id.trim().toUpperCase()).filter(id => id !== "") : [];
         
-        let gRaw = extraerColumnaE(7);
-        datosComodinFijo.grasasIds = gRaw ? gRaw.split(',').map(id => id.trim()).filter(id => id !== "") : [];
+        let gRaw = extraerColumnaE(7);                                      // E8 -> IDs Grasas
+        datosComodinFijo.grasasIds = gRaw ? gRaw.split(',').map(id => id.trim().toUpperCase()).filter(id => id !== "") : [];
         
-        datosComodinFijo.libresTexto = extraerColumnaE(8);
+        datosComodinFijo.libresTexto = extraerColumnaE(8);                  // E9 -> Libres / Extras
 
         const grid = document.getElementById('meal-grid');
         let html = "";
@@ -665,7 +664,7 @@
         poolProteinas = []; poolCarbohidratos = []; poolGrasas = []; poolBuscadorCompleto = [];
 
         function parsearGramos(celda) {
-            if(!celda || celda.v === null || celda.v === undefined) return null;
+            if(!celda || celda.v === null) return null;
             let str = String(celda.v).replace(/\s+/g, '').toLowerCase();
             let match = str.match(/(\d+(?:[.,]\d+)?)/); 
             return match ? parseFloat(match[1].replace(',', '.')) : null;
@@ -687,9 +686,9 @@
                 if (exclusionesPaciente.alimentosOdiados.some(odiado => nClean.includes(odiado))) return true; 
 
                 let tagsAlimento = `
-                    ${celdaExclusion?.v ? String(celdaExclusion.v) : ''} 
-                    ${celdaEstilo?.v ? String(celdaEstilo.v) : ''} 
-                    ${celdaMomento?.v ? String(celdaMomento.v) : ''}
+                    ${celdaExclusion && celdaExclusion.v ? String(celdaExclusion.v) : ''} 
+                    ${celdaEstilo && celdaEstilo.v ? String(celdaEstilo.v) : ''} 
+                    ${celdaMomento && celdaMomento.v ? String(celdaMomento.v) : ''}
                 `.toUpperCase();
 
                 if (exclusionesPaciente.estiloVida === "VEGETARIANO" || exclusionesPaciente.estiloVida === "VEGANO") {
@@ -701,7 +700,7 @@
                 return false;
             }
 
-            // Mapeos originales intactos de tu base de datos
+            // Mantenemos intactos tus mapeos por columnas tradicionales de BBDD alimentos
             if (row[0] && row[0].v !== null && String(row[0].v).trim() !== "" && !String(row[0].v).includes("PROTEÍNAS")) {
                 let n = String(row[0].v).trim();
                 if (!debeExcluirse(n, row[5], row[6], row[7])) {
@@ -760,7 +759,7 @@
             <div class="obs-card c3"><div class="obs-title">${obsJ[0] || 'Extra'}</div><div class="obs-content">${obsJ.slice(1).join('<br>')}</div></div>`;
     }
 
-    // MOTOR INTELIGENTE PARA GENERAR EL COMODÍN EN BASE A LOS IDS GUARDADOS
+    // MOTOR EXCLUSIVO RESOLUTOR DEL COMODÍN MEDIANTE ÍNDICE DE MATRIZ ASOCIADO AL ID
     function calcularComodinSalvavidas() {
         const ingesta = document.getElementById('salvavidas-selector').value;
         const blq = bloquesAsignadosPorIngesta[ingesta];
@@ -773,8 +772,8 @@
         }
 
         let html = `<div class="plate-title" style="color: var(--amber-text); border-bottom-color: var(--amber-border)">
-                        <i class="fa-solid fa-utensils"></i> Receta Fija: <b>${datosComodinFijo.nombreReceta}</b><br>
-                        <small style="font-size:12px; color: var(--text-light)">Cantidades calculadas para ${ingesta} (${blq.p}P - ${blq.hc}HC - ${blq.g}G)</small>
+                        <i class="fa-solid fa-utensils"></i> Plato: <b>${datosComodinFijo.nombreReceta}</b><br>
+                        <small style="font-size:12px; color: var(--text-light)">Cantidades ajustadas para ${ingesta} (${blq.p}P - ${blq.hc}HC - ${blq.g}G)</small>
                     </div>`;
 
         let flagTieneIngredientes = false;
@@ -782,16 +781,23 @@
         function procesarMacroComodin(listaIds, bloquesTotales, poolAlimentos, bgClass, emoji) {
             if (!listaIds || listaIds.length === 0 || bloquesTotales <= 0) return "";
             
-            // Divide los bloques equitativamente si hay múltiples IDs pautados en la misma celda
             let bloquesPorAlimento = bloquesTotales / listaIds.length;
             let subHtml = "";
 
             listaIds.forEach(id => {
-                let idClean = id.toLowerCase().trim();
+                let idClean = id.replace(/\s+/g, '').toUpperCase();
                 if (idClean === "") return;
                 
-                // Busca el alimento cuyo nombre contiene el ID exacto (Ej: "P_001")
-                let alimentoEncontrado = poolAlimentos.find(item => item.nombre.toLowerCase().includes(idClean));
+                // Extrae el número del ID (ej: de "P_001" saca 1)
+                let matchNumero = idClean.match(/\d+/);
+                if(!matchNumero) {
+                    subHtml += `<div class="plate-item" style="color:var(--p-color)"><span>⚠️ ID "${idClean}" no válido. Use el formato correcto (Ej: P_001).</span></div>`;
+                    return;
+                }
+                
+                // Restamos 1 ya que los índices de los arreglos en JavaScript empiezan en 0
+                let indiceAlimento = parseInt(matchNumero[0], 10) - 1;
+                let alimentoEncontrado = poolAlimentos[indiceAlimento];
                 
                 if (alimentoEncontrado) {
                     let gBase = alimentoEncontrado.gramos || 0;
@@ -803,7 +809,7 @@
                         </div>`;
                     flagTieneIngredientes = true;
                 } else {
-                    subHtml += `<div class="plate-item" style="color:var(--p-color)"><span>⚠️ No se localizó el código <b>"${id.toUpperCase()}"</b> en la columna de equivalencias correspondiente.</span></div>`;
+                    subHtml += `<div class="plate-item" style="color:var(--p-color)"><span>⚠️ No existe la fila correspondiente al ID <b>"${idClean}"</b> en la lista de equivalencias.</span></div>`;
                 }
             });
             return subHtml;
@@ -816,14 +822,14 @@
         if (datosComodinFijo.libresTexto && datosComodinFijo.libresTexto !== "" && datosComodinFijo.libresTexto.toLowerCase() !== "ninguno") {
             html += `
                 <div class="plate-item" style="background-color: #f8fafc; padding: 10px; border-radius: 6px; margin-top: 10px;">
-                    <span>🧂 <b>Extras libres pautados:</b> ${datosComodinFijo.libresTexto}</span>
+                    <span>🧂 <b>Extras libres:</b> ${datosComodinFijo.libresTexto}</span>
                     <span class="badge bg-m">Libre</span>
                 </div>`;
             flagTieneIngredientes = true;
         }
 
         if (!flagTieneIngredientes) {
-            out.innerHTML = `<div class="plate-title" style="color:var(--text-light); border-bottom: none; margin-bottom: 0;">ℹ️ No hay ningún ID de alimento configurado en las celdas E5, E6 o E7 para esta receta.</div>`;
+            out.innerHTML = `<div class="plate-title" style="color:var(--text-light); border-bottom: none; margin-bottom: 0;">ℹ️ Comprueba los IDs de las celdas E6, E7 y E8 en tu hoja máster del paciente.</div>`;
             return;
         }
 
