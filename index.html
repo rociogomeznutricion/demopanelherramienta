@@ -415,7 +415,6 @@
 </div>
 
 <script>
-    // Tu Hoja Maestra Central de Control de Acceso
     const MASTER_CONTROL_URL = 'https://docs.google.com/spreadsheets/d/1L7lbZ4JkE7dqO_oizMEDKQabtyUBbR4yaqcrt3LMa6Q/gviz/tq?gid=0&tqx=out:json';
 
     const GID_AJUSTES = '1147936171'; // Pestaña MASTER del Paciente
@@ -425,6 +424,13 @@
     let bloquesAsignadosPorIngesta = {}; 
     let poolProteinas = []; let poolCarbohidratos = []; let poolGrasas = []; let poolBuscadorCompleto = [];
     let currentCategoryFilter = 'all';
+
+    // Objeto global de exclusiones del paciente conectado
+    let exclusionesPaciente = {
+        estiloVida: "",
+        tagsExcluir: [],
+        alimentosOdiados: []
+    };
 
     function cleanJSON(raw) { return JSON.parse(raw.substring(raw.indexOf('{'), raw.lastIndexOf('}') + 1)); }
 
@@ -439,11 +445,9 @@
         return recortado.substring(0, fin).trim();
     }
 
-    // CONFIGURACIÓN DE INICIO CON TECLA ENTER
     document.getElementById('username').addEventListener('keydown', function(e) { if (e.key === 'Enter') ejecutarLogin(); });
     document.getElementById('password').addEventListener('keydown', function(e) { if (e.key === 'Enter') ejecutarLogin(); });
 
-    // LÓGICA DE INICIO DE SESIÓN
     function ejecutarLogin() {
         const userIn = document.getElementById('username').value.trim();
         const passIn = document.getElementById('password').value.trim();
@@ -480,7 +484,6 @@
                             return;
                         }
                         cuenta = c;
-                        // Extraemos el nombre real de la Columna A (índice 0)
                         nombrePacienteOriginal = c[0] && c[0].v ? String(c[0].v).trim() : 'Paciente';
                         break;
                     }
@@ -499,16 +502,13 @@
                     return;
                 }
 
-                // Inyectamos el Nombre de la columna A en la cabecera
                 document.getElementById('main-title').innerText = `Plan de Nutrición: ${nombrePacienteOriginal}`;
                 document.getElementById('personalized-welcome').innerText = `Dashboard exclusivo y personalizado para ${nombrePacienteOriginal}`;
 
-                // OCULTAMOS LOGIN Y REVELAMOS APLICACIÓN DIRECTAMENTE
                 errBox.style.display = "none";
                 document.getElementById('login-screen').style.display = "none";
                 document.getElementById('dashboard-screen').style.display = "block";
                 
-                // Cargar datos dinámicos de las pestañas internas del paciente
                 cargarDatosNutricionales(idPaciente);
             })
             .catch(err => {
@@ -525,7 +525,6 @@
         document.getElementById('plate-output').style.display = "none";
     }
 
-    // CARGAR DATOS DE HOJA INDIVIDUAL
     function cargarDatosNutricionales(spreadsheetId) {
         document.getElementById('sync-status').innerText = "Sincronizando...";
         document.getElementById('sync-status').style.background = "#fef3c7";
@@ -537,25 +536,48 @@
             fetch(urlAjustes).then(r => r.text()),
             fetch(urlEquiv).then(r => r.text())
         ]).then(([dataAjustes, dataEquiv]) => {
-            renderMealsAndTitle(dataAjustes);
+            // Procesamos la columna E de la pestaña MASTER del paciente
+            procesarPerfilYBloquesPaciente(dataAjustes);
+            // Dibujamos las equivalencias aplicando el filtro
             procesarYRenderizarEquivalencias(dataEquiv);
+            
             document.getElementById('sync-status').innerText = "Sincronizado";
             document.getElementById('sync-status').style.background = "#dcfce7";
             document.getElementById('sync-status').style.color = "#15803d";
         }).catch(err => {
             console.error(err);
-            document.getElementById('sync-status').innerText = "Error en hojas del paciente";
+            document.getElementById('sync-status').innerText = "Error en pautas";
             document.getElementById('sync-status').style.background = "#ffeeec";
         });
     }
 
-    function renderMealsAndTitle(raw) {
+    function procesarPerfilYBloquesPaciente(raw) {
         const json = cleanJSON(raw);
         const rows = json.table.rows;
+
+        // Limpiar estados anteriores
+        exclusionesPaciente.estiloVida = "";
+        exclusionesPaciente.tagsExcluir = [];
+        exclusionesPaciente.alimentosOdiados = [];
+
+        // LEER DESDE LA COLUMNA E (Índice de celda 4)
+        // Celda E1 (Fila 0, Columna 4) -> Estilo de vida
+        if (rows[0] && rows[0].c && rows[0].c[4] && rows[0].c[4].v) {
+            exclusionesPaciente.estiloVida = String(rows[0].c[4].v).trim().toUpperCase();
+        }
+        // Celda E2 (Fila 1, Columna 4) -> Alergias / Tags a descartar
+        if (rows[1] && rows[1].c && rows[1].c[4] && rows[1].c[4].v) {
+            exclusionesPaciente.tagsExcluir = String(rows[1].c[4].v).split(',').map(t => t.trim().toUpperCase()).filter(t => t !== "");
+        }
+        // Celda E3 (Fila 2, Columna 4) -> Alimentos que no le gustan
+        if (rows[2] && rows[2].c && rows[2].c[4] && rows[2].c[4].v) {
+            exclusionesPaciente.alimentosOdiados = String(rows[2].c[4].v).split(',').map(a => a.trim().toLowerCase()).filter(a => a !== "");
+        }
 
         const grid = document.getElementById('meal-grid');
         let html = "";
 
+        // Renderizar bloques de ingestas tradicionales (Filas 1 a 5 de las columnas A, B, C)
         for (let i = 0; i < 5; i++) {
             if (!rows[i] || !rows[i].c) continue;
             const row = rows[i].c;
@@ -607,21 +629,70 @@
                 return 'g';
             }
 
-            if (row[0] && row[0].v !== null && String(row[0].v).trim() !== "" && !String(row[0].v).includes("PROTEÍNAS")) {
-                const item = { nombre: String(row[0].v).trim(), gramos: parsearGramos(row[1]), unidad: detectarUnidad(String(row[1]?.v || '')), tipo: "PROTEÍNAS" };
-                poolProteinas.push(item); poolBuscadorCompleto.push(item);
+            // DETECTOR DE EXCLUSIÓN INTELIGENTE
+            function debeExcluirse(nombre, celdaExclusion, celdaEstilo, celdaMomento) {
+                if (!nombre) return true;
+                let nClean = nombre.toLowerCase();
+
+                // 1. Validar si el nombre contiene alguna palabra de los alimentos odiados (Celda E3)
+                if (exclusionesPaciente.alimentosOdiados.some(odiado => nClean.includes(odiado))) {
+                    return true; 
+                }
+
+                // Concatenar todos los tags del alimento de la base de datos (Columnas F, G, H)
+                let tagsAlimento = `
+                    ${celdaExclusion && celdaExclusion.v ? String(celdaExclusion.v) : ''} 
+                    ${celdaEstilo && celdaEstilo.v ? String(celdaEstilo.v) : ''} 
+                    ${celdaMomento && celdaMomento.v ? String(celdaMomento.v) : ''}
+                `.toUpperCase();
+
+                // 2. Validar estilo de vida vegetariano/vegano (Celda E1)
+                if (exclusionesPaciente.estiloVida === "VEGETARIANO" || exclusionesPaciente.estiloVida === "VEGANO") {
+                    if (tagsAlimento.includes("ANIMAL") || tagsAlimento.includes("CARNE") || tagsAlimento.includes("PESCADO")) {
+                        return true;
+                    }
+                }
+
+                // 3. Validar exclusión por tags / Alergias específicos (Celda E2)
+                for (let tagExcluido of exclusionesPaciente.tagsExcluir) {
+                    if (tagsAlimento.includes(tagExcluido)) {
+                        return true;
+                    }
+                }
+
+                return false;
             }
+
+            // Procesar fila de Proteínas (Columna A=0, B=1. Tags F=5, G=6, H=7)
+            if (row[0] && row[0].v !== null && String(row[0].v).trim() !== "" && !String(row[0].v).includes("PROTEÍNAS")) {
+                let n = String(row[0].v).trim();
+                if (!debeExcluirse(n, row[5], row[6], row[7])) {
+                    const item = { nombre: n, gramos: parsearGramos(row[1]), unidad: detectarUnidad(String(row[1]?.v || '')), tipo: "PROTEÍNAS" };
+                    poolProteinas.push(item); poolBuscadorCompleto.push(item);
+                }
+            }
+            // Procesar fila de Carbohidratos (Columna C=2, D=3)
             if (row[2] && row[2].v !== null && String(row[2].v).trim() !== "" && !String(row[2].v).includes("CARBOHIDRATOS")) {
                 let n = String(row[2].v).trim(); if(n.endsWith('|')) n = n.slice(0, -1).trim();
-                const item = { nombre: n, gramos: parsearGramos(row[3]), unidad: detectarUnidad(String(row[3]?.v || '')), tipo: "CARBOHIDRATOS" };
-                poolCarbohidratos.push(item); poolBuscadorCompleto.push(item);
+                if (!debeExcluirse(n, row[5], row[6], row[7])) {
+                    const item = { nombre: n, gramos: parsearGramos(row[3]), unidad: detectarUnidad(String(row[3]?.v || '')), tipo: "CARBOHIDRATOS" };
+                    poolCarbohidratos.push(item); poolBuscadorCompleto.push(item);
+                }
             }
+            // Procesar fila de Grasas (Columna E=4, F=5 en visual, pero leídas en índices correctos)
             if (row[4] && row[4].v !== null && String(row[4].v).trim() !== "" && !String(row[4].v).includes("GRASAS")) {
-                const item = { nombre: String(row[4].v).trim(), gramos: parsearGramos(row[5]), unidad: detectarUnidad(String(row[5]?.v || '')), tipo: "GRASAS" };
-                poolGrasas.push(item); poolBuscadorCompleto.push(item);
+                let n = String(row[4].v).trim();
+                if (!debeExcluirse(n, row[5], row[6], row[7])) {
+                    const item = { nombre: n, gramos: parsearGramos(row[5]), unidad: detectarUnidad(String(row[5]?.v || '')), tipo: "GRASAS" };
+                    poolGrasas.push(item); poolBuscadorCompleto.push(item);
+                }
             }
-            if (row[7] && row[7].v !== null && String(row[7].v).trim() !== "" && !String(row[7].v).includes("MIXTO")) {
-                poolBuscadorCompleto.push({ nombre: String(row[7].v).trim(), gramos: null, unidad: '', tipo: "ALIMENTOS MIXTOS" });
+            // Procesar fila de Mixtos (Columna I en hojas, índice de celda 8)
+            if (row[8] && row[8].v !== null && String(row[8].v).trim() !== "" && !String(row[8].v).includes("MIXTO")) {
+                let n = String(row[8].v).trim();
+                if (!debeExcluirse(n, row[5], row[6], row[7])) {
+                    poolBuscadorCompleto.push({ nombre: n, gramos: null, unidad: '', tipo: "ALIMENTOS MIXTOS" });
+                }
             }
         }
 
@@ -640,13 +711,13 @@
         });
         tbody.innerHTML = htmlTable;
 
-        // Pautas
+        // Renderizar bloques de notas marginales/Pautas de las últimas columnas
         let obsG = [], obsI = [], obsJ = [];
         for (let i = 0; i < rows.length; i++) {
             if(rows[i]?.c) {
-                if(rows[i].c[6]?.v) obsG.push(String(rows[i].c[6].v));
-                if(rows[i].c[8]?.v) obsI.push(String(rows[i].c[8].v));
-                if(rows[i].c[9]?.v) obsJ.push(String(rows[i].c[9].v));
+                if(rows[i].c[9]?.v) obsG.push(String(rows[i].c[9].v));
+                if(rows[i].c[10]?.v) obsI.push(String(rows[i].c[10].v));
+                if(rows[i].c[11]?.v) obsJ.push(String(rows[i].c[11].v));
             }
         }
         document.getElementById('obs-grid').innerHTML = `
