@@ -197,7 +197,7 @@
 
         .meal-content { font-size: 13px; color: var(--text-dark); line-height: 1.6; }
 
-        /* SECCIÓN NUEVA: COMODÍN SALVAVIDAS */
+        /* SECCIÓN: RECETA COMODÍN SALVAVIDAS */
         .comodin-card {
             background: linear-gradient(135deg, var(--amber-bg) 0%, #fffbeb 100%);
             border: 1px solid var(--amber-border);
@@ -387,7 +387,7 @@
         <div class="section-title" style="color: var(--amber-text);"><i class="fa-solid fa-life-ring"></i> Receta Comodín Salvavidas</div>
         <div class="comodin-card">
             <p style="color: var(--amber-text); font-size: 14px; margin-bottom: 15px; font-weight: 500;">
-                Calcula las cantidades exactas de tu plato preferido pautado usando los códigos asignados en tu ficha.
+                Calcula las cantidades exactas de tu plato pautado cruzando los códigos asignados en tu ficha técnica.
             </p>
             <div class="gen-controls">
                 <select id="salvavidas-selector" class="gen-select">
@@ -399,7 +399,7 @@
                 </select>
                 <button class="gen-btn btn-amber" onclick="calcularComodinSalvavidas()">Calcular Receta Fija</button>
             </div>
-            <div class="plate-output" id="salvavidas-output" style="display:none; max-width:650px; margin:0 auto; border-color: var(--amber-border); background:#ffffff;"></div>
+            <div class="plate-output" id="salvavidas-output"></div>
         </div>
 
         <div class="section-title">✨ Asistente de Menú Instantáneo</div>
@@ -430,12 +430,12 @@
                 <button class="filter-btn" data-type="alimentos mixtos" onclick="setCategoryFilter('alimentos mixtos', this)">🥣 Mixtos</button>
             </div>
             <div class="search-area">
-                <input type="text" id="search" class="search-input" placeholder="🔎 Escribe para buscar..." onkeyup="ejecutarFiltroCombinado()">
+                <input type="text" id="search" class="search-input" placeholder="🔎 Escribe código o nombre para buscar..." onkeyup="ejecutarFiltroCombinado()">
             </div>
             <div class="table-container">
                 <table>
                     <thead>
-                        <tr><th>Alimento</th><th>Cantidad base (1 bloque)</th><th>Tipo</th></tr>
+                        <tr><th>Código</th><th>Alimento</th><th>Cantidad base (1 bloque)</th><th>Tipo</th></tr>
                     </thead>
                     <tbody id="table-body"></tbody>
                 </table>
@@ -458,7 +458,7 @@
     let poolProteinas = []; let poolCarbohidratos = []; let poolGrasas = []; let poolBuscadorCompleto = [];
     let currentCategoryFilter = 'all';
 
-    // Estructura global para el Comodín
+    // Objeto global de la receta Comodín
     let datosComodinFijo = {
         nombreReceta: "Receta Comodín",
         proteinasIds: [],
@@ -606,25 +606,25 @@
             return "";
         }
 
-        exclusionesPaciente.estiloVida = extraerColumnaE(0).toUpperCase();
-        let tagsRaw = extraerColumnaE(1);
+        exclusionesPaciente.estiloVida = extraerColumnaE(0).toUpperCase(); // E1
+        let tagsRaw = extraerColumnaE(1); // E2
         exclusionesPaciente.tagsExcluir = tagsRaw ? tagsRaw.split(',').map(t => t.trim().toUpperCase()).filter(t => t !== "") : [];
-        let odiadosRaw = extraerColumnaE(2);
+        let odiadosRaw = extraerColumnaE(2); // E3
         exclusionesPaciente.alimentosOdiados = odiadosRaw ? odiadosRaw.split(',').map(a => a.trim().toLowerCase()).filter(a => a !== "") : [];
 
-        // MAPEADO EXACTO DE CONFIGURACIÓN DE COMODÍN DESDE COLUMNA E
-        datosComodinFijo.nombreReceta = extraerColumnaE(4) || "Receta Fija"; // E5 -> Título del plato
+        // EXTRACCIÓN MAESTRA DEL COMODÍN DESDE LA COLUMNA E
+        datosComodinFijo.nombreReceta = extraerColumnaE(4) || "Receta Comodín"; // E5 -> Título del plato
         
-        let pRaw = extraerColumnaE(5);                                      // E6 -> IDs Proteínas
+        let pRaw = extraerColumnaE(5); // E6 -> IDs Proteínas
         datosComodinFijo.proteinasIds = pRaw ? pRaw.split(',').map(id => id.trim().toUpperCase()).filter(id => id !== "") : [];
         
-        let hcRaw = extraerColumnaE(6);                                     // E7 -> IDs Carbohidratos
+        let hcRaw = extraerColumnaE(6); // E7 -> IDs Carbohidratos
         datosComodinFijo.carbohidratosIds = hcRaw ? hcRaw.split(',').map(id => id.trim().toUpperCase()).filter(id => id !== "") : [];
         
-        let gRaw = extraerColumnaE(7);                                      // E8 -> IDs Grasas
+        let gRaw = extraerColumnaE(7); // E8 -> IDs Grasas
         datosComodinFijo.grasasIds = gRaw ? gRaw.split(',').map(id => id.trim().toUpperCase()).filter(id => id !== "") : [];
         
-        datosComodinFijo.libresTexto = extraerColumnaE(8);                  // E9 -> Libres / Extras
+        datosComodinFijo.libresTexto = extraerColumnaE(8); // E9 -> Extras Libres
 
         const grid = document.getElementById('meal-grid');
         let html = "";
@@ -658,6 +658,7 @@
         grid.innerHTML = html;
     }
 
+    // NUEVO MOTOR: PROCESADOR PARA TABLA VERTICAL / PLANA DE ALIMENTOS
     function procesarYRenderizarEquivalencias(raw) {
         const json = cleanJSON(raw);
         const rows = json.table.rows;
@@ -676,60 +677,70 @@
             return 'g';
         }
 
-        for (let i = 1; i < rows.length; i++) {
-            const row = rows[i].c;
-            if (!row) continue;
+        function debeExcluirse(nombre, filaCeldas) {
+            if (!nombre) return true;
+            let nClean = nombre.toLowerCase();
+            if (exclusionesPaciente.alimentosOdiados.some(odiado => nClean.includes(odiado))) return true; 
 
-            function debeExcluirse(nombre, celdaExclusion, celdaEstilo, celdaMomento) {
-                if (!nombre) return true;
-                let nClean = nombre.toLowerCase();
-                if (exclusionesPaciente.alimentosOdiados.some(odiado => nClean.includes(odiado))) return true; 
+            // Recopilar tags de exclusión cruzando dinámicamente el resto de columnas de la fila
+            let tagsAlimento = "";
+            for (let k = 3; k < filaCeldas.length; k++) {
+                if (filaCeldas[k] && filaCeldas[k].v) tagsAlimento += " " + String(filaCeldas[k].v);
+            }
+            tagsAlimento = tagsAlimento.toUpperCase();
 
-                let tagsAlimento = `
-                    ${celdaExclusion && celdaExclusion.v ? String(celdaExclusion.v) : ''} 
-                    ${celdaEstilo && celdaEstilo.v ? String(celdaEstilo.v) : ''} 
-                    ${celdaMomento && celdaMomento.v ? String(celdaMomento.v) : ''}
-                `.toUpperCase();
-
-                if (exclusionesPaciente.estiloVida === "VEGETARIANO" || exclusionesPaciente.estiloVida === "VEGANO") {
-                    if (tagsAlimento.includes("ANIMAL") || tagsAlimento.includes("CARNE") || tagsAlimento.includes("PESCADO")) return true;
-                }
-                for (let tagExcluido of exclusionesPaciente.tagsExcluir) {
-                    if (tagsAlimento.includes(tagExcluido)) return true;
-                }
-                return false;
+            if (exclusionesPaciente.estiloVida === "VEGETARIANO" || exclusionesPaciente.estiloVida === "VEGANO") {
+                if (tagsAlimento.includes("ANIMAL") || tagsAlimento.includes("CARNE") || tagsAlimento.includes("PESCADO")) return true;
             }
-
-            // Mantenemos intactos tus mapeos por columnas tradicionales de BBDD alimentos
-            if (row[0] && row[0].v !== null && String(row[0].v).trim() !== "" && !String(row[0].v).includes("PROTEÍNAS")) {
-                let n = String(row[0].v).trim();
-                if (!debeExcluirse(n, row[5], row[6], row[7])) {
-                    const item = { nombre: n, gramos: parsearGramos(row[1]), unidad: detectarUnidad(String(row[1]?.v || '')), tipo: "PROTEÍNAS" };
-                    poolProteinas.push(item); poolBuscadorCompleto.push(item);
-                }
+            for (let tagExcluido of exclusionesPaciente.tagsExcluir) {
+                if (tagsAlimento.includes(tagExcluido)) return true;
             }
-            if (row[2] && row[2].v !== null && String(row[2].v).trim() !== "" && !String(row[2].v).includes("CARBOHIDRATOS")) {
-                let n = String(row[2].v).trim(); if(n.endsWith('|')) n = n.slice(0, -1).trim();
-                if (!debeExcluirse(n, row[5], row[6], row[7])) {
-                    const item = { nombre: n, gramos: parsearGramos(row[3]), unidad: detectarUnidad(String(row[3]?.v || '')), tipo: "CARBOHIDRATOS" };
-                    poolCarbohidratos.push(item); poolBuscadorCompleto.push(item);
-                }
-            }
-            if (row[4] && row[4].v !== null && String(row[4].v).trim() !== "" && !String(row[4].v).includes("GRASAS")) {
-                let n = String(row[4].v).trim();
-                if (!debeExcluirse(n, row[5], row[6], row[7])) {
-                    const item = { nombre: n, gramos: parsearGramos(row[5]), unidad: detectarUnidad(String(row[5]?.v || '')), tipo: "GRASAS" };
-                    poolGrasas.push(item); poolBuscadorCompleto.push(item);
-                }
-            }
-            if (row[8] && row[8].v !== null && String(row[8].v).trim() !== "" && !String(row[8].v).includes("MIXTO")) {
-                let n = String(row[8].v).trim();
-                if (!debeExcluirse(n, row[5], row[6], row[7])) {
-                    poolBuscadorCompleto.push({ nombre: n, gramos: null, unidad: '', tipo: "ALIMENTOS MIXTOS" });
-                }
-            }
+            return false;
         }
 
+        // Bucle adaptado a lectura vertical plana
+        for (let i = 1; i < rows.length; i++) {
+            const row = rows[i].c;
+            if (!row || !row[0] || row[0].v === null) continue;
+
+            let id = String(row[0].v).trim().toUpperCase();
+            if (id === "" || id.includes("ID") || id.includes("CÓDIGO")) continue;
+
+            let nombre = row[1] && row[1].v ? String(row[1].v).trim() : "";
+            if (!nombre) continue;
+
+            if (debeExcluirse(nombre, row)) continue;
+
+            let celdaCantidad = row[2];
+            let gramos = parsearGramos(celdaCantidad);
+            let unidad = detectarUnidad(String(celdaCantidad?.v || ''));
+
+            // Auto-detectar el tipo usando el prefijo de tu ID o la columna D (índice 3) si existe
+            let tipo = "ALIMENTOS MIXTOS";
+            let idPrefijo = id.replace(/[^A-Z]/g, ''); 
+            if (idPrefijo.startsWith("P")) tipo = "PROTEÍNAS";
+            else if (idPrefijo.startsWith("HC")) tipo = "CARBOHIDRATOS";
+            else if (idPrefijo.startsWith("G")) tipo = "GRASAS";
+            else if (idPrefijo.startsWith("M")) tipo = "ALIMENTOS MIXTOS";
+
+            if (row[3] && row[3].v) {
+                let tipoCol = String(row[3].v).toUpperCase();
+                if (tipoCol.includes("PROT")) tipo = "PROTEÍNAS";
+                else if (tipoCol.includes("CARB") || tipoCol.includes("HIDR")) tipo = "CARBOHIDRATOS";
+                else if (tipoCol.includes("GRAS")) tipo = "GRASAS";
+                else if (tipoCol.includes("MIX")) tipo = "ALIMENTOS MIXTOS";
+            }
+
+            const item = { id: id, nombre: nombre, gramos: gramos, unidad: unidad, tipo: tipo };
+
+            if (tipo === "PROTEÍNAS") poolProteinas.push(item);
+            else if (tipo === "CARBOHIDRATOS") poolCarbohidratos.push(item);
+            else if (tipo === "GRASAS") poolGrasas.push(item);
+
+            poolBuscadorCompleto.push(item);
+        }
+
+        // Renderizar la tabla visual
         const tbody = document.getElementById('table-body');
         let htmlTable = "";
         poolBuscadorCompleto.forEach(item => {
@@ -738,6 +749,7 @@
             else if(item.tipo === "GRASAS") bClass = "bg-g";
             else if(item.tipo === "ALIMENTOS MIXTOS") bClass = "bg-m";
             htmlTable += `<tr data-type="${item.tipo.toLowerCase()}">
+                <td><code>${item.id}</code></td>
                 <td><strong>${item.nombre}</strong></td>
                 <td>${item.gramos !== null ? item.gramos+item.unidad : 'Ver definición'}</td>
                 <td><span class="badge ${bClass}">${item.tipo}</span></td>
@@ -745,6 +757,7 @@
         });
         tbody.innerHTML = htmlTable;
 
+        // Notas y observaciones marginales
         let obsG = [], obsI = [], obsJ = [];
         for (let i = 0; i < rows.length; i++) {
             if(rows[i]?.c) {
@@ -759,7 +772,7 @@
             <div class="obs-card c3"><div class="obs-title">${obsJ[0] || 'Extra'}</div><div class="obs-content">${obsJ.slice(1).join('<br>')}</div></div>`;
     }
 
-    // MOTOR EXCLUSIVO RESOLUTOR DEL COMODÍN MEDIANTE ÍNDICE DE MATRIZ ASOCIADO AL ID
+    // RESOLUTOR POR CRUCE DIRECTO DE ID DE ALIMENTOS (.find)
     function calcularComodinSalvavidas() {
         const ingesta = document.getElementById('salvavidas-selector').value;
         const blq = bloquesAsignadosPorIngesta[ingesta];
@@ -767,13 +780,13 @@
         out.style.display = "block";
 
         if (!blq || (blq.p === 0 && blq.hc === 0 && blq.g === 0)) {
-            out.innerHTML = `<div class="plate-title">No hay bloques definidos para la ingesta seleccionada.</div>`;
+            out.innerHTML = `<div class="plate-title">No hay bloques pautados para esta ingesta.</div>`;
             return;
         }
 
         let html = `<div class="plate-title" style="color: var(--amber-text); border-bottom-color: var(--amber-border)">
                         <i class="fa-solid fa-utensils"></i> Plato: <b>${datosComodinFijo.nombreReceta}</b><br>
-                        <small style="font-size:12px; color: var(--text-light)">Cantidades ajustadas para ${ingesta} (${blq.p}P - ${blq.hc}HC - ${blq.g}G)</small>
+                        <small style="font-size:12px; color: var(--text-light)">Cantidades calculadas para ${ingesta} (${blq.p}P - ${blq.hc}HC - ${blq.g}G)</small>
                     </div>`;
 
         let flagTieneIngredientes = false;
@@ -788,16 +801,8 @@
                 let idClean = id.replace(/\s+/g, '').toUpperCase();
                 if (idClean === "") return;
                 
-                // Extrae el número del ID (ej: de "P_001" saca 1)
-                let matchNumero = idClean.match(/\d+/);
-                if(!matchNumero) {
-                    subHtml += `<div class="plate-item" style="color:var(--p-color)"><span>⚠️ ID "${idClean}" no válido. Use el formato correcto (Ej: P_001).</span></div>`;
-                    return;
-                }
-                
-                // Restamos 1 ya que los índices de los arreglos en JavaScript empiezan en 0
-                let indiceAlimento = parseInt(matchNumero[0], 10) - 1;
-                let alimentoEncontrado = poolAlimentos[indiceAlimento];
+                // Cruce directo buscando el identificador en la base de datos
+                let alimentoEncontrado = poolAlimentos.find(item => item.id === idClean);
                 
                 if (alimentoEncontrado) {
                     let gBase = alimentoEncontrado.gramos || 0;
@@ -809,7 +814,10 @@
                         </div>`;
                     flagTieneIngredientes = true;
                 } else {
-                    subHtml += `<div class="plate-item" style="color:var(--p-color)"><span>⚠️ No existe la fila correspondiente al ID <b>"${idClean}"</b> en la lista de equivalencias.</span></div>`;
+                    subHtml += `
+                        <div class="plate-item" style="color:var(--p-color)">
+                            <span>⚠️ El código <b>"${idClean}"</b> no existe en la base de datos de alimentos.</span>
+                        </div>`;
                 }
             });
             return subHtml;
@@ -822,7 +830,7 @@
         if (datosComodinFijo.libresTexto && datosComodinFijo.libresTexto !== "" && datosComodinFijo.libresTexto.toLowerCase() !== "ninguno") {
             html += `
                 <div class="plate-item" style="background-color: #f8fafc; padding: 10px; border-radius: 6px; margin-top: 10px;">
-                    <span>🧂 <b>Extras libres:</b> ${datosComodinFijo.libresTexto}</span>
+                    <span>🧂 <b>Extras pautados libres:</b> ${datosComodinFijo.libresTexto}</span>
                     <span class="badge bg-m">Libre</span>
                 </div>`;
             flagTieneIngredientes = true;
@@ -876,9 +884,10 @@
         const trs = document.getElementById('table-body').getElementsByTagName('tr');
         for (let i = 0; i < trs.length; i++) {
             const tr = trs[i];
-            const name = tr.getElementsByTagName('td')[0].textContent.toLowerCase();
+            const code = tr.getElementsByTagName('td')[0].textContent.toLowerCase();
+            const name = tr.getElementsByTagName('td')[1].textContent.toLowerCase();
             const type = tr.getAttribute('data-type') || "";
-            tr.style.display = (name.includes(text) && (currentCategoryFilter === 'all' || type === currentCategoryFilter)) ? "" : "none";
+            tr.style.display = ((name.includes(text) || code.includes(text)) && (currentCategoryFilter === 'all' || type === currentCategoryFilter)) ? "" : "none";
         }
     }
 </script>
