@@ -346,12 +346,16 @@
 </div>
 
 <script>
-    const SPREADSHEET_ID = '1agPyD1JW34QSqXOeisPSsjXQuIXkwvdP4ZFyRAlvip4'; 
-    const GID_AJUSTES = '1147936171'; // Pestaña MASTER
-    const GID_EQUIV = '1979658163';   // Pestaña TABLA EQUIVALENCIAS
+    // --- PARÁMETROS ARCHIVO DEL PACIENTE ---
+    const SPREADSHEET_ID_PACIENTE = '1agPyD1JW34QSqXOeisPSsjXQuIXkwvdP4ZFyRAlvip4'; 
+    const GID_AJUSTES_PACIENTE = '1147936171'; // Pestaña MASTER (Bloques, Nombre y Pautas finales de las columnas G, I, J)
 
-    const urlAjustes = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?gid=${GID_AJUSTES}&tqx=out:json`;
-    const urlEquiv = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?gid=${GID_EQUIV}&tqx=out:json`;
+    // --- PARÁMETROS ARCHIVO MAESTRO CENTRAL ---
+    const SPREADSHEET_ID_MAESTRO = '1qxe-uHMw7rba6CVV3TDY38aA1kULHm3FInrSyYcK4Oo';
+    const GID_EQUIV_MAESTRO = '1979658163';   // Pestaña ROCIOGOMEZ_BBDD_ALIMENTOS
+
+    const urlAjustes = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID_PACIENTE}/gviz/tq?gid=${GID_AJUSTES_PACIENTE}&tqx=out:json`;
+    const urlEquiv = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID_MAESTRO}/gviz/tq?gid=${GID_EQUIV_MAESTRO}&tqx=out:json`;
 
     const mealIcons = { "DESAYUNO": "fa-coffee", "ALMUERZO": "fa-apple-whole", "COMIDA": "fa-utensils", "MERIENDA": "fa-cookie", "CENA": "fa-moon" };
     
@@ -380,11 +384,9 @@
         const json = cleanJSON(raw);
         const rows = json.table.rows;
         
-        // --- CAMBIO FINAL: LECTURA DE D2 PARA EL TITULO ---
-        // Fila 2 en Sheets es el índice 1. Columna D es el índice 3.
         if (rows[1] && rows[1].c && rows[1].c[3] && rows[1].c[3].v) {
             const nombreUsuario = String(rows[1].c[3].v).trim();
-            document.getElementById('main-title').innerText = `Plan nutritional por bloques de ${nombreUsuario}`;
+            document.getElementById('main-title').innerText = `Plan nutricional por bloques de ${nombreUsuario}`;
         }
 
         const grid = document.getElementById('meal-grid');
@@ -429,8 +431,35 @@
             `;
         }
         grid.innerHTML = html;
+        
+        // --- PROCESAMIENTO DE LAS PAUTAS (Columnas G, I y J del archivo del paciente) ---
+        let obsColG = []; let obsColI = []; let obsColJ = [];
+        for (let i = 0; i < rows.length; i++) {
+            if(rows[i] && rows[i].c) {
+                if(rows[i].c[6] && rows[i].c[6].v !== null && String(rows[i].c[6].v).trim() !== "") obsColG.push(String(rows[i].c[6].v));
+                if(rows[i].c[8] && rows[i].c[8].v !== null && String(rows[i].c[8].v).trim() !== "") obsColI.push(String(rows[i].c[8].v));
+                if(rows[i].c[9] && rows[i].c[9].v !== null && String(rows[i].c[9].v).trim() !== "") obsColJ.push(String(rows[i].c[9].v));
+            }
+        }
+        
+        let titleG = "Pautas Generales", contentG = "No hay datos.";
+        if(obsColG.length > 0) { titleG = obsColG[0]; contentG = obsColG.slice(1).join("\n").replace(/\n/g, '<br>'); }
+        
+        let titleI = "Recomendaciones", contentI = "No hay datos.";
+        if(obsColI.length > 0) { titleI = obsColI[0]; contentI = obsColI.slice(1).join("\n").replace(/\n/g, '<br>'); }
+
+        let titleJ = "Suplementación", contentJ = "No hay datos.";
+        if(obsColJ.length > 0) { titleJ = obsColJ[0]; contentJ = obsColJ.slice(1).join("\n").replace(/\n/g, '<br>'); }
+
+        const obsGrid = document.getElementById('obs-grid');
+        obsGrid.innerHTML = `
+            <div class="obs-card"><div class="obs-title"><i class="fa-solid fa-circle-info"></i> ${titleG}</div><div class="obs-content">${contentG}</div></div>
+            <div class="obs-card c2"><div class="obs-title"><i class="fa-solid fa-bowl-food"></i> ${titleI}</div><div class="obs-content">${contentI}</div></div>
+            <div class="obs-card c3"><div class="obs-title"><i class="fa-solid fa-bottle-water"></i> ${titleJ}</div><div class="obs-content">${contentJ}</div></div>
+        `;
     }
 
+    // Carga de la pestaña ROCIOGOMEZ_BBDD_ALIMENTOS del archivo MAESTRO
     function procesarYRenderizarEquivalencias(raw) {
         const json = cleanJSON(raw);
         const rows = json.table.rows;
@@ -566,34 +595,6 @@
         });
 
         tbody.innerHTML = htmlTable || '<tr><td colspan="3">No se encontraron alimentos en la hoja.</td></tr>';
-
-        // --- CAMBIO FINAL: LECTURA DE COLUMNAS G, I y J DE TABLA EQUIVALENCIAS ---
-        let obsColG = []; let obsColI = []; let obsColJ = [];
-        
-        for (let i = 0; i < rows.length; i++) {
-            if(rows[i] && rows[i].c) {
-                // Columnas de base 0 en JS: G = índice 6, I = índice 8, J = índice 9
-                if(rows[i].c[6] && rows[i].c[6].v !== null && String(rows[i].c[6].v).trim() !== "") obsColG.push(String(rows[i].c[6].v));
-                if(rows[i].c[8] && rows[i].c[8].v !== null && String(rows[i].c[8].v).trim() !== "") obsColI.push(String(rows[i].c[8].v));
-                if(rows[i].c[9] && rows[i].c[9].v !== null && String(rows[i].c[9].v).trim() !== "") obsColJ.push(String(rows[i].c[9].v));
-            }
-        }
-        
-        let titleG = "Pautas Columna G", contentG = "No hay datos.";
-        if(obsColG.length > 0) { titleG = obsColG[0]; contentG = obsColG.slice(1).join("\n").replace(/\n/g, '<br>'); }
-        
-        let titleI = "Pautas Columna I", contentI = "No hay datos.";
-        if(obsColI.length > 0) { titleI = obsColI[0]; contentI = obsColI.slice(1).join("\n").replace(/\n/g, '<br>'); }
-
-        let titleJ = "Pautas Columna J", contentJ = "No hay datos.";
-        if(obsColJ.length > 0) { titleJ = obsColJ[0]; contentJ = obsColJ.slice(1).join("\n").replace(/\n/g, '<br>'); }
-
-        const obsGrid = document.getElementById('obs-grid');
-        obsGrid.innerHTML = `
-            <div class="obs-card"><div class="obs-title"><i class="fa-solid fa-circle-info"></i> ${titleG}</div><div class="obs-content">${contentG}</div></div>
-            <div class="obs-card c2"><div class="obs-title"><i class="fa-solid fa-bowl-food"></i> ${titleI}</div><div class="obs-content">${contentI}</div></div>
-            <div class="obs-card c3"><div class="obs-title"><i class="fa-solid fa-bottle-water"></i> ${titleJ}</div><div class="obs-content">${contentJ}</div></div>
-        `;
     }
 
     function generarPlatoInteligente() {
@@ -624,7 +625,7 @@
             seleccionados.hc.push(hcElegido);
             const nombreHc = hcElegido.nombre.toLowerCase();
 
-            if (nombreHc.includes("avena") || nombreHc.includes("fruta") || nombreHc.includes("plátano")) {
+            if (nombreHc.includes("avena") || nombreHc.includes("fruta") || nameHc.includes("plátano")) {
                 let pCompatibles = listaP.filter(p => p.nombre.toLowerCase().includes("yogur") || p.nombre.toLowerCase().includes("batido") || p.nombre.toLowerCase().includes("clara") || p.nombre.toLowerCase().includes("queso"));
                 if(pCompatibles.length > 0) listaP = pCompatibles;
             } else if (nombreHc.includes("pan") || nombreHc.includes("tost")) {
