@@ -494,63 +494,68 @@
 
     // --- PROCESO DE LOGIN ---
     function ejecutarLogin() {
-        const userIn = document.getElementById('username').value.trim().toLowerCase();
-        const passIn = document.getElementById('password').value.trim();
-        const errDiv = document.getElementById('error-msg');
+    const userIn = document.getElementById('username').value.trim().toLowerCase();
+    const passIn = document.getElementById('password').value.trim(); // Mantiene mayúsculas/minúsculas de lo que escribe el usuario
+    const errDiv = document.getElementById('error-msg');
 
-        if(!userIn || !passIn) {
-            errDiv.innerText = "❌ Por favor, rellena todos los campos.";
-            errDiv.style.display = "block";
-            return;
-        }
-
-        const urlControl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID_CONTROL}/gviz/tq?gid=${GID_CONTROL}&tqx=out:json`;
-
-        fetch(urlControl)
-            .then(r => r.text())
-            .then(raw => {
-                const json = cleanJSON(raw);
-                const rows = json.table.rows;
-                let idPacienteValidado = null;
-                let estadoSuscripcion = 'S';
-
-                // Buscar credenciales (empezando en la fila index 1 para saltar cabeceras)
-                for(let i = 1; i < rows.length; i++) {
-                    const row = rows[i].c;
-                    if(!row || !row[0] || !row[1]) continue;
-
-                    const dbUser = String(row[0].v).trim().toLowerCase();
-                    const dbPass = String(row[1].v).trim();
-                    const dbActivo = row[3] && row[3].v ? String(row[3].v).trim().toUpperCase() : 'S';
-                    const dbUrlPaciente = row[4] && row[4].v ? String(row[4].v).trim() : null;
-
-                    if(dbUser === userIn && dbPass === passIn) {
-                        idPacienteValidado = extraerIdDeUrl(dbUrlPaciente);
-                        estadoSuscripcion = dbActivo;
-                        break;
-                    }
-                }
-
-                if (idPacienteValidado) {
-                    if (estadoSuscripcion === 'N') {
-                        errDiv.innerText = "Subcripción inactiva, por favor contacte con su nutricionista";
-                        errDiv.style.display = "block";
-                    } else {
-                        errDiv.style.display = "none";
-                        inicializarDashboard(idPacienteValidado);
-                    }
-                } else {
-                    errDiv.innerText = "❌ Usuario o contraseña incorrectos.";
-                    errDiv.style.display = "block";
-                }
-            })
-            .catch(err => {
-                console.error(err);
-                errDiv.innerText = "❌ Error al conectar con el sistema de control. Verifica que la hoja esté publicada.";
-                errDiv.style.display = "block";
-            });
+    if(!userIn || !passIn) {
+        errDiv.innerText = "❌ Por favor, rellena todos los campos.";
+        errDiv.style.display = "block";
+        return;
     }
 
+    const urlControl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID_CONTROL}/gviz/tq?gid=${GID_CONTROL}&tqx=out:json`;
+
+    fetch(urlControl)
+        .then(r => r.text())
+        .then(raw => {
+            const json = cleanJSON(raw);
+            const rows = json.table.rows;
+            let idPacienteValidado = null;
+            let estadoSuscripcion = 'S';
+
+            // Recorremos las filas desde la 1 (saltando la cabecera)
+            for(let i = 1; i < rows.length; i++) {
+                const row = rows[i].c;
+                if(!row || !row[0] || !row[1]) continue;
+
+                // .v para el usuario pasándolo a minúsculas para que no importe cómo lo escriba el paciente
+                const dbUser = String(row[0].v).trim().toLowerCase();
+                
+                // SEGURIDAD MEJORADA: Usamos .w si existe (texto renderizado por Google) o .v como alternativa
+                // Esto evita que las contraseñas que son solo números (ej: 12345) fallen al compararse
+                const dbPass = row[1].w ? String(row[1].w).trim() : String(row[1].v).trim();
+                
+                const dbActivo = row[3] && row[3].v ? String(row[3].v).trim().toUpperCase() : 'S';
+                const dbUrlPaciente = row[4] && row[4].v ? String(row[4].v).trim() : null;
+
+                // El usuario no discrimina mayúsculas, la contraseña DEBE ser idéntica a la del Excel
+                if(dbUser === userIn && dbPass === passIn) {
+                    idPacienteValidado = extraerIdDeUrl(dbUrlPaciente);
+                    estadoSuscripcion = dbActivo;
+                    break;
+                }
+            }
+
+            if (idPacienteValidado) {
+                if (estadoSuscripcion === 'N') {
+                    errDiv.innerText = "Subcripción inactiva, por favor contacte con su nutricionista";
+                    errDiv.style.display = "block";
+                } else {
+                    errDiv.style.display = "none";
+                    inicializarDashboard(idPacienteValidado);
+                }
+            } else {
+                errDiv.innerText = "❌ Usuario o contraseña incorrectos.";
+                errDiv.style.display = "block";
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            errDiv.innerText = "❌ Error al conectar con el sistema de control. Verifica que la hoja esté publicada.";
+            errDiv.style.display = "block";
+        });
+}
     // --- CARGAR DATOS DEL PACIENTE UNA VEZ VALIDADO ---
     function inicializarDashboard(spreadsheetIdPaciente) {
         const GID_AJUSTES = '1147936171'; 
