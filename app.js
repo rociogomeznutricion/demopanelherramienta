@@ -9,7 +9,7 @@ document.getElementById('password').addEventListener('keydown', e => { if (e.key
 function cleanJSON(raw) {
     return JSON.parse(raw.substring(raw.indexOf('{'), raw.lastIndexOf('}') + 1));
 }
-
+ 
 function limpiarYExtraerId(urlText) {
     if (!urlText || typeof urlText !== 'string') return null;
     let p = urlText.indexOf('/d/');
