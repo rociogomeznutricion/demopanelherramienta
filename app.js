@@ -399,132 +399,105 @@ function ejecutarFiltroCombinado() {
     }
 }
 
-// ─── Procesar y Renderizar BBDD de Equivalencias ───
 function procesarYRenderizarEquivalencias(raw) {
     const json = cleanJSON(raw);
     const rows = json.table.rows;
+    poolProteinas = []; poolCarbohidratos = []; poolGrasas = []; poolBuscadorCompleto = [];
 
-    // Reiniciamos pools
-    poolProteinas        = [];
-    poolCarbohidratos    = [];
-    poolGrasas           = [];
-    poolBuscadorCompleto = [];
-
-    // ── Helpers ──────────────────────────────────────────────────────────────
-    function txtCelda(row, idx) {
-        if (!row || !row[idx] || row[idx].v === null || row[idx].v === undefined) return '';
-        return String(row[idx].v).trim();
-    }
-
-    function parsearGramos(valStr) {
-        if (!valStr) return null;
-        const str   = valStr.replace(/\s+/g, '').toLowerCase();
-        const match = str.match(/(\d+(?:[.,]\d+)?)/);
+    function parsearGramos(celda) {
+        if (!celda || celda.v === null) return null;
+        let str = String(celda.v).replace(/\s+/g, '').toLowerCase();
+        let match = str.match(/(\d+(?:[.,]\d+)?)/);
         return match ? parseFloat(match[1].replace(',', '.')) : null;
     }
 
-    // ── Helper: normaliza texto eliminando tildes, mayúsculas y espacios ────────
-    // "Atún" → "atun" | "VEGANO" → "vegano" | " Lactosa " → "lactosa"
-    function norm(str) {
-        return String(str || '')
-            .toLowerCase()
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '') // elimina diacríticos (tildes, etc.)
-            .trim();
+    function detectarUnidad(celdaStr) {
+        let str = (celdaStr || '').toLowerCase();
+        if (str.includes('ml')) return 'ml';
+        if (str.includes('ud') || str.includes('unidad')) return 'udes';
+        return 'g';
     }
 
-    // Convierte "atun, Pollo, SALMÓN" → ["atun", "pollo", "salmon"]
-    function normLista(str) {
-        return String(str || '').split(/[,;]+/).map(norm).filter(Boolean);
+    // Función de exclusión corregida y simplificada
+    function debeExcluirse(nombre, celdaExclusion, celdaEstilo) {
+        if (!nombre) return true;
+        
+        const nClean = nombre.toLowerCase();
+        // 1. Alimentos odiados (E3 del paciente)
+        if (exclusionesPaciente.alimentosOdiados.some(o => nClean.includes(o))) return true;
+
+        // Normalizamos los tags del alimento de la BBDD
+        const txtExclusion = (celdaExclusion?.v ? String(celdaExclusion.v) : '').toUpperCase();
+        const txtEstilo    = (celdaEstilo?.v ? String(celdaEstilo.v) : '').toUpperCase();
+
+        // 2. Filtro de Estilo de Vida (E1 del paciente)
+        // Si el paciente es Vegano/Vegetariano, bloqueamos carne/pescado/animal O verificamos si coincide con su tag
+        if (['VEGETARIANO', 'VEGANO'].includes(exclusionesPaciente.estiloVida)) {
+            if (txtExclusion.includes('ANIMAL') || txtExclusion.includes('CARNE') || txtExclusion.includes('PESCADO') || txtEstilo.includes('OMNIVORO')) {
+                return true;
+            }
+            // Si el paciente es VEGANO y el alimento no está marcado como VEGANO en su estilo, se excluye
+            if (exclusionesPaciente.styleVida === 'VEGANO' && !txtEstilo.includes('VEGANO')) return true;
+        }
+
+        // 3. Filtro de Alergias / Etiquetas a excluir (E2 del paciente)
+        for (const tag of exclusionesPaciente.tagsExcluir) {
+            if (txtExclusion.includes(tag) || txtEstilo.includes(tag)) return true;
+        }
+
+        return false;
     }
-function debeExcluirse(nombre, tagF, tagG) {
-    if (!nombre) return true;
 
-    const nNorm = norm(nombre);
-    const fNorm = norm(tagF);
-    const gNorm = norm(tagG);
-
-    // E3: nombre contiene algún alimento odiado
-    const odiados = exclusionesPaciente.alimentosOdiados || [];
-    if (odiados.length > 0 && odiados.some(o => nNorm.includes(o))) return true;
-
-    // E2: col F contiene algún tag a excluir
-    const tagsExcluir = exclusionesPaciente.tagsExcluir || [];
-    if (tagsExcluir.length > 0 && tagsExcluir.some(t => fNorm.includes(t))) return true;
-
-    // E1: col G debe contener al menos uno de los estilos del paciente
-    // OJO: si col G está vacía y E1 está relleno → excluir (el alimento no tiene estilo definido)
-    const estilos = exclusionesPaciente.estilosVida || [];
-    if (estilos.length > 0) {
-        if (!gNorm || !estilos.some(e => gNorm.includes(e))) return true;
-    }
-
-    return false;
-}
-
-    // ── Mapeo de columnas ────────────────────────────────────────────────────
-    // Col A (Idx 0) = ID_Alimento     → ignorado en pantalla
-    // Col B (Idx 1) = Alimento        → nombre
-    // Col C (Idx 2) = Macro_principal → P / HC / G / MIXTO
-    // Col D (Idx 3) = Gramos_bloque
-    // Col E (Idx 4) = Unidad          → g, ml, ud
-    // Col F (Idx 5) = Tags_exclusion  → alergias
-    // Col G (Idx 6) = Tags_estilo_vida
-    // Col H (Idx 7) = Tags_momento    → guardado en item.momentos para el Asistente de Menú
-
+    // Estructura de columnas en tu pestaña TABLA EQUIVALENCIAS (GID: 1979658163):
+    // Col 0 (A): Proteínas | Col 1 (B): gr P | Col 2 (C): Carbohidratos | Col 3 (D): gr HC
+    // Col 4 (E): Grasas    | Col 5 (F): gr G | Col 6 (G): Tags Exclusión | Col 7 (H): Tags Estilo Vida
+    // Col 8 (I): Mixtos
     for (let i = 1; i < rows.length; i++) {
         const row = rows[i].c;
         if (!row) continue;
 
-        const nombreAlimento = txtCelda(row, 1);
-        const macroPrincipal = txtCelda(row, 2).toUpperCase();
-        const rawGramos      = txtCelda(row, 3);
-        const unidadMedida   = txtCelda(row, 4) || 'g';
-        const tagF           = txtCelda(row, 5); // Tags_exclusion
-        const tagG           = txtCelda(row, 6); // Tags_estilo_vida
-        const tagH           = txtCelda(row, 7); // Tags_momento
+        // Capturamos las celdas de tags fijas para toda la fila (Columnas G y H)
+        const celdaExclusion = row[6]; 
+        const celdaEstilo    = row[7];
 
-        // Saltamos filas vacías o cabeceras de sección
-        if (!nombreAlimento || /PROTEÍNAS|CARBOHIDRATOS|GRASAS/i.test(nombreAlimento)) continue;
-
-        // Aplicamos filtro de exclusión (tagH no excluye, solo se guarda)
-        if (debeExcluirse(nombreAlimento, tagF, tagG)) continue;
-
-        const gramosNumericos = parsearGramos(rawGramos);
-        const itemAlimento = {
-            nombre:   nombreAlimento,
-            gramos:   gramosNumericos,
-            unidad:   unidadMedida,
-            tipo:     '',
-            momentos: tagH
-                        .toUpperCase()
-                        .split(/[,;]+/)
-                        .map(s => s.trim())
-                        .filter(Boolean)
-        };
-
-        if (macroPrincipal === 'P' || macroPrincipal.includes('PROT')) {
-            itemAlimento.tipo = 'PROTEÍNAS';
-            poolProteinas.push(itemAlimento);
-            poolBuscadorCompleto.push(itemAlimento);
-        } else if (macroPrincipal === 'HC' || macroPrincipal.includes('CARB')) {
-            itemAlimento.tipo = 'CARBOHIDRATOS';
-            poolCarbohidratos.push(itemAlimento);
-            poolBuscadorCompleto.push(itemAlimento);
-        } else if (macroPrincipal === 'G' || macroPrincipal.includes('GRAS')) {
-            itemAlimento.tipo = 'GRASAS';
-            poolGrasas.push(itemAlimento);
-            poolBuscadorCompleto.push(itemAlimento);
-        } else if (macroPrincipal === 'MIXTO') {
-            itemAlimento.tipo   = 'ALIMENTOS MIXTOS';
-            itemAlimento.gramos = null;
-            itemAlimento.unidad = rawGramos; // texto descriptivo en lugar de gramos fijos
-            poolBuscadorCompleto.push(itemAlimento);
+        // Procesar Columna A: Proteínas
+        if (row[0]?.v !== null && String(row[0]?.v || '').trim() !== '' && !String(row[0]?.v || '').includes('PROTEÍNAS')) {
+            const n = String(row[0].v).trim();
+            if (!debeExcluirse(n, celdaExclusion, celdaEstilo)) {
+                const item = { nombre: n, gramos: parsearGramos(row[1]), unidad: detectarUnidad(String(row[1]?.v || '')), tipo: 'PROTEÍNAS' };
+                poolProteinas.push(item); poolBuscadorCompleto.push(item);
+            }
+        }
+        
+        // Procesar Columna C: Carbohidratos
+        if (row[2]?.v !== null && String(row[2]?.v || '').trim() !== '' && !String(row[2]?.v || '').includes('CARBOHIDRATOS')) {
+            let n = String(row[2].v).trim();
+            if (n.endsWith('|')) n = n.slice(0, -1).trim();
+            if (!debeExcluirse(n, celdaExclusion, celdaEstilo)) {
+                const item = { nombre: n, gramos: parsearGramos(row[3]), unidad: detectarUnidad(String(row[3]?.v || '')), tipo: 'CARBOHIDRATOS' };
+                poolCarbohidratos.push(item); poolBuscadorCompleto.push(item);
+            }
+        }
+        
+        // Procesar Columna E: Grasas
+        if (row[4]?.v !== null && String(row[4]?.v || '').trim() !== '' && !String(row[4]?.v || '').includes('GRASAS')) {
+            const n = String(row[4].v).trim();
+            if (!debeExcluirse(n, celdaExclusion, celdaEstilo)) {
+                const item = { nombre: n, gramos: parsearGramos(row[5]), unidad: detectarUnidad(String(row[5]?.v || '')), tipo: 'GRASAS' };
+                poolGrasas.push(item); poolBuscadorCompleto.push(item);
+            }
+        }
+        
+        // Procesar Columna I: Alimentos Mixtos
+        if (row[8]?.v !== null && String(row[8]?.v || '').trim() !== '' && !String(row[8]?.v || '').includes('MIXTO')) {
+            const n = String(row[8].v).trim();
+            if (!debeExcluirse(n, celdaExclusion, celdaEstilo)) {
+                poolBuscadorCompleto.push({ nombre: n, gramos: null, unidad: '', tipo: 'ALIMENTOS MIXTOS' });
+            }
         }
     }
 
-    debugLog(`[BBDD] P: ${poolProteinas.length} | HC: ${poolCarbohidratos.length} | G: ${poolGrasas.length} | Total: ${poolBuscadorCompleto.length}`);
-
+    debugLog(`[EQUIV] P=${poolProteinas.length}  HC=${poolCarbohidratos.length}  G=${poolGrasas.length}`);
     // ── Renderizado de tabla ──────────────────────────────────────────────────
     const tbody = document.getElementById('table-body');
     let htmlTable = '';
