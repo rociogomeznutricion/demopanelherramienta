@@ -165,21 +165,28 @@ function procesarMasterPaciente(raw) {
     // ── 2. Comodín salvavidas (columna E = índice 4) ──
     datosComodinFijo.nombreReceta = getCelda(rows, 4, 4) || "Receta Comodín";
 
+    Console.log(datosComodinFijo.nombreReceta);
+
     const pRaw = getCelda(rows, 5, 4);
     datosComodinFijo.proteinasIds = pRaw
         ? pRaw.split(',').map(id => id.trim().toUpperCase()).filter(id => id !== '')
         : [];
-
+    
+Console.log(datosComodinFijo.proteinasIds);
+    
     const hcRaw = getCelda(rows, 6, 4);
     datosComodinFijo.carbohidratosIds = hcRaw
         ? hcRaw.split(',').map(id => id.trim().toUpperCase()).filter(id => id !== '')
         : [];
-
+Console.log(datosComodinFijo.carbohidratosIds);
+    
     const gRaw = getCelda(rows, 7, 4);
     datosComodinFijo.grasasIds = gRaw
         ? gRaw.split(',').map(id => id.trim().toUpperCase()).filter(id => id !== '')
         : [];
+Console.log(datosComodinFijo.grasasIds);
 
+    
     datosComodinFijo.libresTexto = getCelda(rows, 8, 4);
 
 
