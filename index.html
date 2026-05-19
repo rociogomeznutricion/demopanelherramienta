@@ -665,21 +665,17 @@ function cargarDatosNutricionales(spreadsheetId) {
 //  Fila 1  (fila 2):  A=Peso          B=80            D=Tags a excluir       E=LACTOSA
 //  Fila 2  (fila 3):  A=Altura        B=174           D=Alimentos odiados    E=Atún
 //  Fila 3  (fila 4):  A=Edad          B=23            D=(vacío)              E=(vacío)
-//  Columna D (índice 3) = etiquetas del paciente (exclusiones)
-//  Columna E (índice 4) = valores de esas etiquetas + config comodín
-//
-//  Fila 0  (fila 1):  D=Estilo de vida        E=(valor, ej: Vegetariano)
-//  Fila 1  (fila 2):  D=Tags a excluir        E=(valor, ej: LACTOSA)
-//  Fila 2  (fila 3):  D=Alimentos No Deseados E=(valor, ej: Atún)
-//  Fila 3  (fila 4):  D=(vacío)               E=(vacío)
-//  Fila 4  (fila 5):  D=Nombre receta         E=Arroz con...
-//  Fila 5  (fila 6):  D=Alimentos proteina    E=P_001
-//  Fila 6  (fila 7):  D=Alimentos hidratos    E=HC_001
-//  Fila 7  (fila 8):  D=Alimentos grasa       E=G_003
-//  Fila 8  (fila 9):  D=Salsa/condimentos     E=Tomate
+//  Fila 4  (fila 5):  A=Nivel activ.  B=Sedentario    D=Nombre receta        E=Arroz con...
+//  Fila 5  (fila 6):  A=Objetivo      B=Pérdida...    D=Alimentos proteina   E=P_001
+//  Fila 6  (fila 7):  (vacío)                         D=Alimentos hidratos   E=HC_001
+//  Fila 7  (fila 8):  (vacío)                         D=Alimentos grasa      E=G_003
+//  Fila 8  (fila 9):  A=CONTEO...     B=CANTIDAD...   D=Salsa/condimentos    E=Tomate
+//  Fila 9  (fila 10): A=Gasto energ.  B=2258
+//  Fila 10 (fila 11): A=Calorías obj. B=1806
 //  Fila 11 (fila 12): A=Bloques P     B=8
 //  Fila 12 (fila 13): A=Bloques G     B=5
 //  Fila 13 (fila 14): A=Bloques HC    B=9
+//  Fila 14 (fila 15): (vacío)         C=PORCENTAJES
 //  Fila 15 (fila 16): A=%Desayuno     B=0.2
 //  Fila 16 (fila 17): A=%Almuerzo     B=0.15
 //  Fila 17 (fila 18): A=%Comida       B=0.3
@@ -691,6 +687,8 @@ function procesarMasterPaciente(raw) {
     const rows = json.table.rows;
 
     debugLog('[MASTER] Total filas recibidas: ' + rows.length);
+
+    // Volcamos todas las filas al debug para verificar (opcional)
     rows.forEach((r, i) => {
         if (r && r.c) {
             const vals = r.c.map(c => c?.v ?? '').join(' | ');
@@ -698,17 +696,17 @@ function procesarMasterPaciente(raw) {
         }
     });
 
-    // ── 1. Exclusiones — etiqueta en col D (índice 3), valor en col E (índice 4) ──
-    // Fila 0 → D1=Estilo de vida, E1=valor
+    // ── 1. Exclusiones (columna E = índice 4) ──
+    // Fila 0 → Estilo de vida (E1)
     exclusionesPaciente.estiloVida = getCelda(rows, 0, 4).toUpperCase();
 
-    // Fila 1 → D2=Tags a excluir, E2=valor (ej: LACTOSA, GLUTEN)
+    // Fila 1 → Tags a excluir (E2)
     const tagsRaw = getCelda(rows, 1, 4);
     exclusionesPaciente.tagsExcluir = tagsRaw
         ? tagsRaw.split(',').map(t => t.trim().toUpperCase()).filter(t => t !== '')
         : [];
 
-    // Fila 2 → D3=Alimentos No Deseados, E3=valor (ej: Atún, Brócoli)
+    // Fila 2 → Alimentos odiados (E3)
     const odiadosRaw = getCelda(rows, 2, 4);
     exclusionesPaciente.alimentosOdiados = odiadosRaw
         ? odiadosRaw.split(',').map(a => a.trim().toLowerCase()).filter(a => a !== '')
@@ -716,8 +714,8 @@ function procesarMasterPaciente(raw) {
 
     debugLog(`[EXCLUSIONES] Estilo: "${exclusionesPaciente.estiloVida}" | Tags: ${JSON.stringify(exclusionesPaciente.tagsExcluir)} | Odiados: ${JSON.stringify(exclusionesPaciente.alimentosOdiados)}`);
 
-    // ── 2. Comodín salvavidas — valor en col E (índice 4) ──
-    // Fila 4  → E5=Nombre receta
+    // ── 2. Comodín salvavidas (columna E = índice 4) ──
+    // Fila 4  → Nombre receta (E5)
     datosComodinFijo.nombreReceta = getCelda(rows, 4, 4) || "Receta Comodín";
 
     // Fila 5  → IDs Proteínas (E6)
@@ -806,82 +804,41 @@ function procesarMasterPaciente(raw) {
 
 // ─── Equivalencias ───
 function procesarYRenderizarEquivalencias(raw) {
-    // ─────────────────────────────────────────────────────────────
-    //  Estructura real de la BBDD de alimentos (una fila = un alimento):
-    //  Col A (idx 0) = ID_Alimento  (HC_001, P_001, G_001, M_001...)
-    //  Col B (idx 1) = Nombre del alimento
-    //  Col C (idx 2) = Macro_principal  (HC | P | G | MIXTO)
-    //  Col D (idx 3) = Gramos_bloque    (número)
-    //  Col E (idx 4) = Unidad           (g | ml | ud)
-    //  Col F (idx 5) = Tags_exclusion   (LACTOSA, GLUTEN, ANIMAL...)
-    //  Col G (idx 6) = Tags_estilo_vida (Vegano, Vegetariano, ANIMAL, PESCADO...)
-    //  Col H (idx 7) = Tags_momento     (Desayuno, Almuerzo, Cena...)
-    //
-    //  Los MIXTOS muestran "Ver descripcion" en cantidad porque
-    //  el desglose ya viene explicado en el propio nombre del alimento.
-    // ─────────────────────────────────────────────────────────────
-
     const json = cleanJSON(raw);
     const rows = json.table.rows;
     poolProteinas = []; poolCarbohidratos = []; poolGrasas = []; poolBuscadorCompleto = [];
 
-    // Fila 0 es cabecera (ID_Alimento, Alimento, Macro_principal...) → empezamos en i=1
-    // Pero por si acaso también saltamos filas sin ID en col A
-
     function parsearGramos(celda) {
-        if (!celda || celda.v === null || celda.v === '') return null;
-        const str = String(celda.v).replace(/\s+/g, '').replace(',', '.');
-        const match = str.match(/(\d+(?:\.\d+)?)/);
-        return match ? parseFloat(match[1]) : null;
+        if (!celda || celda.v === null) return null;
+        let str = String(celda.v).replace(/\s+/g, '').toLowerCase();
+        let match = str.match(/(\d+(?:[.,]\d+)?)/);
+        return match ? parseFloat(match[1].replace(',', '.')) : null;
     }
 
-    function detectarUnidad(celda) {
-        const str = (celda?.v ? String(celda.v) : '').toLowerCase();
-        if (str === 'ml' || str.includes('ml')) return 'ml';
-        if (str === 'ud' || str.includes('ud') || str.includes('unidad')) return 'ud';
+    function detectarUnidad(celdaStr) {
+        let str = (celdaStr || '').toLowerCase();
+        if (str.includes('ml')) return 'ml';
+        if (str.includes('ud') || str.includes('unidad')) return 'udes';
         return 'g';
     }
 
-    function debeExcluirse(nombre, tagExclusion, tagEstilo, tagMomento) {
+    function debeExcluirse(nombre, celdaExclusion, celdaEstilo, celdaMomento) {
         if (!nombre) return true;
         const nClean = nombre.toLowerCase();
+        if (exclusionesPaciente.alimentosOdiados.some(o => nClean.includes(o))) return true;
 
-        // ── Alimentos que el paciente odia (por nombre) ──
-        if (exclusionesPaciente.alimentosOdiados.some(o => nClean.includes(o))) {
-            debugLog(`[EXCLUIDO-ODIADO] "${nombre}"`);
-            return true;
-        }
+        const tags = `
+            ${celdaExclusion?.v ? String(celdaExclusion.v) : ''}
+            ${celdaEstilo?.v   ? String(celdaEstilo.v)   : ''}
+            ${celdaMomento?.v  ? String(celdaMomento.v)  : ''}
+        `.toUpperCase();
 
-        // ── Construir lista de tags del alimento normalizados ──
-        // Juntamos F + G + H, separamos por coma o punto y coma, limpiamos espacios
-        const tagsAlimento = [
-            tagExclusion?.v ? String(tagExclusion.v) : '',
-            tagEstilo?.v    ? String(tagEstilo.v)    : '',
-            tagMomento?.v   ? String(tagMomento.v)   : ''
-        ]
-        .join(',')
-        .split(/[,;]/)
-        .map(t => t.trim().toUpperCase())
-        .filter(t => t !== '' && t !== 'NINGUNO');
-
-        // ── Excluir por estilo de vida del paciente ──
         if (['VEGETARIANO', 'VEGANO'].includes(exclusionesPaciente.estiloVida)) {
-            const bloqueados = ['ANIMAL', 'CARNE', 'PESCADO', 'OMNIVORO'];
-            if (tagsAlimento.some(t => bloqueados.some(b => t.includes(b)))) {
-                debugLog(`[EXCLUIDO-ESTILO] "${nombre}" → estilo ${exclusionesPaciente.estiloVida}, tags=${JSON.stringify(tagsAlimento)}`);
-                return true;
-            }
+            if (tags.includes('ANIMAL') || tags.includes('CARNE') || tags.includes('PESCADO')) return true;
         }
-
-        // ── Excluir por tags específicos del paciente (alergias, intolerancias...) ──
-        // El tag del paciente (ej: LACTOSA) debe aparecer en alguno de los tags del alimento
-        for (const tagPaciente of exclusionesPaciente.tagsExcluir) {
-            if (tagsAlimento.some(t => t.includes(tagPaciente))) {
-                debugLog(`[EXCLUIDO-TAG] "${nombre}" → tag paciente "${tagPaciente}" encontrado en ${JSON.stringify(tagsAlimento)}`);
-                return true;
-            }
+        for (const tag of exclusionesPaciente.tagsExcluir) {
+            if (tags.includes(tag)) return true;
         }
-
         return false;
     }
 
@@ -889,75 +846,74 @@ function procesarYRenderizarEquivalencias(raw) {
         const row = rows[i].c;
         if (!row) continue;
 
-        // Saltamos filas sin ID (col A vacía) o que sean cabecera
-        const id     = row[0]?.v ? String(row[0].v).trim().toUpperCase() : '';
-        const nombre = row[1]?.v ? String(row[1].v).trim() : '';
-        const macro  = row[2]?.v ? String(row[2].v).trim().toUpperCase() : '';
-
-        if (!id || !nombre || !macro) continue;
-        if (id === 'ID_ALIMENTO') continue; // fila de cabecera
-
-        if (debeExcluirse(nombre, row[5], row[6], row[7])) continue;
-
-        const gramos = parsearGramos(row[3]);
-        const unidad = detectarUnidad(row[4]);
-        const esMixto = macro === 'MIXTO';
-
-        const item = {
-            id,
-            nombre,
-            gramos: esMixto ? null : gramos,   // Mixtos no tienen gramos calculables
-            unidad: esMixto ? ''   : unidad,
-            tipo: esMixto ? 'ALIMENTOS MIXTOS'
-                : macro === 'P'  ? 'PROTEÍNAS'
-                : macro === 'HC' ? 'CARBOHIDRATOS'
-                : macro === 'G'  ? 'GRASAS'
-                : 'OTROS'
-        };
-
-        // Añadir a pool correspondiente (para generador de menú y comodín)
-        if (macro === 'P')      { poolProteinas.push(item); }
-        else if (macro === 'HC') { poolCarbohidratos.push(item); }
-        else if (macro === 'G')  { poolGrasas.push(item); }
-        // Mixtos van solo al buscador, no a los pools de cálculo
-
-        poolBuscadorCompleto.push(item);
-
-        debugLog(`[EQUIV] ${id} | ${nombre} | ${macro} | ${gramos ?? 'mixto'}${unidad}`);
+        if (row[0]?.v !== null && String(row[0]?.v || '').trim() !== '' && !String(row[0]?.v || '').includes('PROTEÍNAS')) {
+            const n = String(row[0].v).trim();
+            if (!debeExcluirse(n, row[5], row[6], row[7])) {
+                const item = { nombre: n, gramos: parsearGramos(row[1]), unidad: detectarUnidad(String(row[1]?.v || '')), tipo: 'PROTEÍNAS' };
+                poolProteinas.push(item); poolBuscadorCompleto.push(item);
+            }
+        }
+        if (row[2]?.v !== null && String(row[2]?.v || '').trim() !== '' && !String(row[2]?.v || '').includes('CARBOHIDRATOS')) {
+            let n = String(row[2].v).trim();
+            if (n.endsWith('|')) n = n.slice(0, -1).trim();
+            if (!debeExcluirse(n, row[5], row[6], row[7])) {
+                const item = { nombre: n, gramos: parsearGramos(row[3]), unidad: detectarUnidad(String(row[3]?.v || '')), tipo: 'CARBOHIDRATOS' };
+                poolCarbohidratos.push(item); poolBuscadorCompleto.push(item);
+            }
+        }
+        if (row[4]?.v !== null && String(row[4]?.v || '').trim() !== '' && !String(row[4]?.v || '').includes('GRASAS')) {
+            const n = String(row[4].v).trim();
+            if (!debeExcluirse(n, row[5], row[6], row[7])) {
+                const item = { nombre: n, gramos: parsearGramos(row[5]), unidad: detectarUnidad(String(row[5]?.v || '')), tipo: 'GRASAS' };
+                poolGrasas.push(item); poolBuscadorCompleto.push(item);
+            }
+        }
+        if (row[8]?.v !== null && String(row[8]?.v || '').trim() !== '' && !String(row[8]?.v || '').includes('MIXTO')) {
+            const n = String(row[8].v).trim();
+            if (!debeExcluirse(n, row[5], row[6], row[7])) {
+                poolBuscadorCompleto.push({ nombre: n, gramos: null, unidad: '', tipo: 'ALIMENTOS MIXTOS' });
+            }
+        }
     }
 
-    debugLog(`[EQUIV TOTAL] P=${poolProteinas.length}  HC=${poolCarbohidratos.length}  G=${poolGrasas.length}  MIXTOS=${poolBuscadorCompleto.filter(x=>x.tipo==='ALIMENTOS MIXTOS').length}`);
+    debugLog(`[EQUIV] P=${poolProteinas.length}  HC=${poolCarbohidratos.length}  G=${poolGrasas.length}`);
 
-    // ── Renderizar tabla ──
+    // Renderizar tabla
     const tbody = document.getElementById('table-body');
     let htmlTable = '';
     poolBuscadorCompleto.forEach(item => {
         let bClass = 'bg-p';
-        if (item.tipo === 'CARBOHIDRATOS')      bClass = 'bg-hc';
-        else if (item.tipo === 'GRASAS')         bClass = 'bg-g';
+        if (item.tipo === 'CARBOHIDRATOS')   bClass = 'bg-hc';
+        else if (item.tipo === 'GRASAS')      bClass = 'bg-g';
         else if (item.tipo === 'ALIMENTOS MIXTOS') bClass = 'bg-m';
-
-        // Columna cantidad: mixtos muestran "Ver descripción", resto muestran gramos+unidad
-        const cantidadTexto = item.gramos !== null
-            ? `${item.gramos}${item.unidad}`
-            : '<em style="color:var(--text-light)">Ver descripción</em>';
-
         htmlTable += `<tr data-type="${item.tipo.toLowerCase()}">
             <td><strong>${item.nombre}</strong></td>
-            <td>${cantidadTexto}</td>
+            <td>${item.gramos !== null ? item.gramos + item.unidad : 'Ver definición'}</td>
             <td><span class="badge ${bClass}">${item.tipo}</span></td>
         </tr>`;
     });
-    tbody.innerHTML = htmlTable || '<tr><td colspan="3" style="color:var(--text-light);text-align:center;padding:20px">No hay alimentos cargados</td></tr>';
+    tbody.innerHTML = htmlTable;
 
-    // ── Observaciones: no hay columnas I/J/K en esta BBDD → mostramos panel vacío limpio ──
-    document.getElementById('obs-grid').innerHTML = '';
+    // Observaciones (columnas I, J, K = índices 9, 10, 11)
+    let obsG = [], obsI = [], obsJ = [];
+    for (let i = 0; i < rows.length; i++) {
+        if (rows[i]?.c) {
+            if (rows[i].c[9]?.v)  obsG.push(String(rows[i].c[9].v));
+            if (rows[i].c[10]?.v) obsI.push(String(rows[i].c[10].v));
+            if (rows[i].c[11]?.v) obsJ.push(String(rows[i].c[11].v));
+        }
+    }
+    document.getElementById('obs-grid').innerHTML = `
+        <div class="obs-card"><div class="obs-title">${obsG[0] || 'Info'}</div><div class="obs-content">${obsG.slice(1).join('<br>')}</div></div>
+        <div class="obs-card c2"><div class="obs-title">${obsI[0] || 'Pautas'}</div><div class="obs-content">${obsI.slice(1).join('<br>')}</div></div>
+        <div class="obs-card c3"><div class="obs-title">${obsJ[0] || 'Extra'}</div><div class="obs-content">${obsJ.slice(1).join('<br>')}</div></div>`;
 }
 
 // ─────────────────────────────────────────────────────────────
 //  COMODÍN SALVAVIDAS
-//  Busca cada ID (P_001, HC_001, G_003...) directamente en
-//  poolBuscadorCompleto por el campo .id — no por posición numérica.
+//  Resuelve un ID tipo "P_001" → posición 1 (índice 0) del pool
+//  Resuelve "HC_003" → posición 3 (índice 2) del pool de HC
+//  Resuelve "G_003"  → posición 3 (índice 2) del pool de G
 // ─────────────────────────────────────────────────────────────
 function calcularComodinSalvavidas() {
     const ingesta = document.getElementById('salvavidas-selector').value;
@@ -980,54 +936,52 @@ function calcularComodinSalvavidas() {
 
     let hayIngredientes = false;
 
-    function procesarMacroComodin(listaIds, bloquesTotales, bgClass, emoji) {
+    function procesarMacroComodin(listaIds, bloquesTotales, poolAlimentos, bgClass, emoji) {
         if (!listaIds || listaIds.length === 0 || bloquesTotales <= 0) return '';
         const bloquesPorAlimento = bloquesTotales / listaIds.length;
         let subHtml = '';
 
-        listaIds.forEach(idRaw => {
-            const idClean = idRaw.replace(/\s+/g, '').toUpperCase();
+        listaIds.forEach(id => {
+            const idClean = id.replace(/\s+/g, '').toUpperCase();
             if (idClean === '') return;
 
-            // Buscar el alimento por su ID exacto en la BBDD completa
-            const alimento = poolBuscadorCompleto.find(a => a.id === idClean);
+            const matchNum = idClean.match(/\d+/);
+            if (!matchNum) {
+                subHtml += `<div class="plate-item" style="color:var(--p-color)">
+                    <span>⚠️ ID "<b>${idClean}</b>" no válido. Formato esperado: P_001, HC_002, G_003</span></div>`;
+                return;
+            }
+
+            // El número en el ID es 1-based → índice = número - 1
+            const indice = parseInt(matchNum[0], 10) - 1;
+            const alimento = poolAlimentos[indice];
 
             if (alimento) {
-                // Si es MIXTO, mostramos el nombre completo (ya incluye cantidades) sin calcular gramos
-                if (alimento.tipo === 'ALIMENTOS MIXTOS') {
-                    subHtml += `
-                        <div class="plate-item">
-                            <span>${emoji} <b>${alimento.nombre}</b>
-                                <small style="color:var(--text-light); margin-left:6px">(${bloquesPorAlimento.toFixed(1)} blq)</small>
-                            </span>
-                            <span class="item-macro-tag bg-m">MIXTO</span>
-                        </div>`;
-                } else {
-                    const gBase = alimento.gramos || 0;
-                    const gramosCalculados = (bloquesPorAlimento * gBase).toFixed(0);
-                    subHtml += `
-                        <div class="plate-item">
-                            <span>${emoji} <b>${gramosCalculados}${alimento.unidad || 'g'}</b> de <b>${alimento.nombre}</b>
-                                <small style="color:var(--text-light); margin-left:6px">(${bloquesPorAlimento.toFixed(1)} blq · ${gBase}${alimento.unidad}/blq)</small>
-                            </span>
-                            <span class="item-macro-tag ${bgClass}">${bgClass.replace('bg-', '').toUpperCase()}</span>
-                        </div>`;
-                }
+                const gBase = alimento.gramos || 0;
+                const gramosCalculados = (bloquesPorAlimento * gBase).toFixed(0);
+                subHtml += `
+                    <div class="plate-item">
+                        <span>${emoji} <b>${gramosCalculados}${alimento.unidad || 'g'}</b> de <b>${alimento.nombre}</b>
+                            <small style="color:var(--text-light); margin-left:6px">(${bloquesPorAlimento.toFixed(1)} blq · ${gBase}${alimento.unidad}/blq)</small>
+                        </span>
+                        <span class="item-macro-tag ${bgClass}">${bgClass.replace('bg-', '').toUpperCase()}</span>
+                    </div>`;
                 hayIngredientes = true;
-                debugLog(`[COMODÍN CALC] ID=${idClean} → "${alimento.nombre}"`);
+                debugLog(`[COMODÍN CALC] ID=${idClean} → índice ${indice} → "${alimento.nombre}" ${gramosCalculados}${alimento.unidad}`);
             } else {
                 subHtml += `<div class="plate-item" style="color:var(--p-color)">
-                    <span>⚠️ ID <b>${idClean}</b> no encontrado en la tabla de equivalencias. 
-                    Comprueba que existe en la columna A de tu BBDD.</span></div>`;
-                debugLog(`[COMODÍN ERROR] ID=${idClean} no encontrado en poolBuscadorCompleto`);
+                    <span>⚠️ No existe la fila <b>${parseInt(matchNum[0], 10)}</b> en la lista de 
+                    ${bgClass === 'bg-p' ? 'proteínas' : bgClass === 'bg-hc' ? 'carbohidratos' : 'grasas'} 
+                    (hay ${poolAlimentos.length} alimentos disponibles). ID: <b>${idClean}</b></span></div>`;
+                debugLog(`[COMODÍN ERROR] ID=${idClean} → índice ${indice} no existe en pool (size=${poolAlimentos.length})`);
             }
         });
         return subHtml;
     }
 
-    html += procesarMacroComodin(datosComodinFijo.proteinasIds,     blq.p,  'bg-p',  '🥩');
-    html += procesarMacroComodin(datosComodinFijo.carbohidratosIds, blq.hc, 'bg-hc', '🌾');
-    html += procesarMacroComodin(datosComodinFijo.grasasIds,        blq.g,  'bg-g',  '🥑');
+    html += procesarMacroComodin(datosComodinFijo.proteinasIds,     blq.p,  poolProteinas,     'bg-p',  '🥩');
+    html += procesarMacroComodin(datosComodinFijo.carbohidratosIds, blq.hc, poolCarbohidratos, 'bg-hc', '🌾');
+    html += procesarMacroComodin(datosComodinFijo.grasasIds,        blq.g,  poolGrasas,        'bg-g',  '🥑');
 
     if (datosComodinFijo.libresTexto && datosComodinFijo.libresTexto !== '' && datosComodinFijo.libresTexto.toLowerCase() !== 'ninguno') {
         html += `
