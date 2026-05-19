@@ -147,50 +147,83 @@ function procesarMasterPaciente(raw) {
     const json = cleanJSON(raw);
     const rows = json.table.rows;
 
-    debugLog('[MASTER] Total filas recibidas: ' + rows.length);
+    console.log('[DEBUG] Total filas recibidas de la hoja MASTER:', rows.length);
 
-    // Exclusiones de paciente (Columna E)
+    // ── 1. Exclusiones (columna E = índice 4) ──
     exclusionesPaciente.estiloVida = getCelda(rows, 0, 4).toUpperCase();
-    const tagsRaw = getCelda(rows, 1, 4);
-    exclusionesPaciente.tagsExcluir = tagsRaw ? tagsRaw.split(',').map(t => t.trim().toUpperCase()).filter(t => t !== '') : [];
-    const odiadosRaw = getCelda(rows, 2, 4);
-    exclusionesPaciente.alimentosOdiados = odiadosRaw ? odiadosRaw.split(',').map(a => a.trim().toLowerCase()).filter(a => a !== '') : [];
 
-    // Comodín salvavidas (Columna E)
+    const tagsRaw = getCelda(rows, 1, 4);
+    exclusionesPaciente.tagsExcluir = tagsRaw
+        ? tagsRaw.split(',').map(t => t.trim().toUpperCase()).filter(t => t !== '')
+        : [];
+
+    const odiadosRaw = getCelda(rows, 2, 4);
+    exclusionesPaciente.alimentosOdiados = odiadosRaw
+        ? odiadosRaw.split(',').map(a => a.trim().toLowerCase()).filter(a => a !== '')
+        : [];
+
+    // ── 2. Comodín salvavidas (columna E = índice 4) ──
     datosComodinFijo.nombreReceta = getCelda(rows, 4, 4) || "Receta Comodín";
+
     const pRaw = getCelda(rows, 5, 4);
-    datosComodinFijo.proteinasIds = pRaw ? pRaw.split(',').map(id => id.trim().toUpperCase()).filter(id => id !== '') : [];
+    datosComodinFijo.proteinasIds = pRaw
+        ? pRaw.split(',').map(id => id.trim().toUpperCase()).filter(id => id !== '')
+        : [];
+
     const hcRaw = getCelda(rows, 6, 4);
-    datosComodinFijo.carbohidratosIds = hcRaw ? hcRaw.split(',').map(id => id.trim().toUpperCase()).filter(id => id !== '') : [];
+    datosComodinFijo.carbohidratosIds = hcRaw
+        ? hcRaw.split(',').map(id => id.trim().toUpperCase()).filter(id => id !== '')
+        : [];
+
     const gRaw = getCelda(rows, 7, 4);
-    datosComodinFijo.grasasIds = gRaw ? gRaw.split(',').map(id => id.trim().toUpperCase()).filter(id => id !== '') : [];
+    datosComodinFijo.grasasIds = gRaw
+        ? gRaw.split(',').map(id => id.trim().toUpperCase()).filter(id => id !== '')
+        : [];
+
     datosComodinFijo.libresTexto = getCelda(rows, 8, 4);
 
-    // Bloques totales diarios
+
+    // ── 3. Bloques totales diarios (Columna B = Índice 1) ──
+    // Ajustado estrictamente a la captura: Fila 12(P)->Idx 11 | Fila 13(G)->Idx 12 | Fila 14(HC)->Idx 13
     const totalP  = parseFloat(String(getCelda(rows, 11, 1)).replace(',', '.')) || 0;
     const totalG  = parseFloat(String(getCelda(rows, 12, 1)).replace(',', '.')) || 0;
     const totalHC = parseFloat(String(getCelda(rows, 13, 1)).replace(',', '.')) || 0;
 
-    // Porcentajes por ingesta
+    console.log(`[DEBUG] Bloques Totales Leídos -> P: ${totalP}, G: ${totalG}, HC: ${totalHC}`);
+
+
+    // ── 4. Porcentajes por ingesta (Columna B = Índice 1) ──
+    // Ajustado estrictamente a la captura: Fila 16 (%Desayuno) corresponde al Índice 15 en JS
     const porcentajes = [];
     for (let i = 0; i < 5; i++) {
-        let val = parseFloat(String(getCelda(rows, 15 + i, 1)).replace(',', '.')) || 0;
+        const filaIndex = 15 + i; // Desayuno(15), Almuerzo(16), Comida(17), Merienda(18), Cena(19)
+        const valorCelda = getCelda(rows, filaIndex, 1);
+        
+        let val = parseFloat(String(valorCelda).replace(',', '.')) || 0;
+        // Si en Sheets el porcentaje viene expresado en base 100 (ej: 20 en vez de 0.2), lo normalizamos
         if (val > 1) val = val / 100;
+        
         porcentajes.push(val);
+        console.log(`[DEBUG] Ingesta ${MEAL_NAMES[i]} (Fila Sheets ${filaIndex + 1}) -> Texto celda: "${valorCelda}" -> Procesado: ${val}`);
     }
 
-    // Calcular bloques por ingesta y pintar interfaz
+
+    // ── 5. Calcular bloques por ingesta y renderizar tarjetas en el HTML ──
     bloquesAsignadosPorIngesta = {};
     const grid = document.getElementById('meal-grid');
     let html = "";
 
     MEAL_NAMES.forEach((nombre, i) => {
         const pct = porcentajes[i] || 0;
+        
+        // Multiplicamos el bloque total diario por el porcentaje asignado a esta comida
         const p  = parseFloat((totalP  * pct).toFixed(1));
         const hc = parseFloat((totalHC * pct).toFixed(1));
         const g  = parseFloat((totalG  * pct).toFixed(1));
 
         bloquesAsignadosPorIngesta[nombre] = { p, hc, g };
+
+        console.log(`[DEBUG] Bloques Calculados para ${nombre} (${pct * 100}%): P=${p}, HC=${hc}, G=${g}`);
 
         const icon = mealIcons[nombre] || "fa-utensils";
         html += `
@@ -203,9 +236,9 @@ function procesarMasterPaciente(raw) {
                 </div>
             </div>`;
     });
+
     grid.innerHTML = html;
 }
-
 function procesarYRenderizarEquivalencias(raw) {
     const json = cleanJSON(raw);
     const rows = json.table.rows;
