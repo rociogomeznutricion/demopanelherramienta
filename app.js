@@ -188,7 +188,7 @@ function procesarMasterPaciente(raw) {
 //Console.log(datosComodinFijo.grasasIds);
 
     
-    datosComodinFijo.libresTexto = getCelda(rows, 8, 4);
+    datosComodinFijo.libresTexto = getCelda(rows, 6, 4);
 
 
     // ── 3. Bloques totales diarios (Columna B = Índice 1) ──
