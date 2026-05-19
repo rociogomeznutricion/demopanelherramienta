@@ -163,28 +163,29 @@ function procesarMasterPaciente(raw) {
         : [];
 
     // ── 2. Comodín salvavidas (columna E = índice 4) ──
-    datosComodinFijo.nombreReceta = getCelda(rows, 4, 4) || "Receta Comodín";
+    datosComodinFijo.nombreReceta = getCelda(rows, 2, 4) || "Receta Comodín";
 
-    Console.log(datosComodinFijo.nombreReceta);
+    
+    //console.log(`[DEBUG] NOMBRE RECETA ->  ${datosComodinFijo.nombreReceta}`);
 
-    const pRaw = getCelda(rows, 5, 4);
+    const pRaw = getCelda(rows, 3, 4);
     datosComodinFijo.proteinasIds = pRaw
         ? pRaw.split(',').map(id => id.trim().toUpperCase()).filter(id => id !== '')
         : [];
+  //  console.log(`[DEBUG] PROTEINAS ->  ${datosComodinFijo.proteinasIds}`);
+
     
-Console.log(datosComodinFijo.proteinasIds);
-    
-    const hcRaw = getCelda(rows, 6, 4);
+    const hcRaw = getCelda(rows, 4, 4);
     datosComodinFijo.carbohidratosIds = hcRaw
         ? hcRaw.split(',').map(id => id.trim().toUpperCase()).filter(id => id !== '')
         : [];
-Console.log(datosComodinFijo.carbohidratosIds);
+//Console.log(datosComodinFijo.carbohidratosIds);
     
-    const gRaw = getCelda(rows, 7, 4);
+    const gRaw = getCelda(rows, 5, 4);
     datosComodinFijo.grasasIds = gRaw
         ? gRaw.split(',').map(id => id.trim().toUpperCase()).filter(id => id !== '')
         : [];
-Console.log(datosComodinFijo.grasasIds);
+//Console.log(datosComodinFijo.grasasIds);
 
     
     datosComodinFijo.libresTexto = getCelda(rows, 8, 4);
