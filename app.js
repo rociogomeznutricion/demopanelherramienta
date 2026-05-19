@@ -122,8 +122,11 @@ function cargarDatosNutricionales(spreadsheetId) {
     document.getElementById('sync-status').style.background = "#fef3c7";
     document.getElementById('sync-status').style.color = "#92400e";
 
+ // urlMaster sigue usando el documento del paciente que inició sesión
     const urlMaster = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?gid=${GID_PACIENTE_MASTER}&tqx=out:json`;
-    const urlEquiv  = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?gid=${GID_EQUIV}&tqx=out:json`;
+    
+    // NUEVO: urlEquiv ahora apunta siempre al documento global e independiente de alimentos
+    const urlEquiv  = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID_EQUIV_GLOBAL}/gviz/tq?gid=${GID_EQUIV_GLOBAL}&tqx=out:json`;
 
     Promise.all([
         fetch(urlMaster).then(r => r.text()),
