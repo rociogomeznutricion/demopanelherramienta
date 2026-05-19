@@ -188,9 +188,9 @@ function procesarMasterPaciente(raw) {
     // Fila 12 del Sheets (Bloques P)  -> Índice 11 en JavaScript
     // Fila 13 del Sheets (Bloques G)  -> Índice 12 en JavaScript
     // Fila 14 del Sheets (Bloques HC) -> Índice 13 en JavaScript
-    const totalP  = parseFloat(String(getCelda(rows, 11, 1)).replace(',', '.')) || 0;
-    const totalG  = parseFloat(String(getCelda(rows, 12, 1)).replace(',', '.')) || 0;
-    const totalHC = parseFloat(String(getCelda(rows, 13, 1)).replace(',', '.')) || 0;
+    const totalP  = parseFloat(String(getCelda(rows, 10, 1)).replace(',', '.')) || 0;
+    const totalG  = parseFloat(String(getCelda(rows, 11, 1)).replace(',', '.')) || 0;
+    const totalHC = parseFloat(String(getCelda(rows, 12, 1)).replace(',', '.')) || 0;
 
     console.log(`[DEBUG] OBJETIVO DIARIO -> Bloques P: ${totalP}, Bloques G: ${totalG}, Bloques HC: ${totalHC}`);
 
@@ -201,7 +201,7 @@ function procesarMasterPaciente(raw) {
     // Recorre consecutivamente: Desayuno (15), Almuerzo (16), Comida (17), Merienda (18), Cena (19)
     const porcentajes = [];
     for (let i = 0; i < 5; i++) {
-        const filaIndex = 15 + i; 
+        const filaIndex = 13 + i; 
         const valorCelda = getCelda(rows, filaIndex, 1);
         
         let val = parseFloat(String(valorCelda).replace(',', '.')) || 0;
