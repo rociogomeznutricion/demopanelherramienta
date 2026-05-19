@@ -184,31 +184,38 @@ function procesarMasterPaciente(raw) {
 
 
     // ── 3. Bloques totales diarios (Columna B = Índice 1) ──
-    // Ajustado estrictamente a la captura: Fila 12(P)->Idx 11 | Fila 13(G)->Idx 12 | Fila 14(HC)->Idx 13
+    // Mapeo exacto según tu captura:
+    // Fila 12 del Sheets (Bloques P)  -> Índice 11 en JavaScript
+    // Fila 13 del Sheets (Bloques G)  -> Índice 12 en JavaScript
+    // Fila 14 del Sheets (Bloques HC) -> Índice 13 en JavaScript
     const totalP  = parseFloat(String(getCelda(rows, 11, 1)).replace(',', '.')) || 0;
     const totalG  = parseFloat(String(getCelda(rows, 12, 1)).replace(',', '.')) || 0;
     const totalHC = parseFloat(String(getCelda(rows, 13, 1)).replace(',', '.')) || 0;
 
-    console.log(`[DEBUG] Bloques Totales Leídos -> P: ${totalP}, G: ${totalG}, HC: ${totalHC}`);
+    console.log(`[DEBUG] OBJETIVO DIARIO -> Bloques P: ${totalP}, Bloques G: ${totalG}, Bloques HC: ${totalHC}`);
 
 
-    // ── 4. Porcentajes por ingesta (Columna B = Índice 1) ──
-    // Ajustado estrictamente a la captura: Fila 16 (%Desayuno) corresponde al Índice 15 en JS
+    // ── 4. Distribución por ingestas (Columna B = Índice 1) ──
+    // Mapeo exacto según tu captura:
+    // Fila 16 del Sheets (%Desayuno) corresponde al Índice 15 en JavaScript.
+    // Recorre consecutivamente: Desayuno (15), Almuerzo (16), Comida (17), Merienda (18), Cena (19)
     const porcentajes = [];
     for (let i = 0; i < 5; i++) {
-        const filaIndex = 15 + i; // Desayuno(15), Almuerzo(16), Comida(17), Merienda(18), Cena(19)
+        const filaIndex = 15 + i; 
         const valorCelda = getCelda(rows, filaIndex, 1);
         
         let val = parseFloat(String(valorCelda).replace(',', '.')) || 0;
-        // Si en Sheets el porcentaje viene expresado en base 100 (ej: 20 en vez de 0.2), lo normalizamos
+        
+        // Control de formato: Si en Google Sheets pones un número entero como "20" en lugar de "0.2" o "20%",
+        // el sistema detecta que es mayor que 1 y lo normaliza automáticamente dividiendo por 100.
         if (val > 1) val = val / 100;
         
         porcentajes.push(val);
-        console.log(`[DEBUG] Ingesta ${MEAL_NAMES[i]} (Fila Sheets ${filaIndex + 1}) -> Texto celda: "${valorCelda}" -> Procesado: ${val}`);
+        console.log(`[DEBUG] % ${MEAL_NAMES[i]} (Fila Sheets ${filaIndex + 1}) -> Celda: "${valorCelda}" -> Procesado: ${(val * 100)}%`);
     }
 
 
-    // ── 5. Calcular bloques por ingesta y renderizar tarjetas en el HTML ──
+    // ── 5. Cálculo dinámico de bloques por ingesta y renderizado en la interfaz ──
     bloquesAsignadosPorIngesta = {};
     const grid = document.getElementById('meal-grid');
     let html = "";
@@ -216,14 +223,15 @@ function procesarMasterPaciente(raw) {
     MEAL_NAMES.forEach((nombre, i) => {
         const pct = porcentajes[i] || 0;
         
-        // Multiplicamos el bloque total diario por el porcentaje asignado a esta comida
+        // Multiplicamos matemáticamente el bloque diario por la densidad/porcentaje de esta ingesta concreta
         const p  = parseFloat((totalP  * pct).toFixed(1));
         const hc = parseFloat((totalHC * pct).toFixed(1));
         const g  = parseFloat((totalG  * pct).toFixed(1));
 
+        // Guardamos los bloques resultantes para que el recomendador y el generador de platos los utilicen después
         bloquesAsignadosPorIngesta[nombre] = { p, hc, g };
 
-        console.log(`[DEBUG] Bloques Calculados para ${nombre} (${pct * 100}%): P=${p}, HC=${hc}, G=${g}`);
+        console.log(`[DEBUG] CÁLCULO FINAL para ${nombre}: P=${p} blq | HC=${hc} blq | G=${g} blq`);
 
         const icon = mealIcons[nombre] || "fa-utensils";
         html += `
@@ -239,6 +247,8 @@ function procesarMasterPaciente(raw) {
 
     grid.innerHTML = html;
 }
+
+
 function procesarYRenderizarEquivalencias(raw) {
     const json = cleanJSON(raw);
     const rows = json.table.rows;
