@@ -305,7 +305,7 @@ function procesarYRenderizarEquivalencias(raw) {
     }
 
     // Empezamos en i = 1 para saltarnos la fila de cabeceras de Google Sheets
-    for (let i = 0; i < rows.length; i++) {
+    for (let i = 1; i < rows.length; i++) {
         const row = rows[i].c;
         if (!row) continue;
 
