@@ -437,45 +437,30 @@ function procesarYRenderizarEquivalencias(raw) {
     function normLista(str) {
         return String(str || '').split(/[,;]+/).map(norm).filter(Boolean);
     }
+function debeExcluirse(nombre, tagF, tagG) {
+    if (!nombre) return true;
 
-    // ── Lógica de exclusión cruzada con columnas F, G, H ─────────────────────
-    // E3 paciente vs nombre alimento  → ocultar si el nombre CONTIENE algún valor de E3
-    // E2 paciente vs col F del alimento → ocultar si col F CONTIENE algún valor de E2
-    // E1 paciente vs col G del alimento → mostrar SOLO si col G CONTIENE algún valor de E1
-    function debeExcluirse(nombre, tagF, tagG) {
-        if (!nombre) return true;
+    const nNorm = norm(nombre);
+    const fNorm = norm(tagF);
+    const gNorm = norm(tagG);
 
-        const nNorm   = norm(nombre);
-        const fNorm   = norm(tagF);   // Tags_exclusion del alimento (col F)
-        const gNorm   = norm(tagG);   // Tags_estilo_vida del alimento (col G)
+    // E3: nombre contiene algún alimento odiado
+    const odiados = exclusionesPaciente.alimentosOdiados || [];
+    if (odiados.length > 0 && odiados.some(o => nNorm.includes(o))) return true;
 
-        // ── E3: Alimentos no deseados ────────────────────────────────────────
-        // Si E3 tiene valores, ocultar cualquier alimento cuyo nombre contenga alguno
-        // Si E3 está vacío → sin filtro
-        const odiados = exclusionesPaciente.alimentosOdiados; // ya normalizado en procesarMasterPaciente
-        if (odiados.length > 0) {
-            if (odiados.some(o => nNorm.includes(o))) return true;
-        }
+    // E2: col F contiene algún tag a excluir
+    const tagsExcluir = exclusionesPaciente.tagsExcluir || [];
+    if (tagsExcluir.length > 0 && tagsExcluir.some(t => fNorm.includes(t))) return true;
 
-        // ── E2: Alergias / Tags a excluir ────────────────────────────────────
-        // Si E2 tiene valores, ocultar alimentos cuya col F contenga alguno de ellos
-        // Si E2 está vacío → sin filtro
-        const tagsExcluir = exclusionesPaciente.tagsExcluir; // ya normalizado
-        if (tagsExcluir.length > 0) {
-            if (tagsExcluir.some(t => fNorm.includes(t))) return true;
-        }
-
-        // ── E1: Estilo de vida ───────────────────────────────────────────────
-        // Si E1 tiene valores, mostrar SOLO alimentos cuya col G contenga alguno de ellos
-        // Si E1 está vacío → sin filtro
-        const estilos = exclusionesPaciente.estilosVida; // puede ser lista: ["vegano","vegetariano"]
-        if (estilos && estilos.length > 0 && gNorm) {
-            const hayMatch = estilos.some(e => gNorm.includes(e));
-            if (!hayMatch) return true;
-        }
-
-        return false;
+    // E1: col G debe contener al menos uno de los estilos del paciente
+    // OJO: si col G está vacía y E1 está relleno → excluir (el alimento no tiene estilo definido)
+    const estilos = exclusionesPaciente.estilosVida || [];
+    if (estilos.length > 0) {
+        if (!gNorm || !estilos.some(e => gNorm.includes(e))) return true;
     }
+
+    return false;
+}
 
     // ── Mapeo de columnas ────────────────────────────────────────────────────
     // Col A (Idx 0) = ID_Alimento     → ignorado en pantalla
