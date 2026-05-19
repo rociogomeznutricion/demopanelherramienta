@@ -305,7 +305,7 @@ function procesarYRenderizarEquivalencias(raw) {
     }
 
     // Empezamos en i = 1 para saltarnos la fila de cabeceras de Google Sheets
-    for (let i = 1; i < rows.length; i++) {
+    for (let i = 0; i < rows.length; i++) {
         const row = rows[i].c;
         if (!row) continue;
 
@@ -319,14 +319,14 @@ function procesarYRenderizarEquivalencias(raw) {
         // Columna G (Idx 6) = Tags_estilo_vida
         // Columna H (Idx 7) = Tags_momento
 
-        const nombreAlimento = txtCelda(row, 1);
-        const macroPrincipal = txtCelda(row, 2).toUpperCase();
-        const rawGramos      = txtCelda(row, 3);
-        const unidadMedida   = txtCelda(row, 4) || 'g'; // por defecto 'g' si está vacío
+        const nombreAlimento = txtCelda(row, 2);
+        const macroPrincipal = txtCelda(row, 3).toUpperCase();
+        const rawGramos      = txtCelda(row, 4);
+        const unidadMedida   = txtCelda(row, 5) || 'g'; // por defecto 'g' si está vacío
         
-        const tagExclusion   = txtCelda(row, 5);
-        const tagEstilo      = txtCelda(row, 6);
-        const tagMomento     = txtCelda(row, 7);
+        const tagExclusion   = txtCelda(row, 6);
+        const tagEstilo      = txtCelda(row, 7);
+        const tagMomento     = txtCelda(row, 8);
 
         // Si la fila no tiene nombre o coincide con nombres de sección, la saltamos
         if (!nombreAlimento || nombreAlimento.includes('PROTEÍNAS') || nombreAlimento.includes('CARBOHIDRATOS') || nombreAlimento.includes('GRASAS')) {
