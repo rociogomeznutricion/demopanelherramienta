@@ -160,22 +160,28 @@ function procesarMasterPaciente(raw) {
     // E2 (fila 1) → Tags/Alergias:        "LACTOSA", "GLUTEN"…  (separados por coma)
     // E3 (fila 2) → Alimentos no deseados: "Atún, Pollo"…       (separados por coma)
 
-    const estiloVidaRaw       = getCelda(rows, 0, 4);
-    const alergiasRaw         = getCelda(rows, 1, 4);
-    const alimentosOdiadosRaw = getCelda(rows, 2, 4);
+    const estiloVidaRaw       = getCelda(rows, 0, 4); // E1
+    const alergiasRaw         = getCelda(rows, 1, 4); // E2
+    const alimentosOdiadosRaw = getCelda(rows, 2, 4); // E3
 
-    function normalizarTags(str) {
-        if (!str) return [];
-        return str.toUpperCase().split(/[,;]+/).map(s => s.trim()).filter(Boolean);
+    // Normaliza: quita tildes, pasa a minusculas, separa por coma/punto y coma
+    function normPerfil(str) {
+        return String(str || '')
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .split(/[,;]+/)
+            .map(s => s.trim())
+            .filter(Boolean);
     }
 
     exclusionesPaciente = {
-        estiloVida:       estiloVidaRaw.toUpperCase().trim(),
-        tagsExcluir:      normalizarTags(alergiasRaw),
-        alimentosOdiados: normalizarTags(alimentosOdiadosRaw).map(s => s.toLowerCase())
+        estilosVida:      normPerfil(estiloVidaRaw),      // E1: ["vegano"] o ["vegano","vegetariano"] o []
+        tagsExcluir:      normPerfil(alergiasRaw),         // E2: ["lactosa","gluten"] o []
+        alimentosOdiados: normPerfil(alimentosOdiadosRaw)  // E3: ["atun","pollo"] o []
     };
 
-    debugLog(`[PERFIL] Estilo: ${exclusionesPaciente.estiloVida} | Excluir: ${exclusionesPaciente.tagsExcluir.join(',')} | Odiados: ${exclusionesPaciente.alimentosOdiados.join(',')}`);
+    debugLog('[PERFIL] Estilos: ' + exclusionesPaciente.estilosVida.join(',') + ' | Excluir: ' + exclusionesPaciente.tagsExcluir.join(',') + ' | Odiados: ' + exclusionesPaciente.alimentosOdiados.join(','));
 
     // ── 2. Comodín salvavidas (columna E = índice 4) ──────────────────────────
     datosComodinFijo.nombreReceta = getCelda(rows, 2, 4) || "Receta Comodín";
@@ -417,47 +423,55 @@ function procesarYRenderizarEquivalencias(raw) {
         return match ? parseFloat(match[1].replace(',', '.')) : null;
     }
 
+    // ── Helper: normaliza texto eliminando tildes, mayúsculas y espacios ────────
+    // "Atún" → "atun" | "VEGANO" → "vegano" | " Lactosa " → "lactosa"
+    function norm(str) {
+        return String(str || '')
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '') // elimina diacríticos (tildes, etc.)
+            .trim();
+    }
+
+    // Convierte "atun, Pollo, SALMÓN" → ["atun", "pollo", "salmon"]
+    function normLista(str) {
+        return String(str || '').split(/[,;]+/).map(norm).filter(Boolean);
+    }
+
     // ── Lógica de exclusión cruzada con columnas F, G, H ─────────────────────
-    // Col F = Tags_exclusion   → alergias/intolerancias (LACTOSA, GLUTEN, SOJA…)
-    // Col G = Tags_estilo_vida → compatibilidad (VEGANO, VEGETARIANO, OMNIVORO…)
-    // Col H = Tags_momento     → ingestas recomendadas (DESAYUNO, ALMUERZO…)
+    // E3 paciente vs nombre alimento  → ocultar si el nombre CONTIENE algún valor de E3
+    // E2 paciente vs col F del alimento → ocultar si col F CONTIENE algún valor de E2
+    // E1 paciente vs col G del alimento → mostrar SOLO si col G CONTIENE algún valor de E1
     function debeExcluirse(nombre, tagF, tagG) {
         if (!nombre) return true;
 
-        const nClean = nombre.toLowerCase().trim();
+        const nNorm   = norm(nombre);
+        const fNorm   = norm(tagF);   // Tags_exclusion del alimento (col F)
+        const gNorm   = norm(tagG);   // Tags_estilo_vida del alimento (col G)
 
-        // 1. Alimentos odiados (E3 del paciente) — coincidencia parcial
-        if (exclusionesPaciente.alimentosOdiados.some(o => nClean.includes(o))) return true;
-
-        const tagsFilaF = tagF.toUpperCase();
-        const tagsFilaG = tagG.toUpperCase();
-
-        // 2. Estilo de vida (E1 del paciente) vs Tags_estilo_vida (col G)
-        //    Jerarquía: VEGANO ⊂ VEGETARIANO ⊂ LACTO/OVO-VEGETARIANO ⊂ OMNIVORO
-        //    Si el alimento no es compatible con el estilo del paciente → excluir
-        const estiloPaciente = exclusionesPaciente.estiloVida;
-        if (estiloPaciente && tagsFilaG) {
-            const estilosCompatibles = tagsFilaG.split(/[,;]+/).map(s => s.trim()).filter(Boolean);
-
-            const jerarquiaEstilos = {
-                'VEGANO':            ['VEGANO'],
-                'VEGETARIANO':       ['VEGANO', 'VEGETARIANO'],
-                'LACTO-VEGETARIANO': ['VEGANO', 'VEGETARIANO', 'LACTO-VEGETARIANO'],
-                'OVO-VEGETARIANO':   ['VEGANO', 'VEGETARIANO', 'OVO-VEGETARIANO'],
-                'OMNIVORO':          ['VEGANO', 'VEGETARIANO', 'LACTO-VEGETARIANO', 'OVO-VEGETARIANO', 'OMNIVORO'],
-                '':                  []
-            };
-
-            const estilosDelPaciente = jerarquiaEstilos[estiloPaciente] || [estiloPaciente];
-
-            // Si ninguno de los estilos compatibles del alimento encaja con el del paciente → excluir
-            const hayCompatibilidad = estilosCompatibles.some(eC => estilosDelPaciente.includes(eC));
-            if (!hayCompatibilidad) return true;
+        // ── E3: Alimentos no deseados ────────────────────────────────────────
+        // Si E3 tiene valores, ocultar cualquier alimento cuyo nombre contenga alguno
+        // Si E3 está vacío → sin filtro
+        const odiados = exclusionesPaciente.alimentosOdiados; // ya normalizado en procesarMasterPaciente
+        if (odiados.length > 0) {
+            if (odiados.some(o => nNorm.includes(o))) return true;
         }
 
-        // 3. Alergias/Tags (E2 del paciente) vs Tags_exclusion (col F)
-        for (const tagPaciente of exclusionesPaciente.tagsExcluir) {
-            if (tagsFilaF.includes(tagPaciente)) return true;
+        // ── E2: Alergias / Tags a excluir ────────────────────────────────────
+        // Si E2 tiene valores, ocultar alimentos cuya col F contenga alguno de ellos
+        // Si E2 está vacío → sin filtro
+        const tagsExcluir = exclusionesPaciente.tagsExcluir; // ya normalizado
+        if (tagsExcluir.length > 0) {
+            if (tagsExcluir.some(t => fNorm.includes(t))) return true;
+        }
+
+        // ── E1: Estilo de vida ───────────────────────────────────────────────
+        // Si E1 tiene valores, mostrar SOLO alimentos cuya col G contenga alguno de ellos
+        // Si E1 está vacío → sin filtro
+        const estilos = exclusionesPaciente.estilosVida; // puede ser lista: ["vegano","vegetariano"]
+        if (estilos && estilos.length > 0 && gNorm) {
+            const hayMatch = estilos.some(e => gNorm.includes(e));
+            if (!hayMatch) return true;
         }
 
         return false;
