@@ -4,9 +4,12 @@
 
 const MASTER_CONTROL_URL = 'https://docs.google.com/spreadsheets/d/1L7lbZ4JkE7dqO_oizMEDKQabtyUBbR4yaqcrt3LMa6Q/gviz/tq?gid=0&tqx=out:json';
 
-// GIDs de pestañas del paciente
+// GID de la pestaña MASTER del paciente individual
 const GID_PACIENTE_MASTER = '0';
-const GID_EQUIV = '1979658163';
+
+// NUEVA BBDD GLOBAL DE EQUIVALENCIAS (ALIMENTOS)
+const SPREADSHEET_ID_EQUIV_GLOBAL = '1qxe-uHMw7rba6CVV3TDY38aA1kULHm3FInrSyYcK4Oo';
+const GID_EQUIV_GLOBAL = '0';
 
 const mealIcons = {
     "DESAYUNO": "fa-coffee",
