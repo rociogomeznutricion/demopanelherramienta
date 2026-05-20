@@ -177,24 +177,24 @@ const alimentosOdiadosRaw = getCelda(rows, 1, 4); // Índice 1 = Fila 3 del Exce
     debugLog('[PERFIL] Alérgenos (E2): ' + exclusionesPaciente.tagsExcluir.join(', ') + ' | Odiados (E3): ' + exclusionesPaciente.alimentosOdiados.join(', '));
 
     // Datos comodín
-    datosComodinFijo.nombreReceta = getCelda(rows, 4, 4) || "Receta Comodín"; 
+    datosComodinFijo.nombreReceta = getCelda(rows, 2, 4) || "Receta Comodín"; 
 
-    const pRaw = getCelda(rows, 5, 4); 
+    const pRaw = getCelda(rows, 3, 4); 
     datosComodinFijo.proteinasIds = pRaw
         ? pRaw.split(',').map(id => id.trim().toUpperCase()).filter(id => id !== '')
         : [];
 
-    const hcRaw = getCelda(rows, 6, 4); 
+    const hcRaw = getCelda(rows, 4, 4); 
     datosComodinFijo.carbohidratosIds = hcRaw
         ? hcRaw.split(',').map(id => id.trim().toUpperCase()).filter(id => id !== '')
         : [];
 
-    const gRaw = getCelda(rows, 7, 4); 
+    const gRaw = getCelda(rows, 5, 4); 
     datosComodinFijo.grasasIds = gRaw
         ? gRaw.split(',').map(id => id.trim().toUpperCase()).filter(id => id !== '')
         : [];
 
-    datosComodinFijo.libresTexto = getCelda(rows, 8, 4); 
+    datosComodinFijo.libresTexto = getCelda(rows, 6, 4); 
 
     // ── Bloques totales diarios (Columna B) ──
     const totalP  = parseFloat(String(getCelda(rows, 10, 1)).replace(',', '.')) || 0;
