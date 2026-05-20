@@ -413,28 +413,49 @@ function procesarYRenderizarEquivalencias(raw) {
             .trim();
     }
 
-    // NUEVA LÓGICA DE EXCLUSIÓN: Solo E2 (Alérgenos) y E3 (Odiados)
-    function debeExcluirse(nombre, tagF) {
-        if (!nombre) return true;
+  function debeExcluirse(nombre, tagF) {
+    // Marcamos el inicio de la revisión de este alimento específico
+    console.log(`\n🔍 [DEBUG] Iniciando comprobación -> Alimento: "${nombre}" | Tags: "${tagF}"`);
 
-        const nNorm = norm(nombre);
-        const fNorm = norm(tagF);
-
-        // 1. E3 (Odiados): Verificamos si algún alimento odiado está incluido en el NOMBRE del alimento
-        const odiados = exclusionesPaciente.alimentosOdiados || [];
-        if (odiados.length > 0 && odiados.some(odiado => nNorm.includes(odiado))) {
-            return true;
-        }
-
-        // 2. E2 (Alérgenos): Verificamos si algún alérgeno a excluir está incluido en la columna F de la BBDD
-        const tagsExcluir = exclusionesPaciente.tagsExcluir || [];
-        if (tagsExcluir.length > 0 && tagsExcluir.some(alergeno => fNorm.includes(alergeno))) {
-            return true;
-        }
-
-        return false;
+    if (!nombre) {
+        console.warn(`🛑 [SALIDA] Excluido automáticamente: El nombre del alimento viene vacío o indefinido.`);
+        return true;
     }
 
+    const nNorm = norm(nombre);
+    const fNorm = norm(tagF);
+    console.log(`   [INFO] Textos normalizados -> Nombre: "${nNorm}" | Tags: "${fNorm}"`);
+
+    // 1. E3 (Odiados)
+    const odiados = exclusionesPaciente.alimentosOdiados || [];
+    console.log(`   [INFO] Lista de alimentos odiados actuales:`, odiados);
+
+    if (odiados.length > 0) {
+        // Usamos .find para saber cuál es el culpable exacto si salta el filtro
+        const odiadoCulpable = odiados.find(odiado => nNorm.includes(odiado));
+        if (odiadoCulpable) {
+            console.log(`❌ [SALIDA] EXCLUIDO por Alimento Odiado. El culpable es: "${odiadoCulpable}"`);
+            return true;
+        }
+    }
+
+    // 2. E2 (Alérgenos)
+    const tagsExcluir = exclusionesPaciente.tagsExcluir || [];
+    console.log(`   [INFO] Lista de alérgenos a excluir actuales:`, tagsExcluir);
+
+    if (tagsExcluir.length > 0) {
+        // Usamos .find para capturar el alérgeno exacto que hace match
+        const alergenoCulpable = tagsExcluir.find(alergeno => fNorm.includes(alergeno));
+        if (alergenoCulpable) {
+            console.log(`❌ [SALIDA] EXCLUIDO por Alérgeno/Restricción. El culpable es: "${alergenoCulpable}"`);
+            return true;
+        }
+    }
+
+    // Si llega aquí, es que pasó todos los filtros
+    console.log(`✅ [SALIDA] APTO. El alimento no coincide con ninguna exclusión.`);
+    return false;
+}
     for (let i = 1; i < rows.length; i++) {
         const row = rows[i].c;
         if (!row) continue;
@@ -449,7 +470,7 @@ function procesarYRenderizarEquivalencias(raw) {
         if (!nombreAlimento || /PROTEÍNAS|CARBOHIDRATOS|GRASAS/i.test(nombreAlimento)) continue;
         
         // Pasamos solo el nombre y la columna F a la función
-        if (!debeExcluirse(nombreAlimento, tagF)) continue;
+        if (debeExcluirse(nombreAlimento, tagF)) continue;
 
         const gramosNumericos = parsearGramos(rawGramos);
         const itemAlimento = {
