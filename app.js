@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────
-//  MANEJADORES DE INTERFAZ Y EVENTOS DE INICIO 
+//  MANEJADORES DE INTERFAZ Y EVENTOS DE INICIO
 // ─────────────────────────────────────────────────────────────
 
 document.getElementById('username').addEventListener('keydown', e => { if (e.key === 'Enter') ejecutarLogin(); });
@@ -113,10 +113,11 @@ function cerrarSesion() {
     document.getElementById('salvavidas-output').style.display = "none";
     document.getElementById('debug-panel').textContent = "";
     
-    // CORRECCIÓN: Reseteo profundo del estado para evitar contaminación entre usuarios
     bloquesAsignadosPorIngesta = {};
     poolProteinas = []; poolCarbohidratos = []; poolGrasas = []; poolBuscadorCompleto = [];
-    exclusionesPaciente = { estilosVida: [], tagsExcluir: [], alimentosOdiados: [] }; 
+    
+    // Eliminado estilosVida del estado global
+    exclusionesPaciente = { tagsExcluir: [], alimentosOdiados: [] }; 
 }
 
 // ─── Carga e Inyección de datos Nutricionales ───
@@ -153,9 +154,9 @@ function procesarMasterPaciente(raw) {
 
     console.log('[DEBUG] Total filas recibidas de la hoja MASTER:', rows.length);
 
-    const estiloVidaRaw       = getCelda(rows, 0, 4); // E1
-    const alergiasRaw         = getCelda(rows, 1, 4); // E2
-    const alimentosOdiadosRaw = getCelda(rows, 2, 4); // E3
+    // Índices fijos según tu estructura
+    const alergiasRaw         = getCelda(rows, 1, 4); // E2 (Alérgenos / Tags a excluir)
+    const alimentosOdiadosRaw = getCelda(rows, 2, 4); // E3 (Alimentos odiados)
 
     function normPerfil(str) {
         return String(str || '')
@@ -167,33 +168,33 @@ function procesarMasterPaciente(raw) {
             .filter(Boolean);
     }
 
+    // Solo guardamos Alérgenos (E2) y Odiados (E3)
     exclusionesPaciente = {
-        estilosVida:      normPerfil(estiloVidaRaw),      
         tagsExcluir:      normPerfil(alergiasRaw),         
         alimentosOdiados: normPerfil(alimentosOdiadosRaw)  
     };
 
-    debugLog('[PERFIL] Estilos: ' + exclusionesPaciente.estilosVida.join(',') + ' | Excluir: ' + exclusionesPaciente.tagsExcluir.join(',') + ' | Odiados: ' + exclusionesPaciente.alimentosOdiados.join(','));
+    debugLog('[PERFIL] Alérgenos (E2): ' + exclusionesPaciente.tagsExcluir.join(', ') + ' | Odiados (E3): ' + exclusionesPaciente.alimentosOdiados.join(', '));
 
-    // CORRECCIÓN: Ajuste de índices para que coincidan con las celdas reales de la hoja (E6, E7, E8, E9...)
-    datosComodinFijo.nombreReceta = getCelda(rows, 4, 4) || "Receta Comodín"; // E5 (Índice 4)
+    // Datos comodín
+    datosComodinFijo.nombreReceta = getCelda(rows, 4, 4) || "Receta Comodín"; 
 
-    const pRaw = getCelda(rows, 5, 4); // E6 (Índice 5)
+    const pRaw = getCelda(rows, 5, 4); 
     datosComodinFijo.proteinasIds = pRaw
         ? pRaw.split(',').map(id => id.trim().toUpperCase()).filter(id => id !== '')
         : [];
 
-    const hcRaw = getCelda(rows, 6, 4); // E7 (Índice 6)
+    const hcRaw = getCelda(rows, 6, 4); 
     datosComodinFijo.carbohidratosIds = hcRaw
         ? hcRaw.split(',').map(id => id.trim().toUpperCase()).filter(id => id !== '')
         : [];
 
-    const gRaw = getCelda(rows, 7, 4); // E8 (Índice 7)
+    const gRaw = getCelda(rows, 7, 4); 
     datosComodinFijo.grasasIds = gRaw
         ? gRaw.split(',').map(id => id.trim().toUpperCase()).filter(id => id !== '')
         : [];
 
-    datosComodinFijo.libresTexto = getCelda(rows, 8, 4); // E9 (Índice 8)
+    datosComodinFijo.libresTexto = getCelda(rows, 8, 4); 
 
     // ── Bloques totales diarios (Columna B) ──
     const totalP  = parseFloat(String(getCelda(rows, 10, 1)).replace(',', '.')) || 0;
@@ -252,7 +253,7 @@ function calcularComodinSalvavidas() {
     let html = `<div class="plate-title" style="color: var(--amber-text); border-bottom-color: var(--amber-border)">
                     <i class="fa-solid fa-utensils"></i> Plato: <b>${datosComodinFijo.nombreReceta}</b><br>
                     <small style="font-size:12px; color: var(--text-light)">
-                        Cantidades adjustedas para ${ingesta} &nbsp;·&nbsp; 
+                        Cantidades adaptadas para ${ingesta} &nbsp;·&nbsp; 
                         ${blq.p}P &nbsp;·&nbsp; ${blq.hc}HC &nbsp;·&nbsp; ${blq.g}G
                     </small>
                 </div>`;
@@ -412,28 +413,23 @@ function procesarYRenderizarEquivalencias(raw) {
             .trim();
     }
 
-    // CORRECCIÓN: Lógica cruzada bien estructurada en la discriminación de alimentos
-    function debeExcluirse(nombre, tagF, tagG) {
+    // NUEVA LÓGICA DE EXCLUSIÓN: Solo E2 (Alérgenos) y E3 (Odiados)
+    function debeExcluirse(nombre, tagF) {
         if (!nombre) return true;
 
         const nNorm = norm(nombre);
         const fNorm = norm(tagF);
-        const gNorm = norm(tagG);
 
-        // E3: Alimentos odiados
+        // 1. E3 (Odiados): Verificamos si algún alimento odiado está incluido en el NOMBRE del alimento
         const odiados = exclusionesPaciente.alimentosOdiados || [];
-        if (odiados.length > 0 && odiados.some(o => nNorm.includes(o))) return true;
+        if (odiados.length > 0 && odiados.some(odiado => nNorm.includes(odiado))) {
+            return true;
+        }
 
-        // E2: Alergias/Tags a excluir
+        // 2. E2 (Alérgenos): Verificamos si algún alérgeno a excluir está incluido en la columna F de la BBDD
         const tagsExcluir = exclusionesPaciente.tagsExcluir || [];
-        if (tagsExcluir.length > 0 && tagsExcluir.some(t => fNorm.includes(t))) return true;
-
-        // E1: Estilo de vida (comprobamos si el alimento cumple al menos uno de los del paciente)
-        const estilos = exclusionesPaciente.estilosVida || [];
-        if (estilos.length > 0) {
-            if (!gNorm) return true; // Excluir si el paciente busca estilo y el alimento no tiene ninguno asignado
-            const matchesEstilo = estilos.some(e => gNorm.includes(e));
-            if (!matchesEstilo) return true;
+        if (tagsExcluir.length > 0 && tagsExcluir.some(alergeno => fNorm.includes(alergeno))) {
+            return true;
         }
 
         return false;
@@ -447,12 +443,13 @@ function procesarYRenderizarEquivalencias(raw) {
         const macroPrincipal = txtCelda(row, 2).toUpperCase();
         const rawGramos      = txtCelda(row, 3);
         const unidadMedida   = txtCelda(row, 4) || 'g';
-        const tagF           = txtCelda(row, 5); 
-        const tagG           = txtCelda(row, 6); 
-        const tagH           = txtCelda(row, 7); 
+        const tagF           = txtCelda(row, 5); // Columna F: Alérgenos / Tags del alimento
+        const tagH           = txtCelda(row, 7); // Columna H: Momentos
 
         if (!nombreAlimento || /PROTEÍNAS|CARBOHIDRATOS|GRASAS/i.test(nombreAlimento)) continue;
-        if (debeExcluirse(nombreAlimento, tagF, tagG)) continue;
+        
+        // Pasamos solo el nombre y la columna F a la función
+        if (debeExcluirse(nombreAlimento, tagF)) continue;
 
         const gramosNumericos = parsearGramos(rawGramos);
         const itemAlimento = {
@@ -512,9 +509,8 @@ function procesarYRenderizarEquivalencias(raw) {
 
     tbody.innerHTML = htmlTable;
 
-    // CORRECCIÓN: Limitar la recolección de observaciones a las primeras filas para evitar concatenar celdas vacías del bucle infinito
     let obsG = [], obsI = [], obsJ = [];
-    const MAX_FILAS_OBS = Math.min(rows.length, 15); // Asumiendo que las observaciones no ocupan más de 15 filas reales
+    const MAX_FILAS_OBS = Math.min(rows.length, 15); 
     
     for (let i = 0; i < MAX_FILAS_OBS; i++) {
         if (rows[i]?.c) {
