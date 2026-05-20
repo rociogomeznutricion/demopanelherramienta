@@ -29,6 +29,14 @@ let poolGrasas = [];
 let poolBuscadorCompleto = [];
 let currentCategoryFilter = 'all';
 
+// Mantiene el estado del plato aleatorio generado para poder mutar solo lo marcado
+let platoInteligenteActual = {
+    p: null,
+    hc: null,
+    g: null,
+    ingesta: ""
+};
+
 let datosComodinFijo = {
     nombreReceta: "",
     proteinasIds: [],
