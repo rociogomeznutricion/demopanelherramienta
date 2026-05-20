@@ -243,6 +243,14 @@ function procesarMasterPaciente(raw) {
     });
 
     grid.innerHTML = html;
+
+    // Extrayendo los mensajes personalizados de la Columna F (índice 5) de este paciente
+    datosComodinFijo.obsPacientePersonalizada = [];
+    for (let i = 0; i < rows.length; i++) {
+        if (rows[i]?.c && rows[i].c[5]?.v !== undefined && rows[i].c[5]?.v !== null) {
+            datosComodinFijo.obsPacientePersonalizada.push(String(rows[i].c[5].v).trim());
+        }
+    }
 }
 
 // ─── Generador de Receta Salvavidas Fija ───
@@ -307,7 +315,7 @@ function calcularComodinSalvavidas() {
         return subHtml;
     }
 
-    html += procesarMacroComodin(datosComodinFijo.proteinasIds,     blq.p,  poolProteinas,     'bg-p',  '🥩');
+    html += procesarMacroComodin(datosComodinFijo.proteinasIds,     blq.p,  poolProteinas,      'bg-p',  '🥩');
     html += procesarMacroComodin(datosComodinFijo.carbohidratosIds, blq.hc, poolCarbohidratos, 'bg-hc', '🌾');
     html += procesarMacroComodin(datosComodinFijo.grasasIds,        blq.g,  poolGrasas,        'bg-g',  '🥑');
 
@@ -372,7 +380,7 @@ function generarPlatoInteligente() {
     out.innerHTML = html;
 }
 
-// ─── Filtros de Categorías y Buscador ───
+// ─── Extras de Categorías y Buscador ───
 function setCategoryFilter(cat, btn) {
     currentCategoryFilter = cat;
     document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -420,49 +428,46 @@ function procesarYRenderizarEquivalencias(raw) {
             .trim();
     }
 
-  function debeExcluirse(nombre, tagF) {
-    // Marcamos el inicio de la revisión de este alimento específico
-    console.log(`\n🔍 [DEBUG] Iniciando comprobación -> Alimento: "${nombre}" | Tags: "${tagF}"`);
+    function debeExcluirse(nombre, tagF) {
+        console.log(`\n🔍 [DEBUG] Iniciando comprobación -> Alimento: "${nombre}" | Tags: "${tagF}"`);
 
-    if (!nombre) {
-        console.warn(`🛑 [SALIDA] Excluido automáticamente: El nombre del alimento viene vacío o indefinido.`);
-        return true;
-    }
-
-    const nNorm = norm(nombre);
-    const fNorm = norm(tagF);
-    console.log(`   [INFO] Textos normalizados -> Nombre: "${nNorm}" | Tags: "${fNorm}"`);
-
-    // 1. E3 (Odiados)
-    const odiados = exclusionesPaciente.alimentosOdiados || [];
-    console.log(`   [INFO] Lista de alimentos odiados actuales:`, odiados);
-
-    if (odiados.length > 0) {
-        // Usamos .find para saber cuál es el culpable exacto si salta el filtro
-        const odiadoCulpable = odiados.find(odiado => nNorm.includes(odiado));
-        if (odiadoCulpable) {
-            console.log(`❌ [SALIDA] EXCLUIDO por Alimento Odiado. El culpable es: "${odiadoCulpable}"`);
+        if (!nombre) {
+            console.warn(`🛑 [SALIDA] Excluido automáticamente: El nombre del alimento viene vacío o indefinido.`);
             return true;
         }
-    }
 
-    // 2. E2 (Alérgenos)
-    const tagsExcluir = exclusionesPaciente.tagsExcluir || [];
-    console.log(`   [INFO] Lista de alérgenos a excluir actuales:`, tagsExcluir);
+        const nNorm = norm(nombre);
+        const fNorm = norm(tagF);
+        console.log(`   [INFO] Textos normalizados -> Nombre: "${nNorm}" | Tags: "${fNorm}"`);
 
-    if (tagsExcluir.length > 0) {
-        // Usamos .find para capturar el alérgeno exacto que hace match
-        const alergenoCulpable = tagsExcluir.find(alergeno => fNorm.includes(alergeno));
-        if (alergenoCulpable) {
-            console.log(`❌ [SALIDA] EXCLUIDO por Alérgeno/Restricción. El culpable es: "${alergenoCulpable}"`);
-            return true;
+        // 1. E3 (Odiados)
+        const odiados = exclusionesPaciente.alimentosOdiados || [];
+        console.log(`   [INFO] Lista de alimentos odiados actuales:`, odiados);
+
+        if (odiados.length > 0) {
+            const odiadoCulpable = odiados.find(odiado => nNorm.includes(odiado));
+            if (odiadoCulpable) {
+                console.log(`❌ [SALIDA] EXCLUIDO por Alimento Odiado. El culpable es: "${odiadoCulpable}"`);
+                return true;
+            }
         }
+
+        // 2. E2 (Alérgenos)
+        const tagsExcluir = exclusionesPaciente.tagsExcluir || [];
+        console.log(`   [INFO] Lista de alérgenos a excluir actuales:`, tagsExcluir);
+
+        if (tagsExcluir.length > 0) {
+            const alergenoCulpable = tagsExcluir.find(alergeno => fNorm.includes(alergeno));
+            if (alergenoCulpable) {
+                console.log(`❌ [SALIDA] EXCLUIDO por Alérgeno/Restricción. El culpable es: "${alergenoCulpable}"`);
+                return true;
+            }
+        }
+
+        console.log(`✅ [SALIDA] APTO. El alimento no coincide con ninguna exclusión.`);
+        return false;
     }
 
-    // Si llega aquí, es que pasó todos los filtros
-    console.log(`✅ [SALIDA] APTO. El alimento no coincide con ninguna exclusión.`);
-    return false;
-}
     for (let i = 1; i < rows.length; i++) {
         const row = rows[i].c;
         if (!row) continue;
@@ -471,12 +476,11 @@ function procesarYRenderizarEquivalencias(raw) {
         const macroPrincipal = txtCelda(row, 2).toUpperCase();
         const rawGramos      = txtCelda(row, 3);
         const unidadMedida   = txtCelda(row, 4) || 'g';
-        const tagF           = txtCelda(row, 5); // Columna F: Alérgenos / Tags del alimento
-        const tagH           = txtCelda(row, 7); // Columna H: Momentos
+        const tagF           = txtCelda(row, 5); 
+        const tagH           = txtCelda(row, 7); 
 
         if (!nombreAlimento || /PROTEÍNAS|CARBOHIDRATOS|GRASAS/i.test(nombreAlimento)) continue;
         
-        // Pasamos solo el nombre y la columna F a la función
         if (debeExcluirse(nombreAlimento, tagF)) continue;
 
         const gramosNumericos = parsearGramos(rawGramos);
@@ -544,9 +548,12 @@ function procesarYRenderizarEquivalencias(raw) {
         if (rows[i]?.c) {
             if (rows[i].c[8]?.v)  obsG.push(String(rows[i].c[8].v).trim());
             if (rows[i].c[9]?.v)  obsI.push(String(rows[i].c[9].v).trim());
-            if (rows[i].c[10]?.v) obsJ.push(String(rows[i].c[10].v).trim());
+            // Eliminada la lectura de la columna 10 de alimentos para obsJ
         }
     }
+
+    // Cargamos en obsJ los datos de la columna F del paciente que guardamos previamente
+    obsJ = datosComodinFijo.obsPacientePersonalizada || [];
     
     document.getElementById('obs-grid').innerHTML = `
         <div class="obs-card">
