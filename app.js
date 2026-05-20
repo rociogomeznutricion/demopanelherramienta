@@ -154,9 +154,9 @@ function procesarMasterPaciente(raw) {
 
     console.log('[DEBUG] Total filas recibidas de la hoja MASTER:', rows.length);
 
- // Ahora restamos 2 a la fila del Excel porque la fila 1 se ignoró
-const alergiasRaw          = getCelda(rows, 0, 4); // Índice 0 = Fila 2 del Excel (E2)
-const alimentosOdiadosRaw = getCelda(rows, 1, 4); // Índice 1 = Fila 3 del Excel (E3)
+    // Ahora restamos 2 a la fila del Excel porque la fila 1 se ignoró
+    const alergiasRaw          = getCelda(rows, 0, 4); // Índice 0 = Fila 2 del Excel (E2)
+    const alimentosOdiadosRaw = getCelda(rows, 1, 4); // Índice 1 = Fila 3 del Excel (E3)
 
     function normPerfil(str) {
         return String(str || '')
@@ -211,15 +211,22 @@ const alimentosOdiadosRaw = getCelda(rows, 1, 4); // Índice 1 = Fila 3 del Exce
         percentages.push(val);
     }
 
+    // Helper que imita exactamente a REDOND.MULT(valor; 0.5) de Excel
+    function redondMult(valor) {
+        return Math.round(valor / 0.5) * 0.5;
+    }
+
     bloquesAsignadosPorIngesta = {};
     const grid = document.getElementById('meal-grid');
     let html = "";
 
     MEAL_NAMES.forEach((nombre, i) => {
         const pct = percentages[i] || 0;
-        const p   = parseFloat((totalP  * pct).toFixed(1));
-        const hc  = parseFloat((totalHC * pct).toFixed(1));
-        const g   = parseFloat((totalG  * pct).toFixed(1));
+        
+        // Calculamos y aplicamos el redondeo múltiple de 0.5
+        const p   = redondMult(totalP  * pct);
+        const hc  = redondMult(totalHC * pct);
+        const g   = redondMult(totalG  * pct);
 
         bloquesAsignadosPorIngesta[nombre] = { p, hc, g };
 
