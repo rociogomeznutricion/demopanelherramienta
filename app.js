@@ -7,7 +7,7 @@ document.getElementById('password').addEventListener('keydown', e => { if (e.key
 
 // Helpers de formateo y extracción
 function cleanJSON(raw) {
-    return JSON.parse(raw.substring(raw.indexOf('{'), raw.lastIndexOf('}') + 1));
+    return JSON.parse(raw.substring(raw.indexOf('{'), raw.lastIndexOf('}') + 1)); 
 }
 
 function limpiarYExtraerId(urlText) {
