@@ -154,9 +154,9 @@ function procesarMasterPaciente(raw) {
 
     console.log('[DEBUG] Total filas recibidas de la hoja MASTER:', rows.length);
 
-    // Índices fijos según tu estructura
-    const alergiasRaw         = getCelda(rows, 1, 4); // E2 (Alérgenos / Tags a excluir)
-    const alimentosOdiadosRaw = getCelda(rows, 2, 4); // E3 (Alimentos odiados)
+ // Ahora restamos 2 a la fila del Excel porque la fila 1 se ignoró
+const alergiasRaw          = getCelda(rows, 0, 4); // Índice 0 = Fila 2 del Excel (E2)
+const alimentosOdiadosRaw = getCelda(rows, 1, 4); // Índice 1 = Fila 3 del Excel (E3)
 
     function normPerfil(str) {
         return String(str || '')
