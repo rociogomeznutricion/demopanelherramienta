@@ -115,8 +115,8 @@ function cerrarSesion() {
     
     bloquesAsignadosPorIngesta = {};
     poolProteinas = []; poolCarbohidratos = []; poolGrasas = []; poolBuscadorCompleto = [];
+    platoInteligenteActual = { p: null, hc: null, g: null, ingesta: "" };
     
-    // Eliminado estilosVida del estado global
     exclusionesPaciente = { tagsExcluir: [], alimentosOdiados: [] }; 
 }
 
@@ -154,9 +154,8 @@ function procesarMasterPaciente(raw) {
 
     console.log('[DEBUG] Total filas recibidas de la hoja MASTER:', rows.length);
 
-    // Ahora restamos 2 a la fila del Excel porque la fila 1 se ignoró
-    const alergiasRaw          = getCelda(rows, 0, 4); // Índice 0 = Fila 2 del Excel (E2)
-    const alimentosOdiadosRaw = getCelda(rows, 1, 4); // Índice 1 = Fila 3 del Excel (E3)
+    const alergiasRaw          = getCelda(rows, 0, 4); 
+    const alimentosOdiadosRaw = getCelda(rows, 1, 4); 
 
     function normPerfil(str) {
         return String(str || '')
@@ -168,7 +167,6 @@ function procesarMasterPaciente(raw) {
             .filter(Boolean);
     }
 
-    // Solo guardamos Alérgenos (E2) y Odiados (E3)
     exclusionesPaciente = {
         tagsExcluir:      normPerfil(alergiasRaw),         
         alimentosOdiados: normPerfil(alimentosOdiadosRaw)  
@@ -211,7 +209,6 @@ function procesarMasterPaciente(raw) {
         percentages.push(val);
     }
 
-    // Helper que imita exactamente a REDOND.MULT(valor; 0.5) de Excel
     function redondMult(valor) {
         return Math.round(valor / 0.5) * 0.5;
     }
@@ -223,7 +220,6 @@ function procesarMasterPaciente(raw) {
     MEAL_NAMES.forEach((nombre, i) => {
         const pct = percentages[i] || 0;
         
-        // Calculamos y aplicamos el redondeo múltiple de 0.5
         const p   = redondMult(totalP  * pct);
         const hc  = redondMult(totalHC * pct);
         const g   = redondMult(totalG  * pct);
@@ -244,7 +240,6 @@ function procesarMasterPaciente(raw) {
 
     grid.innerHTML = html;
 
-    // Extrayendo los mensajes personalizados de la Columna F (índice 5) de este paciente
     datosComodinFijo.obsPacientePersonalizada = [];
     for (let i = 0; i < rows.length; i++) {
         if (rows[i]?.c && rows[i].c[5]?.v !== undefined && rows[i].c[5]?.v !== null) {
@@ -359,22 +354,96 @@ function generarPlatoInteligente() {
     }
 
     const proteinasFiltradas     = poolFiltradoPorMomento(poolProteinas);
-    const carbohidratosFiltrados = poolFiltradoPorMomento(poolCarbohidratos);
+    const carbohidratosFiltrados = poolFiltradoPorMomento(poolCarbohidratos); // ¡Corregido bug de poolGrasas!
     const grasasFiltradas        = poolFiltradoPorMomento(poolGrasas);
 
+    // Determinar qué macros se deben cambiar o mantener
+    let cambiarP = true;
+    let cambiarHC = true;
+    let cambiarG = true;
+
+    // Si ya existe un plato generado para la misma ingesta, miramos los checkboxes
+    if (platoInteligenteActual.ingesta === ingesta) {
+        const chkP = document.getElementById('chk-change-p');
+        const chkHC = document.getElementById('chk-change-hc');
+        const chkG = document.getElementById('chk-change-g');
+
+        if (chkP) cambiarP = chkP.checked;
+        if (chkHC) cambiarHC = chkHC.checked;
+        if (chkG) cambiarG = chkG.checked;
+    } else {
+        // Si cambia de tipo de comida, reseteamos el estado del plato
+        platoInteligenteActual = { p: null, hc: null, g: null, ingesta: ingesta };
+    }
+
+    // Procesar Proteína
+    if (blq.p > 0 && proteinasFiltradas.length > 0) {
+        if (cambiarP || !platoInteligenteActual.p) {
+            platoInteligenteActual.p = proteinasFiltradas[Math.floor(Math.random() * proteinasFiltradas.length)];
+        }
+    } else {
+        platoInteligenteActual.p = null;
+    }
+
+    // Procesar Carbohidrato
+    if (blq.hc > 0 && carbohidratosFiltrados.length > 0) {
+        if (cambiarHC || !platoInteligenteActual.hc) {
+            platoInteligenteActual.hc = carbohidratosFiltrados[Math.floor(Math.random() * carbohidratosFiltrados.length)];
+        }
+    } else {
+        platoInteligenteActual.hc = null;
+    }
+
+    // Procesar Grasa
+    if (blq.g > 0 && grasasFiltradas.length > 0) {
+        if (cambiarG || !platoInteligenteActual.g) {
+            platoInteligenteActual.g = grasasFiltradas[Math.floor(Math.random() * grasasFiltradas.length)];
+        }
+    } else {
+        platoInteligenteActual.g = null;
+    }
+
+    // Renderizar HTML con checkboxes de control de cambio
     let html = `<div class="plate-title">Propuesta adaptada a tus bloques (${blq.p}P · ${blq.hc}HC · ${blq.g}G)</div>`;
 
-    if (blq.p > 0 && proteinasFiltradas.length > 0) {
-        const p = proteinasFiltradas[Math.floor(Math.random() * proteinasFiltradas.length)];
-        html += `<div class="plate-item"><span>🥩 <b>${(blq.p * (p.gramos || 0)).toFixed(0)}${p.unidad}</b> de <b>${p.nombre}</b></span><span class="item-macro-tag bg-p">P</span></div>`;
+    if (platoInteligenteActual.p) {
+        const p = platoInteligenteActual.p;
+        html += `
+            <div class="plate-item">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <input type="checkbox" id="chk-change-p" style="cursor: pointer; width: 16px; height: 16px;">
+                    <label for="chk-change-p" style="cursor: pointer; user-select: none;">
+                        🥩 <b>${(blq.p * (p.gramos || 0)).toFixed(0)}${p.unidad}</b> de <b>${p.nombre}</b>
+                    </label>
+                </div>
+                <span class="item-macro-tag bg-p">P</span>
+            </div>`;
     }
-    if (blq.hc > 0 && carbohidratosFiltrados.length > 0) {
-        const h = carbohidratosFiltrados[Math.floor(Math.random() * carbohidratosFiltrados.length)];
-        html += `<div class="plate-item"><span>🌾 <b>${(blq.hc * (h.gramos || 0)).toFixed(0)}${h.unidad}</b> de <b>${h.nombre}</b></span><span class="item-macro-tag bg-hc">HC</span></div>`;
+    if (platoInteligenteActual.hc) {
+        const h = platoInteligenteActual.hc;
+        html += `
+            <div class="plate-item">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <input type="checkbox" id="chk-change-hc" style="cursor: pointer; width: 16px; height: 16px;">
+                    <label for="chk-change-hc" style="cursor: pointer; user-select: none;">
+                        🌾 <b>${(blq.hc * (h.gramos || 0)).toFixed(0)}${h.unidad}</b> de <b>${h.nombre}</b>
+                    </label>
+                </div>
+                <span class="item-macro-tag bg-hc">HC</span>
+            </div>`;
     }
-    if (blq.g > 0 && grasasFiltradas.length > 0) {
-        const g = grasasFiltradas[Math.floor(Math.random() * grasasFiltradas.length)];
-        html += `<div class="plate-item"><span>🥑 <b>${(blq.g * (g.gramos || 0)).toFixed(0)}${g.unidad}</b> de <b>${g.nombre}</b></span><span class="item-macro-tag bg-g">G</span></div>`;
+    if (platoInteligenteActual.g) {
+        const g = platoInteligenteActual.g;
+        html += `
+            <div class="plate-item">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <input type="checkbox" id="chk-change-g" style="cursor: pointer; width: 16px; height: 16px;">
+                    <label for="chk-change-g" style="cursor: pointer; user-select: none;">
+                        🥑 <b>${(blq.g * (g.gramos || 0)).toFixed(0)}${g.unidad}</b> de <b>${g.nombre}</b>
+                    </label>
+                </div>
+                <span class="item-macro-tag bg-g">G</span>
+            </div>`;
     }
 
     out.innerHTML = html;
@@ -440,7 +509,6 @@ function procesarYRenderizarEquivalencias(raw) {
         const fNorm = norm(tagF);
         console.log(`   [INFO] Textos normalizados -> Nombre: "${nNorm}" | Tags: "${fNorm}"`);
 
-        // 1. E3 (Odiados)
         const odiados = exclusionesPaciente.alimentosOdiados || [];
         console.log(`   [INFO] Lista de alimentos odiados actuales:`, odiados);
 
@@ -452,14 +520,13 @@ function procesarYRenderizarEquivalencias(raw) {
             }
         }
 
-        // 2. E2 (Alérgenos)
         const tagsExcluir = exclusionesPaciente.tagsExcluir || [];
         console.log(`   [INFO] Lista de alérgenos a excluir actuales:`, tagsExcluir);
 
         if (tagsExcluir.length > 0) {
             const alergenoCulpable = tagsExcluir.find(alergeno => fNorm.includes(alergeno));
             if (alergenoCulpable) {
-                console.log(`❌ [SALIDA] EXCLUIDO por Alérgeno/Restricción. El culpable es: "${alergenoCulpable}"`);
+                console.log(`❌ [SALIDA] EXCLUIDO por Alergeno/Restricción. El culpable es: "${alergenoCulpable}"`);
                 return true;
             }
         }
@@ -518,7 +585,6 @@ function procesarYRenderizarEquivalencias(raw) {
 
     debugLog(`[BBDD] P: ${poolProteinas.length} | HC: ${poolCarbohidratos.length} | G: ${poolGrasas.length} | Total: ${poolBuscadorCompleto.length}`);
 
-    // Renderizado de tabla
     const tbody = document.getElementById('table-body');
     let htmlTable = '';
 
@@ -548,11 +614,9 @@ function procesarYRenderizarEquivalencias(raw) {
         if (rows[i]?.c) {
             if (rows[i].c[8]?.v)  obsG.push(String(rows[i].c[8].v).trim());
             if (rows[i].c[9]?.v)  obsI.push(String(rows[i].c[9].v).trim());
-            // Eliminada la lectura de la columna 10 de alimentos para obsJ
         }
     }
 
-    // Cargamos en obsJ los datos de la columna F del paciente que guardamos previamente
     obsJ = datosComodinFijo.obsPacientePersonalizada || [];
     
     document.getElementById('obs-grid').innerHTML = `
