@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────
-//  CONFIGURACIÓN PRINCIPAL Y ESTADO GLOBAL
+//  CONFIGURACIÓN PRINCIPAL Y ESTADO GLOBAL 
 // ─────────────────────────────────────────────────────────────
 
 const MASTER_CONTROL_URL = 'https://docs.google.com/spreadsheets/d/1L7lbZ4JkE7dqO_oizMEDKQabtyUBbR4yaqcrt3LMa6Q/gviz/tq?gid=0&tqx=out:json';
