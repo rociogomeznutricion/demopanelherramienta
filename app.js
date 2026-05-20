@@ -449,7 +449,7 @@ function procesarYRenderizarEquivalencias(raw) {
         if (!nombreAlimento || /PROTEÍNAS|CARBOHIDRATOS|GRASAS/i.test(nombreAlimento)) continue;
         
         // Pasamos solo el nombre y la columna F a la función
-        if (debeExcluirse(nombreAlimento, tagF)) continue;
+        if (!debeExcluirse(nombreAlimento, tagF)) continue;
 
         const gramosNumericos = parsearGramos(rawGramos);
         const itemAlimento = {
