@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────
-//  MANEJADORES DE INTERFAZ Y EVENTOS DE INICIO
+//  MANEJADORES DE INTERFAZ Y EVENTOS DE INICIO 
 // ─────────────────────────────────────────────────────────────
 
 document.getElementById('username').addEventListener('keydown', e => { if (e.key === 'Enter') ejecutarLogin(); });
