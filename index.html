@@ -80,11 +80,20 @@
                         <option value="MERIENDA">🍪 Merienda</option>
                         <option value="CENA">🌙 Cena</option>
                     </select>
-                    <div class="gen-controls">
-    <select id="day-selector" class="gen-select"></select>
-    <button class="gen-btn" style="background: var(--g-color);" onclick="guardarPlan()">Guardar Plan</button>
+                  <div class="gen-controls">
+    <select id="day-selector" class="gen-select">
+        <option value="Lunes">Lunes</option>
+        <option value="Martes">Martes</option>
+        <option value="Miércoles">Miércoles</option>
+        <option value="Jueves">Jueves</option>
+        <option value="Viernes">Viernes</option>
+        <option value="Sábado">Sábado</option>
+        <option value="Domingo">Domingo</option>
+    </select>
+    
+    <button class="gen-btn" onclick="generarPlatoInteligente()">Sugerir Combinación</button>
+    <button class="gen-btn" onclick="guardarPlan()" style="background-color: #10b981;">Guardar</button>
 </div>
-                    <button class="gen-btn" onclick="generarPlatoInteligente()">Sugerir Combinación</button>
                 </div>
                 <div class="plate-output" id="plate-output"></div>
             </div>
