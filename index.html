@@ -70,7 +70,7 @@
             <div class="section-title">✨ Asistente de Menú Instantáneo</div>
             <div class="generator-card">
                 <p style="color: var(--text-light); font-size: 14px; margin-bottom: 15px; font-weight: 500;">
-                    Selecciona una ingesta y el sistema armará una combinación adaptada respetando tus bloques. Marca solo los ingredientes que desees cambiar.
+                    Selecciona una ingesta y el sistema armará una combination adaptada respetando tus bloques. Marca solo los ingredientes que desees cambiar.
                 </p>
                 <div class="gen-controls">
                     <select id="meal-selector" class="gen-select">
@@ -107,7 +107,7 @@
                 </div>
             </section>
 
-            <div class="section-title">¼ Observaciones y Pautas de Uso</div>
+            <div class="section-title">📌 Observaciones y Pautas de Uso</div>
             <div class="obs-grid" id="obs-grid"></div>
         </div>
 
@@ -123,26 +123,27 @@
                     <button class="day-bubble" onclick="seleccionarDiaPlanificacion(this, 'J')">J</button>
                     <button class="day-bubble" onclick="seleccionarDiaPlanificacion(this, 'V')">V</button>
                     <button class="day-bubble" onclick="seleccionarDiaPlanificacion(this, 'S')">S</button>
+                    <button class="day-bubble" onclick="seleccionarDiaPlanificacion(this, 'D')">D</button>
                 </div>
 
                 <div class="weekly-cards-list">
                     <div class="weekly-card-item">
-                        <div class="weekly-card-header">🍞 Desayuno</div>
+                        <div class="weekly-card-header">☕ Desayuno</div>
                         <ul class="weekly-card-bullets">
-                            <li>2 Cafes con leche almendras</li>
+                            <li>2 Cafés con leche de almendras</li>
                         </ul>
                     </div>
                     
                     <div class="weekly-card-item">
-                        <div class="weekly-card-header">🥗 Almuerzo</div>
+                        <div class="weekly-card-header">🍏 Almuerzo</div>
                         <ul class="weekly-card-bullets">
                             <li>Tortitas de arroz</li>
-                            <li>2 Cuñas queso curado</li>
+                            <li>2 Cuñas de queso curado</li>
                         </ul>
                     </div>
                     
                     <div class="weekly-card-item">
-                        <div class="weekly-card-header">🍛 Comida</div>
+                        <div class="weekly-card-header">🍳 Comida</div>
                         <ul class="weekly-card-bullets">
                             <li>1 Tarrina de arroz con pollo (170g) en base a las pautas asignadas</li>
                         </ul>
@@ -159,20 +160,25 @@
         </div>
 
         <nav class="nav-tabs">
+            <button class="nav-btn active" data-view="view-configurador" onclick="cambiarVista('view-configurador')">
+                <i class="fa-solid fa-sliders"></i>
+                <span class="nav-text">Configurar</span>
+            </button>
             <button class="nav-btn" data-view="view-planificacion" onclick="cambiarVista('view-planificacion')">
-                <i class="fa-regular fa-calendar-days"></i>
+                <i class="fa-solid fa-calendar-alt"></i>
+                <span class="nav-text">Semanal</span>
             </button>
             <button class="nav-btn" data-view="view-diario" onclick="cambiarVista('view-diario')">
-                <i class="fa-solid fa-book-bookmark"></i>
-            </button>
-            <button class="nav-btn active" data-view="view-configurador" onclick="cambiarVista('view-configurador')">
-                <i class="fa-regular fa-lightbulb"></i>
+                <i class="fa-solid fa-book"></i>
+                <span class="nav-text">Diario</span>
             </button>
             <button class="nav-btn-dummy">
                 <i class="fa-regular fa-envelope"></i>
+                <span class="nav-text">Mensajes</span>
             </button>
             <button class="nav-btn-dummy">
                 <i class="fa-regular fa-heart"></i>
+                <span class="nav-text">Progreso</span>
             </button>
         </nav>
     </div>
