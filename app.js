@@ -252,10 +252,27 @@ function cambiarVista(vistaId) {
         botonActivo.classList.add('active');
     }
 
-    // 3. Disparadores opcionales (por si necesitas cargar o repintar datos específicos al abrir un módulo)
+    // 3. Disparadores opcionales 
     if (vistaId === 'view-planificacion' && typeof inicializarPlanificacion === 'function') {
         inicializarPlanificacion();
     } else if (vistaId === 'view-diario' && typeof inicializarDiario === 'function') {
         inicializarDiario();
     }
+    
+    // Scrollear hacia arriba al cambiar de vista en móvil
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ─── CONTROLADOR DE DÍAS (PLANIFICACIÓN) ───
+function seleccionarDia(dia, btnElement) {
+    // Quitar la clase active a todos los botones
+    document.querySelectorAll('.day-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // Añadir la clase active al botón pulsado
+    btnElement.classList.add('active');
+
+    // Aquí puedes añadir tu lógica futura para cargar los datos en "plan-dia-content"
+    console.log("Filtrando planificación para el día:", dia);
 }
