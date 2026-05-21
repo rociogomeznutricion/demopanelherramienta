@@ -97,6 +97,21 @@ function ejecutarLogin() {
 
             cargarDatosNutricionales(idPaciente);
         })
+    
+        function inicializarSelectorDias() {
+    const select = document.getElementById('day-selector');
+    const dias = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+    const hoy = new Date().getDay(); // 0 es Domingo, 1 es Lunes...
+    const indexHoy = hoy === 0 ? 6 : hoy - 1; // Ajuste para que Lunes sea 0
+
+    dias.forEach((dia, i) => {
+        let opt = document.createElement('option');
+        opt.value = dia;
+        opt.innerHTML = dia;
+        if(i === indexHoy) opt.selected = true;
+        select.appendChild(opt);
+    });
+}
         .catch(err => {
             console.error(err);
             errTxt.innerText = "Error al conectar con la base de datos.";
@@ -261,6 +276,29 @@ function cambiarVista(vistaId) {
     
     // Scrollear hacia arriba al cambiar de vista en móvil
     window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function guardarPlan() {
+    const contenido = document.getElementById('plate-output').innerText;
+    const dia = document.getElementById('day-selector').value;
+    const ingesta = document.getElementById('meal-selector').value;
+    
+    if(!contenido || contenido.includes("Sugerir")) {
+        alert("Primero genera un menú.");
+        return;
+    }
+
+    const payload = {
+        paciente: document.getElementById('main-title').innerText,
+        dia: dia,
+        ingesta: ingesta,
+        contenido: contenido
+    };
+
+    fetch("https://script.google.com/macros/s/AKfycbyIMROnmkS1MVYK0t9eCCYFgE7YuHVFqdOnreu0ldeIdp5OFikyagBsoOu2HLqCIyRo/exec", {
+        method: "POST",
+        body: JSON.stringify(payload)
+    }).then(() => alert("¡Plan guardado en el Sheet para el " + dia + "!"));
 }
 
 // ─── CONTROLADOR DE DÍAS (PLANIFICACIÓN) ───
