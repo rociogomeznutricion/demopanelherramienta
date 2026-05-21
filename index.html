@@ -1,8 +1,8 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Dashboard Nutricional Inteligente</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -34,119 +34,129 @@
 
     <div class="dashboard-content" id="dashboard-screen">
         <header class="header">
-            <h1 id="main-title">Plan Nutricional por Bloques</h1>
+            <h1 id="main-title">Plan Nutricional</h1>
             <p id="personalized-welcome">Dashboard personalizado</p>
-            <button class="logout-btn" onclick="cerrarSesion()"><i class="fa-solid fa-right-from-bracket"></i> Salir</button>
+            <button class="logout-btn" onclick="cerrarSesion()"><i class="fa-solid fa-right-from-bracket"></i></button>
         </header>
-
-        <nav class="nav-tabs">
-            <button class="nav-btn active" data-view="view-configurador" onclick="cambiarVista('view-configurador')">
-                <i class="fa-solid fa-sliders"></i> Configurar Planificación
-            </button>
-            <button class="nav-btn" data-view="view-planificacion" onclick="cambiarVista('view-planificacion')">
-                <i class="fa-solid fa-calendar-alt"></i> Planificación Nutricional
-            </button>
-            <button class="nav-btn" data-view="view-diario" onclick="cambiarVista('view-diario')">
-                <i class="fa-solid fa-book"></i> Diario de Sensaciones
-            </button>
-        </nav>
 
         <div class="debug-panel" id="debug-panel"></div>
 
-        <div id="view-configurador" class="app-view active-view">
-            <div class="section-title">
-                Reparto de Bloques por Ingesta
+        <div id="tab-plan" class="tab-content active">
+            <div class="section-title-container">
+                <div class="section-title">Planificación semanal</div>
                 <span id="sync-status" class="status-pill">Sincronizando...</span>
             </div>
-
-            <div class="meal-grid" id="meal-grid"></div>
-
-            <div class="section-title" style="color: var(--amber-text);"><i class="fa-solid fa-life-ring"></i> Receta Comodín Salvavidas</div>
-            <div class="comodin-card">
-                <p style="color: var(--amber-text); font-size: 14px; margin-bottom: 15px; font-weight: 500;">
-                    Calcula las cantidades exactas de tu plato preferido pautado usando los códigos asignados en tu ficha.
-                </p>
-                <div class="gen-controls">
-                    <select id="salvavidas-selector" class="gen-select">
-                        <option value="DESAYUNO">☕ Desayuno</option>
-                        <option value="ALMUERZO">🍏 Almuerzo (Media Mañana)</option>
-                        <option value="COMIDA">🍳 Comida</option>
-                        <option value="MERIENDA">🍪 Merienda</option>
-                        <option value="CENA">🌙 Cena</option>
-                    </select>
-                    <button class="gen-btn btn-amber" onclick="calcularComodinSalvavidas()">Calcular Receta Fija</button>
-                </div>
-                <div class="plate-output" id="salvavidas-output"></div>
+            
+            <p class="sub-label-app">Selecciona el día</p>
+            <div class="day-bar" id="day-bar-container">
+                <button class="day-btn" id="day-LUNES" onclick="seleccionarDia('LUNES')">L</button>
+                <button class="day-btn" id="day-MARTES" onclick="seleccionarDia('MARTES')">M</button>
+                <button class="day-btn" id="day-MIERCOLES" onclick="seleccionarDia('MIERCOLES')">X</button>
+                <button class="day-btn" id="day-JUEVES" onclick="seleccionarDia('JUEVES')">J</button>
+                <button class="day-btn" id="day-VIERNES" onclick="seleccionarDia('VIERNES')">V</button>
+                <button class="day-btn" id="day-SABADO" onclick="seleccionarDia('SABADO')">S</button>
+                <button class="day-btn" id="day-DOMINGO" onclick="seleccionarDia('DOMINGO')">D</button>
             </div>
 
-            <div class="section-title">✨ Asistente de Menú Instantáneo</div>
-            <div class="generator-card">
-                <p style="color: var(--text-light); font-size: 14px; margin-bottom: 15px; font-weight: 500;">
-                    Selecciona una ingesta y el sistema armará una combinación adaptada respetando tus bloques. Marca solo los ingredientes que desees cambiar.
-                </p>
-                <div class="gen-controls">
-                    <select id="meal-selector" class="gen-select">
-                        <option value="DESAYUNO">☕ Desayuno</option>
-                        <option value="ALMUERZO">🍏 Almuerzo (Media Mañana)</option>
-                        <option value="COMIDA">🍳 Comida</option>
-                        <option value="MERIENDA">🍪 Merienda</option>
-                        <option value="CENA">🌙 Cena</option>
-                    </select>
-                    <button class="gen-btn" onclick="generarPlatoInteligente()">Sugerir Combinación</button>
-                </div>
-                <div class="plate-output" id="plate-output"></div>
-            </div>
+            <div class="meal-list-vertical" id="meal-grid"></div>
+        </div>
 
-            <div class="section-title">Base de Datos de Equivalencias</div>
+        <div id="tab-equiv" class="tab-content">
+            <div class="section-title">Base de Equivalencias</div>
             <section class="card">
                 <div class="filter-container">
                     <button class="filter-btn active" data-type="all" onclick="setCategoryFilter('all', this)">⚡ Todos</button>
-                    <button class="filter-btn" data-type="proteínas" onclick="setCategoryFilter('proteínas', this)">🥩 Proteínas</button>
-                    <button class="filter-btn" data-type="carbohidratos" onclick="setCategoryFilter('carbohidratos', this)">🌾 Carbohidratos</button>
+                    <button class="filter-btn" data-type="proteínas" onclick="setCategoryFilter('proteínas', this)">🥩 Prot</button>
+                    <button class="filter-btn" data-type="carbohidratos" onclick="setCategoryFilter('carbohidratos', this)">🌾 HC</button>
                     <button class="filter-btn" data-type="grasas" onclick="setCategoryFilter('grasas', this)">🥑 Grasas</button>
                     <button class="filter-btn" data-type="alimentos mixtos" onclick="setCategoryFilter('alimentos mixtos', this)">🥣 Mixtos</button>
                 </div>
                 <div class="search-area">
-                    <input type="text" id="search" class="search-input" placeholder="🔎 Escribe para buscar..." onkeyup="ejecutarFiltroCombinado()">
+                    <input type="text" id="search" class="search-input" placeholder="🔎 Buscar alimento..." onkeyup="ejecutarFiltroCombinado()">
                 </div>
                 <div class="table-container">
                     <table>
                         <thead>
-                            <tr><th>Alimento</th><th>Cantidad base (1 bloque)</th><th>Tipo</th></tr>
+                            <tr><th>Alimento</th><th>1 Bloque</th><th>Tipo</th></tr>
                         </thead>
                         <tbody id="table-body"></tbody>
                     </table>
                 </div>
             </section>
+        </div>
 
-            <div class="section-title">📌 Observaciones y Pautas de Uso</div>
+        <div id="tab-generator" class="tab-content">
+            <div class="section-title">✨ Asistente de Menú</div>
+            <div class="generator-card">
+                <p style="color: var(--text-light); font-size: 13px; margin-bottom: 15px; text-align: left;">
+                    Genera una combinación adaptada respetando tus bloques. Marca los ingredientes que desees mantener fijos y vuelve a pulsar el botón para cambiar el resto.
+                </p>
+                <div class="gen-controls">
+                    <select id="meal-selector" class="gen-select">
+                        <option value="DESAYUNO">☕ Desayuno</option>
+                        <option value="ALMUERZO">🍏 Almuerzo</option>
+                        <option value="COMIDA">🍳 Comida</option>
+                        <option value="MERIENDA">🍪 Merienda</option>
+                        <option value="CENA">🌙 Cena</option>
+                    </select>
+                    <button class="gen-btn" onclick="generarPlatoInteligente()">Sugerir Plato</button>
+                </div>
+                <div class="plate-output" id="plate-output"></div>
+            </div>
+        </div>
+
+        <div id="tab-obs" class="tab-content">
+            <div class="section-title">📌 Pautas y Observaciones</div>
             <div class="obs-grid" id="obs-grid"></div>
         </div>
 
-        <div id="view-planificacion" class="app-view">
-            <div class="section-title">📅 Mi Planificación Nutricional Semanal</div>
-            <div class="card">
-                <p style="color: var(--text-light);">Espacio reservado para el calendario estructurado de comidas.</p>
+        <div id="tab-salvavidas" class="tab-content">
+            <div class="section-title" style="color: var(--amber-text);"><i class="fa-solid fa-life-ring"></i> Receta Fija Salvavidas</div>
+            <div class="comodin-card">
+                <p style="color: var(--amber-text); font-size: 13px; margin-bottom: 15px; font-weight: 500;">
+                    Calcula las cantidades exactas de tu receta pautada usando los códigos de tu ficha.
+                </p>
+                <div class="gen-controls">
+                    <select id="salvavidas-selector" class="gen-select">
+                        <option value="DESAYUNO">☕ Desayuno</option>
+                        <option value="ALMUERZO">🍏 Almuerzo</option>
+                        <option value="COMIDA">🍳 Comida</option>
+                        <option value="MERIENDA">🍪 Merienda</option>
+                        <option value="CENA">🌙 Cena</option>
+                    </select>
+                    <button class="gen-btn btn-amber" onclick="calcularComodinSalvavidas()">Calcular Fija</button>
                 </div>
+                <div class="plate-output" id="salvavidas-output"></div>
+            </div>
         </div>
 
-        <div id="view-diario" class="app-view">
-            <div class="section-title">📝 Diario de Sensaciones y Progreso</div>
-            <div class="card">
-                <p style="color: var(--text-light);">Espacio reservado para el registro diario de energía, digestiones y entrenamientos.</p>
-                </div>
-        </div>
+        <nav class="bottom-nav">
+            <button class="nav-item active" id="nav-plan" onclick="switchTab('tab-plan', this)">
+                <i class="fa-regular fa-calendar-check"></i>
+                <span>Diario</span>
+            </button>
+            <button class="nav-item" id="nav-equiv" onclick="switchTab('tab-equiv', this)">
+                <i class="fa-solid fa-book"></i>
+                <span>Alimentos</span>
+            </button>
+            <button class="nav-item" id="nav-generator" onclick="switchTab('tab-generator', this)">
+                <i class="fa-regular fa-lightbulb"></i>
+                <span>Asistente</span>
+            </button>
+            <button class="nav-item" id="nav-obs" onclick="switchTab('tab-obs', this)">
+                <i class="fa-regular fa-envelope"></i>
+                <span>Pautas</span>
+            </button>
+            <button class="nav-item" id="nav-salvavidas" onclick="switchTab('tab-salvavidas', this)">
+                <i class="fa-regular fa-heart"></i>
+                <span>Favorito</span>
+            </button>
+        </nav>
+
     </div>
 </div>
 
-<a href="https://wa.me/34633892567" class="whatsapp-float" target="_blank" rel="noopener noreferrer" title="Contactar con Nutricionista">
-    <i class="fa-brands fa-whatsapp"></i>
-</a>
-
 <script src="config.js"></script>
 <script src="app.js"></script>
-<script src="modules/configurador.js"></script>
-<script src="modules/planificacion.js"></script>
-<script src="modules/diario.js"></script>
 </body>
 </html>
