@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 //  MANEJADORES DE INTERFAZ Y EVENTOS DE INICIO (NÚCLEO)
-// ─────────────────────────────────────────────────────────────
+// ───────────────────────────────────────────────────────────── 
 
 document.getElementById('username').addEventListener('keydown', e => { if (e.key === 'Enter') ejecutarLogin(); });
 document.getElementById('password').addEventListener('keydown', e => { if (e.key === 'Enter') ejecutarLogin(); });
