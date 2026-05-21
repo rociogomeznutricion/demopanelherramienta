@@ -32,7 +32,7 @@
         </div>
     </div>
 
-    <div class="dashboard-content" id="dashboard-screen">
+    <div class="dashboard-content" id="dashboard-screen" style="padding-bottom: 90px;">
         <header class="header">
             <h1 id="main-title">Plan Nutricional por Bloques</h1>
             <p id="personalized-welcome">Dashboard personalizado</p>
@@ -49,9 +49,9 @@
 
             <div class="meal-grid" id="meal-grid"></div>
 
-            <div class="section-title" style="color: var(--amber-text);"><i class="fa-solid fa-life-ring"></i> Receta Comodín Salvavidas</div>
+            <div class="section-title" style="color: var(--amber-text, #d97706);"><i class="fa-solid fa-life-ring"></i> Receta Comodín Salvavidas</div>
             <div class="comodin-card">
-                <p style="color: var(--amber-text); font-size: 14px; margin-bottom: 15px; font-weight: 500;">
+                <p style="color: var(--amber-text, #d97706); font-size: 14px; margin-bottom: 15px; font-weight: 500;">
                     Calcula las cantidades exactas de tu plato preferido pautado usando los códigos asignados en tu ficha.
                 </p>
                 <div class="gen-controls">
@@ -69,8 +69,8 @@
 
             <div class="section-title">✨ Asistente de Menú Instantáneo</div>
             <div class="generator-card">
-                <p style="color: var(--text-light); font-size: 14px; margin-bottom: 15px; font-weight: 500;">
-                    Selecciona una ingesta y el sistema armará una combination adaptada respetando tus bloques. Marca solo los ingredientes que desees cambiar.
+                <p style="color: var(--text-light, #6b7280); font-size: 14px; margin-bottom: 15px; font-weight: 500;">
+                    Selecciona una ingesta y el sistema armará una combinación adaptada respetando tus bloques. Marca solo los ingredientes que desees cambiar.
                 </p>
                 <div class="gen-controls">
                     <select id="meal-selector" class="gen-select">
@@ -112,40 +112,47 @@
         </div>
 
         <div id="view-planificacion" class="app-view">
-            <div class="weekly-container">
-                <h2 class="weekly-title">Planificación semanal</h2>
-                <p class="weekly-subtitle">Selecciona el día</p>
+            <div class="section-title" style="margin-bottom: 5px;">Planificación semanal</div>
+            
+            <div style="background: transparent; padding: 0;">
+                <p style="color: var(--text-light, #6b7280); font-size: 14px; margin-bottom: 15px;">Selecciona el día</p>
                 
-                <div class="day-selector-row">
-                    <button class="day-bubble active" onclick="seleccionarDiaPlanificacion(this, 'L')">L</button>
-                    <button class="day-bubble" onclick="seleccionarDiaPlanificacion(this, 'M')">M</button>
-                    <button class="day-bubble" onclick="seleccionarDiaPlanificacion(this, 'X')">X</button>
-                    <button class="day-bubble" onclick="seleccionarDiaPlanificacion(this, 'J')">J</button>
-                    <button class="day-bubble" onclick="seleccionarDiaPlanificacion(this, 'V')">V</button>
-                    <button class="day-bubble" onclick="seleccionarDiaPlanificacion(this, 'S')">S</button>
-                    <button class="day-bubble" onclick="seleccionarDiaPlanificacion(this, 'D')">D</button>
+                <div class="day-selector">
+                    <button class="day-btn active" onclick="seleccionarDia('L', this)">L</button>
+                    <button class="day-btn" onclick="seleccionarDia('M', this)">M</button>
+                    <button class="day-btn" onclick="seleccionarDia('X', this)">X</button>
+                    <button class="day-btn" onclick="seleccionarDia('J', this)">J</button>
+                    <button class="day-btn" onclick="seleccionarDia('V', this)">V</button>
+                    <button class="day-btn" onclick="seleccionarDia('S', this)">S</button>
+                    <button class="day-btn" onclick="seleccionarDia('D', this)">D</button>
                 </div>
 
-                <div class="weekly-cards-list">
-                    <div class="weekly-card-item">
-                        <div class="weekly-card-header">☕ Desayuno</div>
-                        <ul class="weekly-card-bullets">
-                            <li>2 Cafés con leche de almendras</li>
+                <div id="plan-dia-content" class="plan-content">
+                    <div class="plan-meal-card">
+                        <div class="plan-meal-header">
+                            <i class="fa-solid fa-bread-slice" style="color: #f59e0b;"></i> <strong>Desayuno</strong>
+                        </div>
+                        <ul class="plan-meal-list">
+                            <li>2 Cafés con leche almendras</li>
                         </ul>
                     </div>
                     
-                    <div class="weekly-card-item">
-                        <div class="weekly-card-header">🍏 Almuerzo</div>
-                        <ul class="weekly-card-bullets">
+                    <div class="plan-meal-card">
+                        <div class="plan-meal-header">
+                            <i class="fa-solid fa-bowl-food" style="color: #10b981;"></i> <strong>Almuerzo</strong>
+                        </div>
+                        <ul class="plan-meal-list">
                             <li>Tortitas de arroz</li>
-                            <li>2 Cuñas de queso curado</li>
+                            <li>2 Cuñas queso curado</li>
                         </ul>
                     </div>
-                    
-                    <div class="weekly-card-item">
-                        <div class="weekly-card-header">🍳 Comida</div>
-                        <ul class="weekly-card-bullets">
-                            <li>1 Tarrina de arroz con pollo (170g) en base a las pautas asignadas</li>
+
+                    <div class="plan-meal-card">
+                        <div class="plan-meal-header">
+                            <i class="fa-solid fa-plate-wheat" style="color: #f97316;"></i> <strong>Comida</strong>
+                        </div>
+                        <ul class="plan-meal-list">
+                            <li>1 Tarrina de arroz con pollo (170g) en crudo y verduras</li>
                         </ul>
                     </div>
                 </div>
@@ -155,32 +162,25 @@
         <div id="view-diario" class="app-view">
             <div class="section-title">📝 Diario de Sensaciones y Progreso</div>
             <div class="card">
-                <p style="color: var(--text-light);">Espacio reservado para el registro diario de energía, digestiones y entrenamientos.</p>
+                <p style="color: var(--text-light, #6b7280);">Espacio reservado para el registro diario de energía, digestiones y entrenamientos.</p>
             </div>
         </div>
 
-        <nav class="nav-tabs">
+        <nav class="nav-tabs bottom-nav" id="bottom-navigation">
             <button class="nav-btn active" data-view="view-configurador" onclick="cambiarVista('view-configurador')">
                 <i class="fa-solid fa-sliders"></i>
-                <span class="nav-text">Configurar</span>
+                <span>Configurar</span>
             </button>
             <button class="nav-btn" data-view="view-planificacion" onclick="cambiarVista('view-planificacion')">
                 <i class="fa-solid fa-calendar-alt"></i>
-                <span class="nav-text">Semanal</span>
+                <span>Planificar</span>
             </button>
             <button class="nav-btn" data-view="view-diario" onclick="cambiarVista('view-diario')">
                 <i class="fa-solid fa-book"></i>
-                <span class="nav-text">Diario</span>
-            </button>
-            <button class="nav-btn-dummy">
-                <i class="fa-regular fa-envelope"></i>
-                <span class="nav-text">Mensajes</span>
-            </button>
-            <button class="nav-btn-dummy">
-                <i class="fa-regular fa-heart"></i>
-                <span class="nav-text">Progreso</span>
+                <span>Diario</span>
             </button>
         </nav>
+
     </div>
 </div>
 
