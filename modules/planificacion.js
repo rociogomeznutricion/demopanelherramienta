@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 //  MÓDULO: PLANIFICACIÓN NUTRICIONAL SECO/SEMANAL
-// ─────────────────────────────────────────────────────────────
+// ───────────────────────────────────────────────────────────── 
 
 function inicializarPlanificacion() {
     console.log("[Módulo Planificación] Cargado y listo para expandir.");
