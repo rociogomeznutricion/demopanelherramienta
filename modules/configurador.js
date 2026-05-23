@@ -284,3 +284,86 @@ function procesarYRenderizarEquivalencias(raw) {
         <div class="obs-card c2"><div class="obs-title">${obsI[0] || 'Pautas'}</div><div class="obs-content">${obsI.slice(1).filter(Boolean).join('<br>')}</div></div>
         <div class="obs-card c3"><div class="obs-title">${obsJ[0] || 'Extra'}</div><div class="obs-content">${obsJ.slice(1).filter(Boolean).join('<br>')}</div></div>`;
 }
+
+// ─────────────────────────────────────────────────────────────
+//  ENVIAR COMBINACIÓN SUGERIDA A GOOGLE SHEETS
+// ─────────────────────────────────────────────────────────────
+function guardarCombinacionSugerida() {
+    // 1. Localizar los dos desplegables de tu interfaz
+    // IMPORTANTE: Cambia 'id-de-tu-select-dia' e 'id-de-tu-select-ingesta' por los IDs reales de tu HTML
+    const selectDia = document.getElementById('id-de-tu-select-dia'); 
+    const selectIngesta = document.getElementById('id-de-tu-select-ingesta');
+    
+    if (!selectDia || !selectIngesta) {
+        alert("Error de configuración: Asegúrate de poner los IDs correctos de tus desplegables de Día e Ingesta.");
+        return;
+    }
+    
+    const diaSeleccionado = selectDia.value.trim();
+    const ingestaSeleccionada = selectIngesta.value.trim();
+    
+    if (!diaSeleccionado || !ingestaSeleccionada) {
+        alert("Por favor, selecciona un Día y una Ingesta válidos.");
+        return;
+    }
+    
+    // 2. Capturar los ingredientes que están visualizándose y marcados (con check)
+    const checkboxes = document.querySelectorAll('#plate-output .ingrediente-check:checked');
+    if (checkboxes.length === 0) {
+        alert("No hay ningún alimento sugerido o seleccionado para guardar.");
+        return;
+    }
+    
+    // 3. Formatear los alimentos simulando la apariencia visual (Icono + Nombre + Cantidad)
+    let textoFormateado = "";
+    checkboxes.forEach((cb) => {
+        // Obtenemos el texto que acompaña al checkbox (ej: "Tortitas de avena (40g)")
+        const textoAlimento = cb.parentElement.innerText.trim();
+        // Construimos la línea usando un emoji indicador limpio
+        textoFormateado += `🔸 ${textoAlimento}\n`;
+    });
+    
+    // Limpiamos el último salto de línea
+    textoFormateado = textoFormateado.trim();
+    
+    // 4. Validar que el paciente tiene la sesión iniciada
+    if (!window.currentPacienteId) {
+        alert("Primero debes iniciar sesión con un usuario válido.");
+        return;
+    }
+    
+    // 5. TU URL DE GOOGLE APPS SCRIPT
+    // PEGA AQUÍ la URL que copiaste en el paso 8 de la Parte 1
+    const URL_WEB_APP = "AQUÍ_PEGA_TU_URL_DE_APPS_SCRIPT"; 
+    
+    if (URL_WEB_APP === "AQUÍ_PEGA_TU_URL_DE_APPS_SCRIPT") {
+        alert("Falta configurar la URL de tu Google Apps Script en el código JS.");
+        return;
+    }
+    
+    // Construimos la petición segura por GET uniendo las variables
+    const urlFinal = `${URL_WEB_APP}?spreadsheetId=${encodeURIComponent(window.currentPacienteId)}&gid=425566588&dia=${encodeURIComponent(diaSeleccionado)}&ingesta=${encodeURIComponent(ingestaSeleccionada)}&texto=${encodeURIComponent(textoFormateado)}`;
+    
+    // Cambiar estado visual del botón para que el usuario sepa que está trabajando
+    console.log("Inyectando combinación en el plan semanal...");
+    
+    // Realizar el envío de datos
+    fetch(urlFinal, { method: 'GET', mode: 'cors' })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === "success") {
+            alert(`¡Guardado perfecto! Combinación añadida al ${diaSeleccionado} en el ${ingestaSeleccionada}.`);
+            
+            // ¡Puntazo extra! Si el usuario está mirando las burbujas, actualizamos los datos al instante
+            if (typeof inicializarPlanificacion === 'function') {
+                inicializarPlanificacion();
+            }
+        } else {
+            alert("Google Sheets rechazó el guardado: " + data.message);
+        }
+    })
+    .catch(error => {
+        console.error("Error de red:", error);
+        alert("Error de conexión. Asegúrate de haber publicado el Script correctamente.");
+    });
+}
