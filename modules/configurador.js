@@ -23,9 +23,9 @@ function renderizarPlato(plato) {
             </div>`;
     });
 
-   /* html += `</div>
-             <button onclick="solicitarNuevaSugerencia()" class="btn-sugerir">Sugerir Nueva Combinación</button>`;
-    */
+   // html += `</div>
+     //        <button onclick="solicitarNuevaSugerencia()" class="btn-sugerir">Sugerir Nueva Combinación</button>`;
+    
     container.innerHTML = html;
 }
 
@@ -176,7 +176,7 @@ function generarPlatoInteligente() {
     html += renderItem(platoInteligenteActual.hc, blq.hc, 'chk-change-hc', 'Hidrato', '🌾', 'bg-hc');
     html += renderItem(platoInteligenteActual.g, blq.g, 'chk-change-g', 'Grasa', '🥑', 'bg-g');
 
-    html += `<button onclick="generarPlatoInteligente()" style="margin-top:15px; width:100%; padding:10px; cursor:pointer;">Sugerir Nueva Combinación</button>`;
+   // html += `<button onclick="generarPlatoInteligente()" style="margin-top:15px; width:100%; padding:10px; cursor:pointer;">Sugerir Nueva Combinación</button>`;
     out.innerHTML = html;
 }
 
