@@ -55,12 +55,13 @@ function limpiarYExtraerId(urlText) {
 }
 
 function cambiarVista(vistaId) {
-    document.querySelectorAll('.app-view').forEach(v => v.classList.remove('active-view'));
-    document.getElementById(vistaId)?.classList.add('active-view');
+   document.querySelectorAll('.app-view').forEach(v => v.classList.remove('active-view'));
+    const view = document.getElementById(vistaId);
+    if (view) view.classList.add('active-view');
     
-    // Si entramos en planificar, llamamos a la función de tu nuevo módulo
-    if (vistaId === 'view-planificacion' && typeof inicializarPlanificacion === 'function') {
-        inicializarPlanificacion(currentPacienteId);
+    // Llamada segura a la función global
+    if (vistaId === 'view-planificacion' && typeof window.inicializarPlanificacion === 'function') {
+        window.inicializarPlanificacion();
     }
 }
 
