@@ -124,88 +124,59 @@ function generarPlatoInteligente() {
     const out = document.getElementById('plate-output');
     out.style.display = "block";
 
-    if (!blq || (blq.p === 0 && blq.hc === 0 && blq.g === 0)) {
-        out.innerHTML = `<div class="plate-title">No hay bloques definidos para esta ingesta.</div>`;
-        return;
-    }
+    if (!blq) return;
 
     const ingestaUpper = ingesta.toUpperCase();
+    const proteinasFiltradas = poolProteinas.filter(item => !item.momentos || item.momentos.includes(ingestaUpper));
+    const carbohidratosFiltrados = poolCarbohidratos.filter(item => !item.momentos || item.momentos.includes(ingestaUpper));
+    const grasasFiltradas = poolGrasas.filter(item => !item.momentos || item.momentos.includes(ingestaUpper));
 
-    function poolFiltradoPorMomento(pool) {
-        return pool.filter(item => !item.momentos || item.momentos.length === 0 || item.momentos.includes(ingestaUpper));
-    }
+    // LEER ESTADO DE LOS CHECKS ACTUALES EN PANTALLA
+    // NOTA: Si el check está MARCADO, queremos CAMBIARLO. Si está DESMARCADO, lo MANTENEMOS.
+    const chkP = document.getElementById('chk-change-p');
+    const chkHC = document.getElementById('chk-change-hc');
+    const chkG = document.getElementById('chk-change-g');
 
-    const proteinasFiltradas     = poolFiltradoPorMomento(poolProteinas);
-    const carbohidratosFiltrados = poolFiltradoPorMomento(poolCarbohidratos);
-    const grasasFiltradas        = poolFiltradoPorMomento(poolGrasas);
-
-    let cambiarP = true, cambiarHC = true, cambiarG = true;
-
-    if (platoInteligenteActual.ingesta === ingesta) {
-        const chkP = document.getElementById('chk-change-p');
-        const chkHC = document.getElementById('chk-change-hc');
-        const chkG = document.getElementById('chk-change-g');
-        if (chkP) cambiarP = chkP.checked;
-        if (chkHC) cambiarHC = chkHC.checked;
-        if (chkG) cambiarG = chkG.checked;
-    } else {
+    // Inicializamos si es la primera vez o cambiamos de ingesta
+    if (platoInteligenteActual.ingesta !== ingesta) {
         platoInteligenteActual = { p: null, hc: null, g: null, ingesta: ingesta };
     }
 
-    if (blq.p > 0 && proteinasFiltradas.length > 0) {
-        if (cambiarP || !platoInteligenteActual.p) platoInteligenteActual.p = proteinasFiltradas[Math.floor(Math.random() * proteinasFiltradas.length)];
-    } else { platoInteligenteActual.p = null; }
+    // LÓGICA: Si es null (primera vez) O el checkbox está marcado (queremos cambiar)
+    if ((!platoInteligenteActual.p || (chkP && chkP.checked)) && proteinasFiltradas.length > 0) {
+        platoInteligenteActual.p = proteinasFiltradas[Math.floor(Math.random() * proteinasFiltradas.length)];
+    }
+    
+    if ((!platoInteligenteActual.hc || (chkHC && chkHC.checked)) && carbohidratosFiltrados.length > 0) {
+        platoInteligenteActual.hc = carbohidratosFiltrados[Math.floor(Math.random() * carbohidratosFiltrados.length)];
+    }
+    
+    if ((!platoInteligenteActual.g || (chkG && chkG.checked)) && grasasFiltradas.length > 0) {
+        platoInteligenteActual.g = grasasFiltradas[Math.floor(Math.random() * grasasFiltradas.length)];
+    }
 
-    if (blq.hc > 0 && carbohidratosFiltrados.length > 0) {
-        if (cambiarHC || !platoInteligenteActual.hc) platoInteligenteActual.hc = carbohidratosFiltrados[Math.floor(Math.random() * carbohidratosFiltrados.length)];
-    } else { platoInteligenteActual.hc = null; }
-
-    if (blq.g > 0 && grasasFiltradas.length > 0) {
-        if (cambiarG || !platoInteligenteActual.g) platoInteligenteActual.g = grasasFiltradas[Math.floor(Math.random() * grasasFiltradas.length)];
-    } else { platoInteligenteActual.g = null; }
-
+    // RENDERIZADO
     let html = `<div class="plate-title">Propuesta adaptada a tus bloques (${blq.p}P · ${blq.hc}HC · ${blq.g}G)</div>`;
 
-    if (platoInteligenteActual.p) {
-        const p = platoInteligenteActual.p;
-        html += `
+    const renderItem = (item, blqVal, id, label, icon, bg) => {
+        if (!item) return '';
+        return `
             <div class="plate-item">
                 <div style="display: flex; align-items: center; gap: 12px;">
-                    <input type="checkbox" id="chk-change-p" style="cursor: pointer; width: 16px; height: 16px;">
-                    <label for="chk-change-p" style="cursor: pointer; user-select: none;">
-                        🥩 <b>${(blq.p * (p.gramos || 0)).toFixed(0)}${p.unidad}</b> de <b>${p.nombre}</b>
+                    <input type="checkbox" id="${id}" checked style="cursor: pointer; width: 16px; height: 16px;">
+                    <label for="${id}" style="cursor: pointer;">
+                        ${icon} <b>${(blqVal * (item.gramos || 0)).toFixed(0)}${item.unidad}</b> de <b>${item.nombre}</b>
                     </label>
                 </div>
-                <span class="item-macro-tag bg-p">P</span>
+                <span class="item-macro-tag ${bg}">${bg.replace('bg-', '').toUpperCase()}</span>
             </div>`;
-    }
-    if (platoInteligenteActual.hc) {
-        const h = platoInteligenteActual.hc;
-        html += `
-            <div class="plate-item">
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <input type="checkbox" id="chk-change-hc" style="cursor: pointer; width: 16px; height: 16px;">
-                    <label for="chk-change-hc" style="cursor: pointer; user-select: none;">
-                        🌾 <b>${(blq.hc * (h.gramos || 0)).toFixed(0)}${h.unidad}</b> de <b>${h.nombre}</b>
-                    </label>
-                </div>
-                <span class="item-macro-tag bg-hc">HC</span>
-            </div>`;
-    }
-    if (platoInteligenteActual.g) {
-        const g = platoInteligenteActual.g;
-        html += `
-            <div class="plate-item">
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <input type="checkbox" id="chk-change-g" style="cursor: pointer; width: 16px; height: 16px;">
-                    <label for="chk-change-g" style="cursor: pointer; user-select: none;">
-                        🥑 <b>${(blq.g * (g.gramos || 0)).toFixed(0)}${g.unidad}</b> de <b>${g.nombre}</b>
-                    </label>
-                </div>
-                <span class="item-macro-tag bg-g">G</span>
-            </div>`;
-    }
+    };
 
+    html += renderItem(platoInteligenteActual.p, blq.p, 'chk-change-p', 'Proteína', '🥩', 'bg-p');
+    html += renderItem(platoInteligenteActual.hc, blq.hc, 'chk-change-hc', 'Hidrato', '🌾', 'bg-hc');
+    html += renderItem(platoInteligenteActual.g, blq.g, 'chk-change-g', 'Grasa', '🥑', 'bg-g');
+
+    html += `<button onclick="generarPlatoInteligente()" style="margin-top:15px; width:100%; padding:10px; cursor:pointer;">Sugerir Nueva Combinación</button>`;
     out.innerHTML = html;
 }
 
