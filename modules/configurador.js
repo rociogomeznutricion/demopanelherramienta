@@ -1,4 +1,37 @@
 // ───────────────────────────────────────────────────────────── 
+//  MÓDULO: CONFIGURAR PLANIFICACIÓN
+// ─────────────────────────────────────────────────────────────
+
+function renderizarPlato(plato) {
+    const container = document.getElementById('plate-output');
+    container.style.display = "block";
+    
+    let html = `
+        <div class="plate-title"><i class="fa-solid fa-bowl-food"></i> Combinación Sugerida</div>
+        <div class="ingredients-list">`;
+
+    plato.ingredientes.forEach(ing => {
+        // Si el ID del ingrediente NO está en "bloqueados", significa que está activo y se puede cambiar
+        const isChecked = !window.ingredientesBloqueados.includes(ing.id);
+        
+        html += `
+            <div class="ingrediente-item">
+                <label>
+                    <input type="checkbox" class="ingrediente-check" value="${ing.id}" ${isChecked ? 'checked' : ''}>
+                    ${ing.nombre} (${ing.cantidad}${ing.unidad})
+                </label>
+            </div>`;
+    });
+
+    html += `</div>
+             <button onclick="solicitarNuevaSugerencia()" class="btn-sugerir">Sugerir Nueva Combinación</button>`;
+    
+    container.innerHTML = html;
+}
+
+
+
+// ───────────────────────────────────────────────────────────── 
 //  MÓDULO: CONFIGURAR PLANIFICACIÓN (Cálculos y Buscador)
 // ─────────────────────────────────────────────────────────────
 
