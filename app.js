@@ -1,3 +1,16 @@
+// Variable global para controlar qué ingredientes están bloqueados (fijos)
+let ingredientesBloqueados = []; 
+
+// Modifica la función generarPlatoInteligente para que llame a la lógica con el estado
+function ejecutarGeneracion() {
+    // Obtenemos los IDs de los checkboxes marcados
+    const checkboxes = document.querySelectorAll('.ingrediente-check:checked');
+    ingredientesBloqueados = Array.from(checkboxes).map(cb => cb.value);
+    
+    // Llamamos a la lógica real de generación (asegúrate de que esta función exista en configurador.js)
+    generarPlatoInteligente(ingredientesBloqueados);
+}
+
 // ─────────────────────────────────────────────────────────────
 //  MANEJADORES DE INTERFAZ Y EVENTOS DE INICIO (NÚCLEO)
 // ───────────────────────────────────────────────────────────── 
