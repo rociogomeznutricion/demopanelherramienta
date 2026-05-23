@@ -306,7 +306,7 @@ function guardarCombinacionSugerida() {
     const contenidoPlato = containerPlato.innerText.trim();
     
     // 4. URL de tu Google Apps Script (asegúrate de tener la tuya aquí)
-    const URL_WEB_APP = "TU_URL_AQUÍ"; 
+    const URL_WEB_APP = "https://script.google.com/macros/s/AKfycbyCQI5cadBlnj-00qTqMGlUIKzUCF9Ih9qB-5_9VkQZAO2ddeGtvNG60ZC1QHVOHWds/exec"; 
     
     const urlFinal = `${URL_WEB_APP}?spreadsheetId=${encodeURIComponent(window.currentPacienteId)}&gid=425566588&dia=${encodeURIComponent(selectDia.value)}&ingesta=${encodeURIComponent(selectIngesta.value)}&texto=${encodeURIComponent(contenidoPlato)}`;
     
