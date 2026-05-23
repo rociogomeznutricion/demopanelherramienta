@@ -128,11 +128,19 @@
             <div class="obs-grid" id="obs-grid"></div>
         </div>
 
-      <div class="section-title">
-    📅 Planificación Semanal
-    <button onclick="cargarPlanSemanal()" class="btn-refresh">
-        <i class="fa-solid fa-sync"></i> Refrescar
-    </button>
+    <div id="view-planificacion" class="app-view">
+    <div class="section-title">📅 Planificación Semanal</div>
+    
+    <div class="day-selector" id="day-selector-container">
+        </div>
+    
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h3>Detalle del día</h3>
+        <button onclick="cargarPlanSemanal()" class="btn-refresh"><i class="fa-solid fa-sync"></i> Refrescar</button>
+    </div>
+    
+    <div id="plan-grid" class="plan-container">
+        </div>
 </div>
 <div id="plan-grid" class="plan-container">
     </div>
