@@ -289,81 +289,36 @@ function procesarYRenderizarEquivalencias(raw) {
 //  ENVIAR COMBINACIÓN SUGERIDA A GOOGLE SHEETS
 // ─────────────────────────────────────────────────────────────
 function guardarCombinacionSugerida() {
-    // 1. Localizar los dos desplegables de tu interfaz
-    // IMPORTANTE: Cambia 'id-de-tu-select-dia' e 'id-de-tu-select-ingesta' por los IDs reales de tu HTML
-    const selectDia = document.getElementById('day-selector'); 
-    const selectIngesta = document.getElementById('meal-selector');
+    // 1. Obtener los selectores de Día e Ingesta
+    const selectDia = document.getElementById('id-de-tu-select-dia'); // Asegúrate que este ID existe
+    const selectIngesta = document.getElementById('id-de-tu-select-ingesta');
     
-    if (!selectDia || !selectIngesta) {
-        alert("Error de configuración: Asegúrate de poner los IDs correctos de tus desplegables de Día e Ingesta.");
+    // 2. Obtener el contenedor del plato
+    const containerPlato = document.getElementById('plate-output');
+    
+    if (!containerPlato || containerPlato.innerText.trim() === "") {
+        alert("No hay ningún contenido sugerido para guardar.");
         return;
     }
     
-    const diaSeleccionado = selectDia.value.trim();
-    const ingestaSeleccionada = selectIngesta.value.trim();
+    // 3. Capturar TODO el texto limpio del interior de la card
+    // Esto ignorará los checkboxes y guardará el texto que ve el usuario
+    const contenidoPlato = containerPlato.innerText.trim();
     
-    if (!diaSeleccionado || !ingestaSeleccionada) {
-        alert("Por favor, selecciona un Día y una Ingesta válidos.");
-        return;
-    }
+    // 4. URL de tu Google Apps Script (asegúrate de tener la tuya aquí)
+    const URL_WEB_APP = "TU_URL_AQUÍ"; 
     
-    // 2. Capturar los ingredientes que están visualizándose y marcados (con check)
-    const checkboxes = document.querySelectorAll('#plate-output .ingrediente-check:checked');
-    if (checkboxes.length === 0) {
-        alert("No hay ningún alimento sugerido o seleccionado para guardar.");
-        return;
-    }
+    const urlFinal = `${URL_WEB_APP}?spreadsheetId=${encodeURIComponent(window.currentPacienteId)}&gid=425566588&dia=${encodeURIComponent(selectDia.value)}&ingesta=${encodeURIComponent(selectIngesta.value)}&texto=${encodeURIComponent(contenidoPlato)}`;
     
-    // 3. Formatear los alimentos simulando la apariencia visual (Icono + Nombre + Cantidad)
-    let textoFormateado = "";
-    checkboxes.forEach((cb) => {
-        // Obtenemos el texto que acompaña al checkbox (ej: "Tortitas de avena (40g)")
-        const textoAlimento = cb.parentElement.innerText.trim();
-        // Construimos la línea usando un emoji indicador limpio
-        textoFormateado += `🔸 ${textoAlimento}\n`;
-    });
-    
-    // Limpiamos el último salto de línea
-    textoFormateado = textoFormateado.trim();
-    
-    // 4. Validar que el paciente tiene la sesión iniciada
-    if (!window.currentPacienteId) {
-        alert("Primero debes iniciar sesión con un usuario válido.");
-        return;
-    }
-    
-    // 5. TU URL DE GOOGLE APPS SCRIPT
-    // PEGA AQUÍ la URL que copiaste en el paso 8 de la Parte 1
-    const URL_WEB_APP = "https://script.google.com/macros/s/AKfycbz-_XsjGy0LZSddAakAc7DVPgMld542N4dRv72Fi9CpCsm1hPtMca9vxJYdGB7jSR2q/exec"; 
-    
-    if (URL_WEB_APP === "https://script.google.com/macros/s/AKfycbz-_XsjGy0LZSddAakAc7DVPgMld542N4dRv72Fi9CpCsm1hPtMca9vxJYdGB7jSR2q/exec") {
-        alert("Falta configurar la URL de tu Google Apps Script en el código JS.");
-        return;
-    }
-    
-    // Construimos la petición segura por GET uniendo las variables
-    const urlFinal = `${URL_WEB_APP}?spreadsheetId=${encodeURIComponent(window.currentPacienteId)}&gid=425566588&dia=${encodeURIComponent(diaSeleccionado)}&ingesta=${encodeURIComponent(ingestaSeleccionada)}&texto=${encodeURIComponent(textoFormateado)}`;
-    
-    // Cambiar estado visual del botón para que el usuario sepa que está trabajando
-    console.log("Inyectando combinación en el plan semanal...");
-    
-    // Realizar el envío de datos
+    // 5. Envío
     fetch(urlFinal, { method: 'GET', mode: 'cors' })
     .then(response => response.json())
     .then(data => {
         if (data.status === "success") {
-            alert(`¡Guardado perfecto! Combinación añadida al ${diaSeleccionado} en el ${ingestaSeleccionada}.`);
-            
-            // ¡Puntazo extra! Si el usuario está mirando las burbujas, actualizamos los datos al instante
-            if (typeof inicializarPlanificacion === 'function') {
-                inicializarPlanificacion();
-            }
+            alert(`Guardado correctamente en ${selectIngesta.value} del ${selectDia.value}`);
         } else {
-            alert("Google Sheets rechazó el guardado: " + data.message);
+            alert("Error: " + data.message);
         }
     })
-    .catch(error => {
-        console.error("Error de red:", error);
-        alert("Error de conexión. Asegúrate de haber publicado el Script correctamente.");
-    });
+    .catch(error => alert("Error de conexión con el servidor."));
 }
