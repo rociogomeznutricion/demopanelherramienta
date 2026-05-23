@@ -1,5 +1,7 @@
 // Variable global para controlar qué ingredientes están bloqueados (fijos)
 let ingredientesBloqueados = []; 
+// Variable global para almacenar el ID del paciente tras el login
+let currentPacienteId = ""; 
 
 // Modifica la función generarPlatoInteligente para que llame a la lógica con el estado
 function ejecutarGeneracion() {
