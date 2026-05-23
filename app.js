@@ -1,4 +1,4 @@
-// Variable global para controlar qué ingredientes están bloqueados (fijos)
+// Variable global para controlar qué ingredientes están bloqueados  (fijos)
 let ingredientesBloqueados = []; 
 
 // Modifica la función generarPlatoInteligente para que llame a la lógica con el estado
