@@ -289,36 +289,49 @@ function procesarYRenderizarEquivalencias(raw) {
 //  ENVIAR COMBINACIÓN SUGERIDA A GOOGLE SHEETS
 // ─────────────────────────────────────────────────────────────
 function guardarCombinacionSugerida() {
-    // 1. Obtener los selectores de Día e Ingesta
-    const selectDia = document.getElementById('id-de-tu-select-dia'); // Asegúrate que este ID existe
-    const selectIngesta = document.getElementById('id-de-tu-select-ingesta');
+    // 1. Obtener los selectores usando tus IDs reales
+    const selectDia = document.getElementById('dia-selector'); 
+    const selectIngesta = document.getElementById('ingesta-selector');
     
-    // 2. Obtener el contenedor del plato
+    // 2. Capturar el contenedor del plato
     const containerPlato = document.getElementById('plate-output');
     
-    if (!containerPlato || containerPlato.innerText.trim() === "") {
-        alert("No hay ningún contenido sugerido para guardar.");
+    if (!containerPlato) {
+        alert("Error: No se encuentra el contenedor con id='plate-output'");
         return;
     }
     
-    // 3. Capturar TODO el texto limpio del interior de la card
-    // Esto ignorará los checkboxes y guardará el texto que ve el usuario
-    const contenidoPlato = containerPlato.innerText.trim();
+    if (!selectDia || !selectIngesta) {
+        alert("Error: No se encuentran los selectores 'dia-selector' o 'ingesta-selector'");
+        return;
+    }
     
-    // 4. URL de tu Google Apps Script (asegúrate de tener la tuya aquí)
-    const URL_WEB_APP = "https://script.google.com/macros/s/AKfycbyCQI5cadBlnj-00qTqMGlUIKzUCF9Ih9qB-5_9VkQZAO2ddeGtvNG60ZC1QHVOHWds/exec"; 
+    // 3. Obtener el texto limpio ignorando los inputs/checkboxes
+    const contenidoPlato = containerPlato.textContent.trim();
     
+    if (contenidoPlato === "") {
+        alert("El plato está vacío, no hay nada que guardar.");
+        return;
+    }
+    
+    // 4. Tu URL configurada
+    const URL_WEB_APP = "https://script.google.com/macros/s/AKfycbzE8Fzd5OQQ5TkP_g0V36XprMZ0n9jT6xsH1OJQpL7lAFrkvgo6htb8GENua8qFgE2U/exec"; 
+    
+    // 5. Construir la URL con parámetros
     const urlFinal = `${URL_WEB_APP}?spreadsheetId=${encodeURIComponent(window.currentPacienteId)}&gid=425566588&dia=${encodeURIComponent(selectDia.value)}&ingesta=${encodeURIComponent(selectIngesta.value)}&texto=${encodeURIComponent(contenidoPlato)}`;
     
-    // 5. Envío
+    // 6. Enviar
     fetch(urlFinal, { method: 'GET', mode: 'cors' })
     .then(response => response.json())
     .then(data => {
         if (data.status === "success") {
-            alert(`Guardado correctamente en ${selectIngesta.value} del ${selectDia.value}`);
+            alert("¡Guardado correctamente en el Excel!");
         } else {
-            alert("Error: " + data.message);
+            alert("Error en el script: " + data.message);
         }
     })
-    .catch(error => alert("Error de conexión con el servidor."));
+    .catch(error => {
+        console.error("Error:", error);
+        alert("Error de conexión. Asegúrate de haber publicado la última versión del Apps Script.");
+    });
 }
