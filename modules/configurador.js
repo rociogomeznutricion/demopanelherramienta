@@ -289,49 +289,56 @@ function procesarYRenderizarEquivalencias(raw) {
 //  ENVIAR COMBINACIÓN SUGERIDA A GOOGLE SHEETS
 // ─────────────────────────────────────────────────────────────
 function guardarCombinacionSugerida() {
-    // 1. Obtener los selectores usando tus IDs reales
-    const selectDia = document.getElementById('day-selector'); 
-    const selectIngesta = document.getElementById('meal-selector');
-    
-    // 2. Capturar el contenedor del plato
-    const containerPlato = document.getElementById('plate-output');
-    
-    if (!containerPlato) {
-        alert("Error: No se encuentra el contenedor con id='plate-output'");
-        return;
-    }
-    
-    if (!selectDia || !selectIngesta) {
-        alert("Error: No se encuentran los selectores 'dia-selector' o 'ingesta-selector'");
-        return;
-    }
-    
-    // 3. Obtener el texto limpio ignorando los inputs/checkboxes
-    const contenidoPlato = containerPlato.textContent.trim();
-    
-    if (contenidoPlato === "") {
-        alert("El plato está vacío, no hay nada que guardar.");
-        return;
-    }
-    
-    // 4. Tu URL configurada
-    const URL_WEB_APP = "https://script.google.com/macros/s/AKfycbzE8Fzd5OQQ5TkP_g0V36XprMZ0n9jT6xsH1OJQpL7lAFrkvgo6htb8GENua8qFgE2U/exec"; 
-    
-    // 5. Construir la URL con parámetros
-    const urlFinal = `${URL_WEB_APP}?spreadsheetId=${encodeURIComponent(window.currentPacienteId)}&gid=425566588&dia=${encodeURIComponent(selectDia.value)}&ingesta=${encodeURIComponent(selectIngesta.value)}&texto=${encodeURIComponent(contenidoPlato)}`;
-    
-    // 6. Enviar
-    fetch(urlFinal, { method: 'GET', mode: 'cors' })
-    .then(response => response.json())
-    .then(data => {
-        if (data.status === "success") {
-            alert("¡Guardado correctamente en el Excel!");
-        } else {
-            alert("Error en el script: " + data.message);
+    try {
+        // 1. Obtener los selectores con los nuevos IDs
+        const selectDia = document.getElementById('day-selector'); 
+        const selectIngesta = document.getElementById('meal-selector');
+        
+        // 2. Capturar el contenedor del plato
+        const containerPlato = document.getElementById('plate-output');
+        
+        // Comprobación de seguridad
+        if (!containerPlato) {
+            console.error("Error: No se encuentra el contenedor con id='plate-output'");
+            alert("No se encontró el contenedor de sugerencias. ¿Has generado ya una sugerencia?");
+            return;
         }
-    })
-    .catch(error => {
-        console.error("Error:", error);
-        alert("Error de conexión. Asegúrate de haber publicado la última versión del Apps Script.");
-    });
+        
+        if (!selectDia || !selectIngesta) {
+            alert("Error: No se encuentran los selectores 'day-selector' o 'meal-selector'. Revisa tu HTML.");
+            return;
+        }
+        
+        // 3. Obtener el texto
+        const contenidoPlato = containerPlato.innerText.trim();
+        
+        if (!contenidoPlato) {
+            alert("El área de sugerencias está vacía.");
+            return;
+        }
+        
+        // 4. URL de Google Apps Script
+        const URL_WEB_APP = "https://script.google.com/macros/s/AKfycbzE8Fzd5OQQ5TkP_g0V36XprMZ0n9jT6xsH1OJQpL7lAFrkvgo6htb8GENua8qFgE2U/exec"; 
+        
+        // 5. Construir la URL con parámetros
+        const urlFinal = `${URL_WEB_APP}?spreadsheetId=${encodeURIComponent(window.currentPacienteId)}&gid=425566588&dia=${encodeURIComponent(selectDia.value)}&ingesta=${encodeURIComponent(selectIngesta.value)}&texto=${encodeURIComponent(contenidoPlato)}`;
+        
+        // 6. Envío
+        fetch(urlFinal, { method: 'GET', mode: 'cors' })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === "success") {
+                alert("¡Guardado correctamente en el Excel!");
+            } else {
+                alert("Error en el script: " + data.message);
+            }
+        })
+        .catch(error => {
+            console.error("Error:", error);
+            alert("Error de conexión con el script.");
+        });
+
+    } catch (err) {
+        console.error("Error crítico en guardarCombinacionSugerida:", err);
+    }
 }
