@@ -361,7 +361,7 @@ async function cargarPlanSemanal() {
             </tr></thead><tbody>`;
         
         // Asumiendo que A2:A8 son los días y B:F las ingestas (filas 0 a 6)
-        for (let i = 1; i < Math.min(rows.length, 7); i++) {
+        for (let i = 0; i < Math.min(rows.length, 7); i++) {
             html += `<tr>
                 <td><strong>${getCelda(rows, i, 0)}</strong></td>
                 <td>${getCelda(rows, i, 1)}</td>
