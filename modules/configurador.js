@@ -289,57 +289,28 @@ function procesarYRenderizarEquivalencias(raw) {
 //  ENVIAR COMBINACIÓN SUGERIDA A GOOGLE SHEETS
 // ─────────────────────────────────────────────────────────────
 function guardarCombinacionSugerida() {
-    try {
-        // 1. Obtener los selectores con los nuevos IDs
-        const selectDia = document.getElementById('day-selector'); 
-        const selectIngesta = document.getElementById('meal-selector');
-        
-        // 2. Capturar el contenedor del plato
-        const containerPlato = document.getElementById('plate-output');
-        
-        // Comprobación de seguridad
-        if (!containerPlato) {
-            console.error("Error: No se encuentra el contenedor con id='plate-output'");
-            alert("No se encontró el contenedor de sugerencias. ¿Has generado ya una sugerencia?");
-            return;
-        }
-        
-        if (!selectDia || !selectIngesta) {
-            alert("Error: No se encuentran los selectores 'day-selector' o 'meal-selector'. Revisa tu HTML.");
-            return;
-        }
-        
-        // 3. Obtener el texto
-        //const contenidoPlato = containerPlato.innerText.trim();
-        const contenidoPlato = "CONTENIDO FIJO PRUEBA";
-        
-        if (!contenidoPlato) {
-            alert("El área de sugerencias está vacía.");
-            return;
-        }
-        
-        // 4. URL de Google Apps Script
-        const URL_WEB_APP = "https://script.google.com/macros/s/AKfycbzE8Fzd5OQQ5TkP_g0V36XprMZ0n9jT6xsH1OJQpL7lAFrkvgo6htb8GENua8qFgE2U/exec"; 
-        
-        // 5. Construir la URL con parámetros
-        const urlFinal = `${URL_WEB_APP}?spreadsheetId=${encodeURIComponent(window.currentPacienteId)}&gid=425566588&dia=${encodeURIComponent(selectDia.value)}&ingesta=${encodeURIComponent(selectIngesta.value)}&texto=${encodeURIComponent(contenidoPlato)}`;
-        
-        // 6. Envío
-        fetch(urlFinal, { method: 'GET', mode: 'cors' })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === "success") {
-                alert("¡Guardado correctamente en el Excel!");
-            } else {
-                alert("Error en el script: " + data.message);
-            }
-        })
-        .catch(error => {
-            console.error("Error:", error);
-            alert("Error de conexión con el script.");
-        });
+    const selectDia = document.getElementById('day-selector'); 
+    const selectIngesta = document.getElementById('meal-selector');
+    const containerPlato = document.getElementById('plate-output');
+    
+    const contenido = containerPlato.innerText.trim();
+    
+    const payload = {
+        spreadsheetId: window.currentPacienteId,
+        gid: '425566588',
+        dia: selectDia.value,
+        ingesta: selectIngesta.value,
+        texto: contenido
+    };
 
-    } catch (err) {
-        console.error("Error crítico en guardarCombinacionSugerida:", err);
-    }
+    const URL_WEB_APP = "https://script.google.com/macros/s/AKfycbwedSPzSMuVo6dh-Y1x3H4hjcO2GDPv0zh1ncbCZgs0039Bk9tD8JJztRMJmPM0Ud3g/exec";
+
+    fetch(URL_WEB_APP, {
+        method: 'POST',
+        mode: 'no-cors', // Para evitar problemas de permisos de navegador
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(() => alert("¡Enviado a Google Sheets!"))
+    .catch(err => alert("Error: " + err));
 }
