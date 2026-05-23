@@ -291,8 +291,8 @@ function procesarYRenderizarEquivalencias(raw) {
 function guardarCombinacionSugerida() {
     // 1. Localizar los dos desplegables de tu interfaz
     // IMPORTANTE: Cambia 'id-de-tu-select-dia' e 'id-de-tu-select-ingesta' por los IDs reales de tu HTML
-    const selectDia = document.getElementById('id-de-tu-select-dia'); 
-    const selectIngesta = document.getElementById('id-de-tu-select-ingesta');
+    const selectDia = document.getElementById('day-selector'); 
+    const selectIngesta = document.getElementById('meal-selector');
     
     if (!selectDia || !selectIngesta) {
         alert("Error de configuración: Asegúrate de poner los IDs correctos de tus desplegables de Día e Ingesta.");
