@@ -23,9 +23,9 @@ function renderizarPlato(plato) {
             </div>`;
     });
 
-    html += `</div>
+   /* html += `</div>
              <button onclick="solicitarNuevaSugerencia()" class="btn-sugerir">Sugerir Nueva Combinación</button>`;
-    
+    */
     container.innerHTML = html;
 }
 
