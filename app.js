@@ -495,42 +495,7 @@ function renderizarComidasDelDia(indexDia) {
     // Volcamos todo el texto en el hueco que preparamos antes
     contenedor.innerHTML = htmlComidas;
 }
-💡 ¿Por qué funciona esto?
-Usamos una variable global datosPlanificacionGlobal. En vez de pedirle a Google la dieta cada vez que tocas la "M" de Martes, se la pedimos una sola vez al entrar.
 
-La función seleccionarDia se encarga de jugar con los colores de los botones (encendiendo el tocado y apagando el resto).
-
-Añadí white-space: pre-line; al estilo del texto. Esto es un truco vital para Google Sheets: si tú en tu Excel escribes un alimento, pulsas Alt+Enter y escribes otro debajo, esta línea de código respeta esos saltos de línea para que quede en forma de lista y no amontonado.
-
-Guarda el archivo, refresca (F5) tu navegador y prueba la pestaña de Planificar.
-
-no veo el filtro de los dias
-
-¡No te preocupes! Esto es completamente normal. El motivo por el cual no ves las burbujas es porque hay un "conflicto de poderes" entre tus archivos:
-
-El nuevo archivo planificacion.js está listo para pintar las burbujas.
-
-Pero tu archivo app.js todavía tiene guardado el código antiguo (el que intentaba crear la tabla vieja). Cuando haces clic en la pestaña "Planificar", el sistema sigue haciendo caso a app.js y se salta el nuevo archivo.
-
-Vamos a solucionarlo de forma muy sencilla en dos pasos rápidos.
-
-Paso 1: Corregir el punto de mira en planificacion.js
-Abre tu archivo planificacion.js y localiza la línea 11. Verás que dice esto:
-
-JavaScript
-const container = document.getElementById('view-planificacion');
-Cámbiala para que apunte a plan-grid (que es el hueco exacto que tu HTML tiene reservado para la planificación). Debe quedar así:
-
-JavaScript
-const container = document.getElementById('plan-grid');
-Guarda el archivo planificacion.js y ciérralo.
-
-Paso 2: Desactivar la tabla vieja en app.js
-Ahora abre tu archivo app.js y ve hacia el final del todo. Vas a buscar el bloque de código antiguo que se encargaba de la tabla. Lo reconocerás enseguida porque contiene la línea const container = document.getElementById('plan-grid'); y un montón de líneas con <td> y <tr>.
-
-Selecciona todo ese bloque de código viejo (desde donde empieza la función hasta su llave de cierre }) y bórralo. En su lugar, pega este código limpio que simplemente le dice a la aplicación: "Oye, cuando entres aquí, usa el sistema de burbujas de planificacion.js":
-
-JavaScript
 // ─────────────────────────────────────────────────────────────
 //  ENLACE A LA PLANIFICACIÓN POR BURBUJAS
 // ─────────────────────────────────────────────────────────────
