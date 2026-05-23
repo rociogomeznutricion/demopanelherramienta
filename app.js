@@ -2,10 +2,15 @@
 //  MANEJADORES DE INTERFAZ Y EVENTOS DE INICIO (NÚCLEO)
 // ───────────────────────────────────────────────────────────── 
 
-document.getElementById('username').addEventListener('keydown', e => { if (e.key === 'Enter') ejecutarLogin(); });
-document.getElementById('password').addEventListener('keydown', e => { if (e.key === 'Enter') ejecutarLogin(); });
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('username').addEventListener('keydown', e => { if (e.key === 'Enter') ejecutarLogin(); });
+    document.getElementById('password').addEventListener('keydown', e => { if (e.key === 'Enter') ejecutarLogin(); });
+    inicializarSelectorDias();
+});
 
 function cleanJSON(raw) {
+    // La respuesta de Google Sheets gviz suele venir como: google.visualization.Query.setResponse({...});
+    // Esta función limpia el JSON
     return JSON.parse(raw.substring(raw.indexOf('{'), raw.lastIndexOf('}') + 1)); 
 }
 
@@ -68,6 +73,7 @@ function ejecutarLogin() {
                 if (dbUser.toLowerCase() === userIn.toLowerCase() && dbPass === passIn) {
                     if (dbActivo !== 'S') {
                         errTxt.innerText = "Suscripción inactiva. Consulte con su nutricionista.";
+                        errBox.style.display = "flex";
                         return;
                     }
                     cuenta = c;
@@ -78,6 +84,7 @@ function ejecutarLogin() {
 
             if (!cuenta) {
                 errTxt.innerText = "Usuario o contraseña incorrectos.";
+                errBox.style.display = "flex";
                 return;
             }
 
@@ -86,6 +93,7 @@ function ejecutarLogin() {
 
             if (!idPaciente) {
                 errTxt.innerText = "La URL del paciente en la columna E no es válida.";
+                errBox.style.display = "flex";
                 return;
             }
 
@@ -97,12 +105,19 @@ function ejecutarLogin() {
 
             cargarDatosNutricionales(idPaciente);
         })
-    
-        function inicializarSelectorDias() {
+        .catch(err => {
+            console.error(err);
+            errTxt.innerText = "Error al conectar con la base de datos.";
+            errBox.style.display = "flex";
+        });
+}
+
+function inicializarSelectorDias() {
     const select = document.getElementById('day-selector');
+    if (!select) return;
     const dias = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
-    const hoy = new Date().getDay(); // 0 es Domingo, 1 es Lunes...
-    const indexHoy = hoy === 0 ? 6 : hoy - 1; // Ajuste para que Lunes sea 0
+    const hoy = new Date().getDay(); 
+    const indexHoy = hoy === 0 ? 6 : hoy - 1; 
 
     dias.forEach((dia, i) => {
         let opt = document.createElement('option');
@@ -111,11 +126,6 @@ function ejecutarLogin() {
         if(i === indexHoy) opt.selected = true;
         select.appendChild(opt);
     });
-}
-        .catch(err => {
-            console.error(err);
-            errTxt.innerText = "Error al conectar con la base de datos.";
-        });
 }
 
 function cerrarSesion() {
@@ -132,7 +142,6 @@ function cerrarSesion() {
     platoInteligenteActual = { p: null, hc: null, g: null, ingesta: "" };
     exclusionesPaciente = { tagsExcluir: [], alimentosOdiados: [] }; 
 
-    // Al cerrar sesión, resetear siempre a la primera pestaña por defecto
     cambiarVista('view-configurador');
 }
 
@@ -248,7 +257,6 @@ function procesarMasterPaciente(raw) {
 
 // ─── CONTROLADOR DEL MENÚ DE NAVEGACIÓN (SISTEMA DE RUTAS) ───
 function cambiarVista(vistaId) {
-    // 1. Ocultar todas las vistas y remover clases activas
     document.querySelectorAll('.app-view').forEach(view => {
         view.classList.remove('active-view');
     });
@@ -256,7 +264,6 @@ function cambiarVista(vistaId) {
         btn.classList.remove('active');
     });
 
-    // 2. Activar la vista seleccionada y su correspondiente botón
     const vistaDestino = document.getElementById(vistaId);
     if (vistaDestino) {
         vistaDestino.classList.add('active-view');
@@ -267,14 +274,12 @@ function cambiarVista(vistaId) {
         botonActivo.classList.add('active');
     }
 
-    // 3. Disparadores opcionales 
     if (vistaId === 'view-planificacion' && typeof inicializarPlanificacion === 'function') {
         inicializarPlanificacion();
     } else if (vistaId === 'view-diario' && typeof inicializarDiario === 'function') {
         inicializarDiario();
     }
     
-    // Scrollear hacia arriba al cambiar de vista en móvil
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -303,14 +308,10 @@ function guardarPlan() {
 
 // ─── CONTROLADOR DE DÍAS (PLANIFICACIÓN) ───
 function seleccionarDia(dia, btnElement) {
-    // Quitar la clase active a todos los botones
     document.querySelectorAll('.day-btn').forEach(btn => {
         btn.classList.remove('active');
     });
     
-    // Añadir la clase active al botón pulsado
     btnElement.classList.add('active');
-
-    // Aquí puedes añadir tu lógica futura para cargar los datos en "plan-dia-content"
     console.log("Filtrando planificación para el día:", dia);
 }
