@@ -334,9 +334,9 @@ function guardarCombinacionSugerida() {
     
     // 5. TU URL DE GOOGLE APPS SCRIPT
     // PEGA AQUÍ la URL que copiaste en el paso 8 de la Parte 1
-    const URL_WEB_APP = "AQUÍ_PEGA_TU_URL_DE_APPS_SCRIPT"; 
+    const URL_WEB_APP = "https://script.google.com/macros/s/AKfycbyyLyhm3HzQOkX4GHC3CP_0MhftSNqrLAjIZQKUzDuUWnMnqeE_hYWdho9HOr1laTqX/exec"; 
     
-    if (URL_WEB_APP === "AQUÍ_PEGA_TU_URL_DE_APPS_SCRIPT") {
+    if (URL_WEB_APP === "https://script.google.com/macros/s/AKfycbyyLyhm3HzQOkX4GHC3CP_0MhftSNqrLAjIZQKUzDuUWnMnqeE_hYWdho9HOr1laTqX/exec") {
         alert("Falta configurar la URL de tu Google Apps Script en el código JS.");
         return;
     }
