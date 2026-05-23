@@ -128,54 +128,15 @@
             <div class="obs-grid" id="obs-grid"></div>
         </div>
 
-        <div id="view-planificacion" class="app-view">
-            <div class="section-title" style="margin-bottom: 5px;">Planificación semanal</div>
-            
-            <div style="background: transparent; padding: 0;">
-                <p style="color: var(--text-light, #6b7280); font-size: 14px; margin-bottom: 15px;">Selecciona el día</p>
-                
-                <div class="day-selector">
-                    <button class="day-btn active" onclick="seleccionarDia('L', this)">L</button>
-                    <button class="day-btn" onclick="seleccionarDia('M', this)">M</button>
-                    <button class="day-btn" onclick="seleccionarDia('X', this)">X</button>
-                    <button class="day-btn" onclick="seleccionarDia('J', this)">J</button>
-                    <button class="day-btn" onclick="seleccionarDia('V', this)">V</button>
-                    <button class="day-btn" onclick="seleccionarDia('S', this)">S</button>
-                    <button class="day-btn" onclick="seleccionarDia('D', this)">D</button>
-                </div>
-
-                <div id="plan-dia-content" class="plan-content">
-                    <div class="plan-meal-card">
-                        <div class="plan-meal-header">
-                            <i class="fa-solid fa-bread-slice" style="color: #f59e0b;"></i> <strong>Desayuno</strong>
-                        </div>
-                        <ul class="plan-meal-list">
-                            <li>2 Cafés con leche almendras</li>
-                        </ul>
-                    </div>
-                    
-                    <div class="plan-meal-card">
-                        <div class="plan-meal-header">
-                            <i class="fa-solid fa-bowl-food" style="color: #10b981;"></i> <strong>Almuerzo</strong>
-                        </div>
-                        <ul class="plan-meal-list">
-                            <li>Tortitas de arroz</li>
-                            <li>2 Cuñas queso curado</li>
-                        </ul>
-                    </div>
-
-                    <div class="plan-meal-card">
-                        <div class="plan-meal-header">
-                            <i class="fa-solid fa-plate-wheat" style="color: #f97316;"></i> <strong>Comida</strong>
-                        </div>
-                        <ul class="plan-meal-list">
-                            <li>1 Tarrina de arroz con pollo (170g) en crudo y verduras</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
-
+      <div class="section-title">
+    📅 Planificación Semanal
+    <button onclick="cargarPlanSemanal()" class="btn-refresh">
+        <i class="fa-solid fa-sync"></i> Refrescar
+    </button>
+</div>
+<div id="plan-grid" class="plan-container">
+    </div>
+        
         <div id="view-diario" class="app-view">
             <div class="section-title">📝 Diario de Sensaciones y Progreso</div>
             <div class="card">
