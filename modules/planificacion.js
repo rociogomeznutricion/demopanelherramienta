@@ -2,20 +2,25 @@
 //  MÓDULO: PLANIFICACIÓN NUTRICIONAL SECO/SEMANAL
 // ───────────────────────────────────────────────────────────── 
 
-function inicializarPlanificacion() {
-    console.log("[Módulo Planificación] Cargado y listo para expandir.");
+window.inicializarPlanificacion = async function() {
+    console.log("[Módulo Planificación] Cargando datos del paciente:", currentPacienteId);
     
-    const container = document.querySelector('#view-planificacion .card');
+    // El GID que me diste
+    const gidRegistroSemanal = '425566588'; 
+    const url = `https://docs.google.com/spreadsheets/d/${currentPacienteId}/gviz/tq?gid=${gidRegistroSemanal}&tqx=out:json`;
     
-    // Ejemplo de renderizado inicial dinámico. Puedes cambiar esto por peticiones Fetch a tus Sheets
-    container.innerHTML = `
-        <p style="margin-bottom: 15px; font-weight:500;">Aquí podrás estructurar y consultar los platos de la semana:</p>
-        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; text-align:center;">
-            <div style="padding:10px; background:#f1f5f9; border-radius:8px; font-size:13px;"><b>Lunes</b><br>🍗 Pollo Arroz</div>
-            <div style="padding:10px; background:#f1f5f9; border-radius:8px; font-size:13px;"><b>Martes</b><br>🐟 Salmón Wok</div>
-            <div style="padding:10px; background:#f1f5f9; border-radius:8px; font-size:13px;"><b>Miércoles</b><br>🥩 Ternera Pasta</div>
-            <div style="padding:10px; background:#f1f5f9; border-radius:8px; font-size:13px;"><b>Jueves</b><br>🍳 Tortilla Pan</div>
-            <div style="padding:10px; background:#f1f5f9; border-radius:8px; font-size:13px;"><b>Viernes</b><br>🥗 Ensalada Mix</div>
-        </div>
-    `;
-}
+    const container = document.getElementById('view-planificacion'); // O el div que contenga la sección
+    // Si tienes un contenedor específico para la tabla, úsalo aquí
+    
+    try {
+        const response = await fetch(url);
+        const json = cleanJSON(await response.text()); // cleanJSON es global, funciona aquí
+        const rows = json.table.rows;
+
+        // Aquí renderizas tu tabla usando 'rows'
+        // ... (tu lógica de renderizado igual que te pasé antes)
+        console.log("Datos cargados correctamente");
+    } catch (e) {
+        console.error("Error al cargar planificación:", e);
+    }
+};
