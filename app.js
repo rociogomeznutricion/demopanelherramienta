@@ -369,23 +369,6 @@ function ejecutarLogin() {
         console.warn("Aviso: No se ha encontrado la función cambiarVista.");
     }
 }
-Paso 4: Guarda y recarga
-Guarda el archivo app.js, vuelve a tu navegador y pulsa F5 para recargar la página. ¡El login debería volver a funcionar!
-
-¿Antes de que se rompiera, tu login tenía alguna comprobación de contraseña específica conectada a Google Sheets, o simplemente usabas el nombre de usuario para cargar el plan directamente?
-
-Ya funciona perfectamente. Pero quiero en la seccion de "Planificar", en lugar de enseñarme el cuadrante de los 7 dias de la semana, hay un filtro por dias de la semana a modo de "burbujas" que contengan L,M,X,J,V,S,D y que solo se muestre el dia que corresponda
-
-¡Genial! Me alegro muchísimo de que el login haya revivido. Esas pequeñas victorias son las que hacen que programar valga la pena.
-
-Pasar de una tabla gigante a una vista de "burbujas" por día es una decisión de diseño excelente. Las tablas son horribles de leer en las pantallas de los teléfonos, mientras que seleccionar un día y ver tarjetas con tus comidas es súper intuitivo. He revisado tu archivo styles.css y la buena noticia es que ya tienes el diseño preparado (las clases .day-btn y .plan-meal-card).
-
-Vamos a cambiar la lógica para que Google Sheets descargue los 7 días de golpe, pero nosotros los guardemos en secreto en la memoria y solo enseñemos el día que tocas.
-
-🛠️ Cómo implementar las burbujas paso a paso
-Abre tu archivo planificacion.js. Vas a borrar todo lo que hay dentro de ese archivo y lo vas a sustituir por el siguiente código. Lo he comentado en detalle para que sepas exactamente qué hace cada bloque:
-
-JavaScript
 // ─────────────────────────────────────────────────────────────
 //  MÓDULO: PLANIFICACIÓN NUTRICIONAL (VERSIÓN BURBUJAS)
 // ───────────────────────────────────────────────────────────── 
