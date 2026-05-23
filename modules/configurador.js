@@ -290,8 +290,8 @@ function procesarYRenderizarEquivalencias(raw) {
 // ─────────────────────────────────────────────────────────────
 function guardarCombinacionSugerida() {
     // 1. Obtener los selectores usando tus IDs reales
-    const selectDia = document.getElementById('dia-selector'); 
-    const selectIngesta = document.getElementById('ingesta-selector');
+    const selectDia = document.getElementById('day-selector'); 
+    const selectIngesta = document.getElementById('meal-selector');
     
     // 2. Capturar el contenedor del plato
     const containerPlato = document.getElementById('plate-output');
