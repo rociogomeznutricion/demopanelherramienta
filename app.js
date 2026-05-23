@@ -339,37 +339,7 @@ let currentPacienteId = "";
 // currentPacienteId = idPaciente;
 
 
-Conversación con Gemini
-Tengo este software de nutricion. Y al hacer una modificacion se me ha roto el login. Necesito que me digas como arreglarlo con detalles, ya que soy muy torpe
 
-¡Hola! No te preocupes en absoluto, es completamente normal que al tocar el código se rompa algo. Nos pasa constantemente a todos los que programamos. Lo importante es que tu navegador nos está diciendo exactamente qué le duele.
-
-🔍 El Diagnóstico
-Mirando la captura de pantalla que has subido, el panel de la derecha (la consola del navegador) muestra letras rojas con el siguiente error principal:
-
-Uncaught ReferenceError: ejecutarLogin is not defined
-
-¿Qué significa esto? Significa que cuando haces clic en el botón de entrar o pulsas la tecla "Enter", el sistema intenta lanzar una función llamada ejecutarLogin, pero no la encuentra. Es muy probable que al hacer tus modificaciones recientes hayas borrado o comentado sin querer el bloque de código que definía esa función en tu archivo app.js.
-
-Además, tienes un segundo error similar debajo: inicializarSelectorDias is not defined, lo que indica que esa función también se ha perdido o está fallando.
-
-🛠️ Cómo arreglarlo paso a paso
-Para que vuelvas a poder entrar, vamos a volver a crear esa función. Sigue estos pasos:
-
-Paso 1: Abre tu archivo app.js
-Abre el archivo app.js en tu editor de código (Notepad++, VS Code, etc.).
-
-Paso 2: Neutraliza el error del selector de días
-Ve a la línea 22 de app.js. Verás algo así:
-inicializarSelectorDias();
-
-Como ahora mismo esa función no existe y está haciendo que la aplicación se "congele", ponle dos barras delante para desactivarla temporalmente (lo que llamamos "comentar" el código). Debería quedar así:
-// inicializarSelectorDias();
-
-Paso 3: Añade la función de Login
-Ve al final de tu archivo app.js (o justo debajo de donde defines las variables globales) y pega el siguiente código. He reconstruido la lógica básica basándome en la estructura de tu proyecto:
-
-JavaScript
 // ─────────────────────────────────────────────────────────────
 //  FUNCIÓN DE LOGIN RECUPERADA
 // ─────────────────────────────────────────────────────────────
@@ -594,6 +564,9 @@ function cargarPlanificacionSemanal() {
         console.error("No se ha encontrado la función inicializarPlanificacion en planificacion.js");
     }
 }
+// ─────────────────────────────────────────────────────────────
+//  ENLACE A LA PLANIFICACIÓN POR BURBUJAS (CON NOMBRE CORRECTO)
+// ─────────────────────────────────────────────────────────────
 // ─────────────────────────────────────────────────────────────
 //  ENLACE A LA PLANIFICACIÓN POR BURBUJAS (CON NOMBRE CORRECTO)
 // ─────────────────────────────────────────────────────────────
