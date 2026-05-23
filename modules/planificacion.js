@@ -12,7 +12,7 @@ window.inicializarPlanificacion = async function() {
     const url = `https://docs.google.com/spreadsheets/d/${currentPacienteId}/gviz/tq?gid=${gidRegistroSemanal}&tqx=out:json`;
     
     // Buscamos el div principal donde va todo
-    const container = document.getElementById('view-planificacion'); 
+    const container = document.getElementById('plan-grid'); 
     
     try {
         // Ponemos un mensajito mientras Google nos responde
