@@ -28,7 +28,7 @@ window.inicializarPlanificacion = async function() {
         construirInterfazDias(container);
         
         // 2. Simulamos que hacemos "clic" en el Lunes (índice 0) para que no salga la pantalla vacía
-        seleccionarDia(1);
+        seleccionarDia(0);
         
     } catch (e) {
         console.error("Error al cargar planificación:", e);
