@@ -288,9 +288,9 @@ function cambiarVista(vistaId) {
         botonActivo.classList.add('active');
     }
 
-    if (vistaId === 'view-planificacion' && typeof cargarPlanSemanal === 'function') {
-       // inicializarPlanificacion();
-        cargarPlanSemanal();
+    if (vistaId === 'view-planificacion' && typeof inicializarPlanificacion === 'function') {
+       inicializarPlanificacion();
+        --cargarPlanSemanal();
     } else if (vistaId === 'view-diario' && typeof inicializarDiario === 'function') {
         inicializarDiario();
     }
@@ -338,7 +338,69 @@ let currentPacienteId = "";
 // En tu función ejecutarLogin, cuando obtienes 'idPaciente', añade:
 // currentPacienteId = idPaciente;
 
+
+let currentPacienteId = "";
+let datosPlanSemanal = []; // Almacenamos aquí las filas leídas
+
+// Función para inicializar los botones y la carga
+function inicializarPlanificacion() {
+    const container = document.getElementById('day-selector-container');
+    const dias = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+    container.innerHTML = "";
+    
+    dias.forEach((dia, index) => {
+        const btn = document.createElement('button');
+        btn.className = "day-btn";
+        btn.innerText = dia.charAt(0); // L, M, X...
+        btn.onclick = () => {
+            document.querySelectorAll('.day-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            renderizarDiaSeleccionado(index);
+        };
+        container.appendChild(btn);
+    });
+
+    cargarPlanSemanal();
+}
+
 async function cargarPlanSemanal() {
+    if (!currentPacienteId) return;
+    const url = `https://docs.google.com/spreadsheets/d/${currentPacienteId}/gviz/tq?gid=425566588&tqx=out:json`;
+    
+    try {
+        const response = await fetch(url);
+        const json = cleanJSON(await response.text());
+        datosPlanSemanal = json.table.rows;
+        
+        // Seleccionamos por defecto el primer día (Lunes)
+        renderizarDiaSeleccionado(0);
+        document.querySelector('.day-btn').classList.add('active');
+    } catch (e) {
+        document.getElementById('plan-grid').innerHTML = "Error al cargar.";
+    }
+}
+
+function renderizarDiaSeleccionado(idx) {
+    const row = datosPlanSemanal[idx];
+    if (!row) return;
+
+    // Etiquetas de las ingestas
+    const cabeceras = ["Desayuno", "Almuerzo", "Comida", "Merienda", "Cena"];
+    let html = `<div class="plan-cards">`;
+    
+    for (let i = 0; i < 5; i++) {
+        html += `
+            <div class="plan-meal-card">
+                <strong>${cabeceras[i]}</strong>
+                <p>${getCelda(datosPlanSemanal, idx, i + 1)}</p>
+            </div>`;
+    }
+    html += `</div>`;
+    document.getElementById('plan-grid').innerHTML = html;
+}
+
+
+/*async function cargarPlanSemanal() {
     if (!currentPacienteId) {
         alert("Primero inicia sesión.");
         return;
@@ -377,4 +439,4 @@ async function cargarPlanSemanal() {
         container.innerHTML = "Error al cargar los datos.";
         console.error(e);
     }
-}
+}*/
