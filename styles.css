@@ -544,3 +544,13 @@ td { padding: 14px; border-bottom: 1px solid var(--border); font-size: 14px; }
     color: #475569;
     font-weight: bold;
 }
+
+.plan-container { overflow-x: auto; margin-top: 15px; }
+.plan-table { width: 100%; border-collapse: collapse; font-size: 13px; background: white; }
+.plan-table th, .plan-table td { border: 1px solid #e2e8f0; padding: 10px; text-align: left; }
+.plan-table th { background-color: #f1f5f9; color: #1e293b; font-weight: 600; }
+.btn-refresh { 
+    background: #0047ab; color: white; border: none; 
+    padding: 6px 12px; border-radius: 6px; cursor: pointer; float: right; 
+    font-size: 12px;
+}
