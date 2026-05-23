@@ -328,3 +328,51 @@ function seleccionarDia(dia, btnElement) {
     btnElement.classList.add('active');
     console.log("Filtrando planificación para el día:", dia);
 }
+
+// Variable global para almacenar el ID del paciente tras el login
+let currentPacienteId = ""; 
+
+// IMPORTANTE: Asegúrate de guardar el ID en la función ejecutarLogin()
+// En tu función ejecutarLogin, cuando obtienes 'idPaciente', añade:
+// currentPacienteId = idPaciente;
+
+async function cargarPlanSemanal() {
+    if (!currentPacienteId) {
+        alert("Primero inicia sesión.");
+        return;
+    }
+    
+    const gidRegistroSemanal = '425566588'; 
+    const url = `https://docs.google.com/spreadsheets/d/${currentPacienteId}/gviz/tq?gid=${gidRegistroSemanal}&tqx=out:json`;
+    
+    const container = document.getElementById('plan-grid');
+    container.innerHTML = "Cargando...";
+
+    try {
+        const response = await fetch(url);
+        const text = await response.text();
+        const json = cleanJSON(text);
+        const rows = json.table.rows;
+        
+        let html = `<table class="plan-table"><thead><tr>
+            <th>Día</th><th>Desayuno</th><th>Almuerzo</th><th>Comida</th><th>Merienda</th><th>Cena</th>
+            </tr></thead><tbody>`;
+        
+        // Asumiendo que A2:A8 son los días y B:F las ingestas (filas 0 a 6)
+        for (let i = 0; i < Math.min(rows.length, 7); i++) {
+            html += `<tr>
+                <td><strong>${getCelda(rows, i, 0)}</strong></td>
+                <td>${getCelda(rows, i, 1)}</td>
+                <td>${getCelda(rows, i, 2)}</td>
+                <td>${getCelda(rows, i, 3)}</td>
+                <td>${getCelda(rows, i, 4)}</td>
+                <td>${getCelda(rows, i, 5)}</td>
+            </tr>`;
+        }
+        html += `</tbody></table>`;
+        container.innerHTML = html;
+    } catch (e) {
+        container.innerHTML = "Error al cargar los datos.";
+        console.error(e);
+    }
+}
