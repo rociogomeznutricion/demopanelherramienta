@@ -103,6 +103,7 @@ function ejecutarLogin() {
 
             const urlPaciente = cuenta[4]?.v ? String(cuenta[4].v).trim() : '';
             const idPaciente = limpiarYExtraerId(urlPaciente);
+            currentPacienteId = idPaciente; // <--- AÑADE ESTA LÍNEA
 
             if (!idPaciente) {
                 errTxt.innerText = "La URL del paciente en la columna E no es válida.";
@@ -289,6 +290,7 @@ function cambiarVista(vistaId) {
 
     if (vistaId === 'view-planificacion' && typeof inicializarPlanificacion === 'function') {
         inicializarPlanificacion();
+        cargarPlanSemanal();
     } else if (vistaId === 'view-diario' && typeof inicializarDiario === 'function') {
         inicializarDiario();
     }
