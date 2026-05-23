@@ -310,7 +310,8 @@ function guardarCombinacionSugerida() {
         }
         
         // 3. Obtener el texto
-        const contenidoPlato = containerPlato.innerText.trim();
+        //const contenidoPlato = containerPlato.innerText.trim();
+        const contenidoPlato = "CONTENIDO FIJO PRUEBA";
         
         if (!contenidoPlato) {
             alert("El área de sugerencias está vacía.");
