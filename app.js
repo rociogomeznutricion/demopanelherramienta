@@ -288,8 +288,8 @@ function cambiarVista(vistaId) {
         botonActivo.classList.add('active');
     }
 
-    if (vistaId === 'view-planificacion' && typeof inicializarPlanificacion === 'function') {
-        inicializarPlanificacion();
+    if (vistaId === 'view-planificacion' && typeof cargarPlanSemanal === 'function') {
+       // inicializarPlanificacion();
         cargarPlanSemanal();
     } else if (vistaId === 'view-diario' && typeof inicializarDiario === 'function') {
         inicializarDiario();
