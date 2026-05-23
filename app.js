@@ -338,43 +338,275 @@ let currentPacienteId = "";
 // En tu función ejecutarLogin, cuando obtienes 'idPaciente', añade:
 // currentPacienteId = idPaciente;
 
-async function cargarPlanSemanal() {
+
+Conversación con Gemini
+Tengo este software de nutricion. Y al hacer una modificacion se me ha roto el login. Necesito que me digas como arreglarlo con detalles, ya que soy muy torpe
+
+¡Hola! No te preocupes en absoluto, es completamente normal que al tocar el código se rompa algo. Nos pasa constantemente a todos los que programamos. Lo importante es que tu navegador nos está diciendo exactamente qué le duele.
+
+🔍 El Diagnóstico
+Mirando la captura de pantalla que has subido, el panel de la derecha (la consola del navegador) muestra letras rojas con el siguiente error principal:
+
+Uncaught ReferenceError: ejecutarLogin is not defined
+
+¿Qué significa esto? Significa que cuando haces clic en el botón de entrar o pulsas la tecla "Enter", el sistema intenta lanzar una función llamada ejecutarLogin, pero no la encuentra. Es muy probable que al hacer tus modificaciones recientes hayas borrado o comentado sin querer el bloque de código que definía esa función en tu archivo app.js.
+
+Además, tienes un segundo error similar debajo: inicializarSelectorDias is not defined, lo que indica que esa función también se ha perdido o está fallando.
+
+🛠️ Cómo arreglarlo paso a paso
+Para que vuelvas a poder entrar, vamos a volver a crear esa función. Sigue estos pasos:
+
+Paso 1: Abre tu archivo app.js
+Abre el archivo app.js en tu editor de código (Notepad++, VS Code, etc.).
+
+Paso 2: Neutraliza el error del selector de días
+Ve a la línea 22 de app.js. Verás algo así:
+inicializarSelectorDias();
+
+Como ahora mismo esa función no existe y está haciendo que la aplicación se "congele", ponle dos barras delante para desactivarla temporalmente (lo que llamamos "comentar" el código). Debería quedar así:
+// inicializarSelectorDias();
+
+Paso 3: Añade la función de Login
+Ve al final de tu archivo app.js (o justo debajo de donde defines las variables globales) y pega el siguiente código. He reconstruido la lógica básica basándome en la estructura de tu proyecto:
+
+JavaScript
+// ─────────────────────────────────────────────────────────────
+//  FUNCIÓN DE LOGIN RECUPERADA
+// ─────────────────────────────────────────────────────────────
+function ejecutarLogin() {
+    const userInput = document.getElementById('username');
+    const passInput = document.getElementById('password');
+    
+    // 1. Comprobamos que el usuario haya escrito algo
+    if (!userInput || userInput.value.trim() === "") {
+        alert("Por favor, introduce tu usuario.");
+        return;
+    }
+
+    // 2. Guardamos el ID del paciente (tu sistema usa currentPacienteId)
+    currentPacienteId = userInput.value.trim();
+
+    // 3. Ocultamos la pantalla de login
+    const loginScreen = document.getElementById('login-screen');
+    if (loginScreen) {
+        loginScreen.style.display = 'none';
+    }
+
+    // 4. Activamos la primera vista (Configurador)
+    if (typeof cambiarVista === 'function') {
+        cambiarVista('view-configurador');
+    } else {
+        console.warn("Aviso: No se ha encontrado la función cambiarVista.");
+    }
+}
+Paso 4: Guarda y recarga
+Guarda el archivo app.js, vuelve a tu navegador y pulsa F5 para recargar la página. ¡El login debería volver a funcionar!
+
+¿Antes de que se rompiera, tu login tenía alguna comprobación de contraseña específica conectada a Google Sheets, o simplemente usabas el nombre de usuario para cargar el plan directamente?
+
+Ya funciona perfectamente. Pero quiero en la seccion de "Planificar", en lugar de enseñarme el cuadrante de los 7 dias de la semana, hay un filtro por dias de la semana a modo de "burbujas" que contengan L,M,X,J,V,S,D y que solo se muestre el dia que corresponda
+
+¡Genial! Me alegro muchísimo de que el login haya revivido. Esas pequeñas victorias son las que hacen que programar valga la pena.
+
+Pasar de una tabla gigante a una vista de "burbujas" por día es una decisión de diseño excelente. Las tablas son horribles de leer en las pantallas de los teléfonos, mientras que seleccionar un día y ver tarjetas con tus comidas es súper intuitivo. He revisado tu archivo styles.css y la buena noticia es que ya tienes el diseño preparado (las clases .day-btn y .plan-meal-card).
+
+Vamos a cambiar la lógica para que Google Sheets descargue los 7 días de golpe, pero nosotros los guardemos en secreto en la memoria y solo enseñemos el día que tocas.
+
+🛠️ Cómo implementar las burbujas paso a paso
+Abre tu archivo planificacion.js. Vas a borrar todo lo que hay dentro de ese archivo y lo vas a sustituir por el siguiente código. Lo he comentado en detalle para que sepas exactamente qué hace cada bloque:
+
+JavaScript
+// ─────────────────────────────────────────────────────────────
+//  MÓDULO: PLANIFICACIÓN NUTRICIONAL (VERSIÓN BURBUJAS)
+// ───────────────────────────────────────────────────────────── 
+
+// Guardamos los datos aquí para no tener que recargarlos de internet cada vez que tocas un botón
+let datosPlanificacionGlobal = []; 
+
+window.inicializarPlanificacion = async function() {
+    console.log("[Módulo Planificación] Cargando datos del paciente:", currentPacienteId);
+    
+    const gidRegistroSemanal = '425566588'; 
+    const url = `https://docs.google.com/spreadsheets/d/${currentPacienteId}/gviz/tq?gid=${gidRegistroSemanal}&tqx=out:json`;
+    
+    // Buscamos el div principal donde va todo
+    const container = document.getElementById('view-planificacion'); 
+    
+    try {
+        // Ponemos un mensajito mientras Google nos responde
+        container.innerHTML = "<p style='text-align:center; padding: 20px;'>Cargando tu planificación...</p>";
+        
+        const response = await fetch(url);
+        const json = cleanJSON(await response.text());
+        
+        // Guardamos las 7 filas (Lunes a Domingo) en nuestra variable global
+        datosPlanificacionGlobal = json.table.rows; 
+
+        // 1. Construimos la botonera de L a D
+        construirInterfazDias(container);
+        
+        // 2. Simulamos que hacemos "clic" en el Lunes (índice 0) para que no salga la pantalla vacía
+        seleccionarDia(0);
+        
+    } catch (e) {
+        console.error("Error al cargar planificación:", e);
+        container.innerHTML = "<p style='text-align:center; color: var(--p-color); padding: 20px;'>Error al cargar los datos. Revisa tu conexión.</p>";
+    }
+};
+
+function construirInterfazDias(container) {
+    const dias = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+    
+    // Titulo de la sección
+    let html = `<div class="section-title">📅 Tu Semana al Detalle</div>`;
+    
+    // Contenedor de las burbujas (centradas y alineadas)
+    html += `<div style="display: flex; gap: 12px; justify-content: center; margin-bottom: 25px; flex-wrap: wrap;">`;
+    
+    // Creamos un botón por cada letra del array 'dias'
+    dias.forEach((dia, index) => {
+        html += `<button class="day-btn" id="btn-dia-${index}" onclick="seleccionarDia(${index})" 
+                 style="width: 45px; height: 45px; border-radius: 50%; border: none; font-weight: 600; cursor: pointer; font-size: 15px; transition: all 0.2s;">
+                 ${dia}
+                 </button>`;
+    });
+    html += `</div>`;
+
+    // Debajo de los botones, dejamos un "hueco" donde luego inyectaremos el texto de las comidas
+    html += `<div id="contenedor-comidas-dia"></div>`;
+
+    container.innerHTML = html;
+}
+
+window.seleccionarDia = function(indexDia) {
+    // 1. Reseteamos los colores de todos los botones para apagarlos
+    const todosLosBotones = document.querySelectorAll('.day-btn');
+    todosLosBotones.forEach(btn => {
+        btn.classList.remove('active');
+        btn.style.backgroundColor = 'var(--white, #ffffff)'; 
+        btn.style.color = 'var(--text-light, #64748b)';
+        btn.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
+    });
+
+    // 2. Encendemos solo el botón que hemos tocado (el activo)
+    const botonActivo = document.getElementById(`btn-dia-${indexDia}`);
+    if (botonActivo) {
+        botonActivo.classList.add('active');
+        // Colores que encajan con tu tema azul (blue-accent)
+        botonActivo.style.backgroundColor = 'var(--blue-accent, #0047ab)';
+        botonActivo.style.color = '#ffffff';
+        botonActivo.style.boxShadow = '0 4px 8px rgba(0, 71, 171, 0.3)';
+        botonActivo.style.transform = 'scale(1.05)';
+    }
+
+    // 3. Llamamos a la función que dibuja el texto de la dieta
+    renderizarComidasDelDia(indexDia);
+};
+
+function renderizarComidasDelDia(indexDia) {
+    const contenedor = document.getElementById('contenedor-comidas-dia');
+    if (!contenedor || !datosPlanificacionGlobal[indexDia]) return;
+
+    // Cogemos solo la fila del excel que pertenece a este día
+    const filaDia = datosPlanificacionGlobal[indexDia];
+    const ingestas = ['Desayuno', 'Almuerzo', 'Comida', 'Merienda', 'Cena'];
+    
+    // Función de seguridad por si alguna celda en Google Sheets está vacía
+    const getTextoSeguro = (columna) => {
+        if (filaDia.c && filaDia.c[columna] && filaDia.c[columna].v) {
+            return filaDia.c[columna].v;
+        }
+        return "<i style='color: #94a3b8;'>Libre o sin asignar</i>";
+    };
+
+    let htmlComidas = "";
+
+    // En Sheets: Columna 0 es el Nombre del Día, la 1 es Desayuno, la 2 Almuerzo...
+    // Recorremos las 5 comidas creando una tarjeta para cada una
+    ingestas.forEach((nombreIngesta, i) => {
+        const contenido = getTextoSeguro(i + 1); 
+        
+        // Usamos las clases que ya existen en tu styles.css
+        htmlComidas += `
+            <div class="plan-meal-card" style="margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+                <div class="plan-meal-header" style="color: var(--blue-accent, #0047ab);">
+                    <i class="fa-solid fa-utensils"></i> <strong>${nombreIngesta}</strong>
+                </div>
+                <div style="color: var(--text-dark, #1e293b); font-size: 15px; line-height: 1.6; margin-top: 10px; white-space: pre-line;">
+                    ${contenido}
+                </div>
+            </div>
+        `;
+    });
+
+    // Volcamos todo el texto en el hueco que preparamos antes
+    contenedor.innerHTML = htmlComidas;
+}
+💡 ¿Por qué funciona esto?
+Usamos una variable global datosPlanificacionGlobal. En vez de pedirle a Google la dieta cada vez que tocas la "M" de Martes, se la pedimos una sola vez al entrar.
+
+La función seleccionarDia se encarga de jugar con los colores de los botones (encendiendo el tocado y apagando el resto).
+
+Añadí white-space: pre-line; al estilo del texto. Esto es un truco vital para Google Sheets: si tú en tu Excel escribes un alimento, pulsas Alt+Enter y escribes otro debajo, esta línea de código respeta esos saltos de línea para que quede en forma de lista y no amontonado.
+
+Guarda el archivo, refresca (F5) tu navegador y prueba la pestaña de Planificar.
+
+no veo el filtro de los dias
+
+¡No te preocupes! Esto es completamente normal. El motivo por el cual no ves las burbujas es porque hay un "conflicto de poderes" entre tus archivos:
+
+El nuevo archivo planificacion.js está listo para pintar las burbujas.
+
+Pero tu archivo app.js todavía tiene guardado el código antiguo (el que intentaba crear la tabla vieja). Cuando haces clic en la pestaña "Planificar", el sistema sigue haciendo caso a app.js y se salta el nuevo archivo.
+
+Vamos a solucionarlo de forma muy sencilla en dos pasos rápidos.
+
+Paso 1: Corregir el punto de mira en planificacion.js
+Abre tu archivo planificacion.js y localiza la línea 11. Verás que dice esto:
+
+JavaScript
+const container = document.getElementById('view-planificacion');
+Cámbiala para que apunte a plan-grid (que es el hueco exacto que tu HTML tiene reservado para la planificación). Debe quedar así:
+
+JavaScript
+const container = document.getElementById('plan-grid');
+Guarda el archivo planificacion.js y ciérralo.
+
+Paso 2: Desactivar la tabla vieja en app.js
+Ahora abre tu archivo app.js y ve hacia el final del todo. Vas a buscar el bloque de código antiguo que se encargaba de la tabla. Lo reconocerás enseguida porque contiene la línea const container = document.getElementById('plan-grid'); y un montón de líneas con <td> y <tr>.
+
+Selecciona todo ese bloque de código viejo (desde donde empieza la función hasta su llave de cierre }) y bórralo. En su lugar, pega este código limpio que simplemente le dice a la aplicación: "Oye, cuando entres aquí, usa el sistema de burbujas de planificacion.js":
+
+JavaScript
+// ─────────────────────────────────────────────────────────────
+//  ENLACE A LA PLANIFICACIÓN POR BURBUJAS
+// ─────────────────────────────────────────────────────────────
+function cargarPlanificacionSemanal() {
     if (!currentPacienteId) {
         alert("Primero inicia sesión.");
         return;
     }
     
-    const gidRegistroSemanal = '425566588'; 
-    const url = `https://docs.google.com/spreadsheets/d/${currentPacienteId}/gviz/tq?gid=${gidRegistroSemanal}&tqx=out:json`;
+    // Si existe nuestra función de burbujas, la ejecutamos
+    if (typeof inicializarPlanificacion === 'function') {
+        inicializarPlanificacion();
+    } else {
+        console.error("No se ha encontrado la función inicializarPlanificacion en planificacion.js");
+    }
+}
+// ─────────────────────────────────────────────────────────────
+//  ENLACE A LA PLANIFICACIÓN POR BURBUJAS (CON NOMBRE CORRECTO)
+// ─────────────────────────────────────────────────────────────
+function cargarPlanSemanal() {
+    if (!currentPacienteId) {
+        alert("Primero inicia sesión.");
+        return;
+    }
     
-    const container = document.getElementById('plan-grid');
-    container.innerHTML = "Cargando...";
-
-    try {
-        const response = await fetch(url);
-        const text = await response.text();
-        const json = cleanJSON(text);
-        const rows = json.table.rows;
-        
-        let html = `<table class="plan-table"><thead><tr>
-            <th>Día</th><th>Desayuno</th><th>Almuerzo</th><th>Comida</th><th>Merienda</th><th>Cena</th>
-            </tr></thead><tbody>`;
-        
-        // Asumiendo que A2:A8 son los días y B:F las ingestas (filas 0 a 6)
-        for (let i = 0; i < Math.min(rows.length, 7); i++) {
-            html += `<tr>
-                <td><strong>${getCelda(rows, i, 0)}</strong></td>
-                <td>${getCelda(rows, i, 1)}</td>
-                <td>${getCelda(rows, i, 2)}</td>
-                <td>${getCelda(rows, i, 3)}</td>
-                <td>${getCelda(rows, i, 4)}</td>
-                <td>${getCelda(rows, i, 5)}</td>
-            </tr>`;
-        }
-        html += `</tbody></table>`;
-        container.innerHTML = html;
-    } catch (e) {
-        container.innerHTML = "Error al cargar los datos.";
-        console.error(e);
+    // Si existe nuestra nueva función de burbujas, la ejecutamos
+    if (typeof inicializarPlanificacion === 'function') {
+        inicializarPlanificacion();
+    } else {
+        console.error("No se ha encontrado la función inicializarPlanificacion en planificacion.js");
     }
 }
