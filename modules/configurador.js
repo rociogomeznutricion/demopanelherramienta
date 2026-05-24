@@ -303,7 +303,7 @@ function guardarCombinacionSugerida() {
         texto: contenido
     };
 
-    const URL_WEB_APP = "https://script.google.com/macros/s/AKfycbylPakJjvpt6uVsHNusD1WnxE4a50QhovtAQ8V-z7HKa8vARIbI_wY1--k4j1Klhsxm/exec";
+    const URL_WEB_APP = "https://script.google.com/macros/s/AKfycbyxvzA_vlaVgB3Bz5qD6dFzXC2RES2exj50sg7QD67PM-hbzKqVsIlVtePV6c_Cbdkd/exec";
 
     fetch(URL_WEB_APP, {
         method: 'POST',
