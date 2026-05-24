@@ -294,7 +294,7 @@ function guardarCombinacionSugerida() {
     const containerPlato = document.getElementById('plate-output');
     
     const contenido = containerPlato.innerText.trim();
-    
+    Console.log(window.currentPacienteId);
     const payload = {
         spreadsheetId: window.currentPacienteId,
         gid: '425566588',
@@ -303,7 +303,7 @@ function guardarCombinacionSugerida() {
         texto: contenido
     };
 
-    const URL_WEB_APP = "https://script.google.com/macros/s/AKfycbwedSPzSMuVo6dh-Y1x3H4hjcO2GDPv0zh1ncbCZgs0039Bk9tD8JJztRMJmPM0Ud3g/exec";
+    const URL_WEB_APP = "https://script.google.com/macros/s/AKfycbylPakJjvpt6uVsHNusD1WnxE4a50QhovtAQ8V-z7HKa8vARIbI_wY1--k4j1Klhsxm/exec";
 
     fetch(URL_WEB_APP, {
         method: 'POST',
