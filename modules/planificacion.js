@@ -47,7 +47,8 @@ function construirInterfazDias(container) {
     
     // Creamos un botón por cada letra del array 'dias'
     dias.forEach((dia, index) => {
-        html += `<button class="day-btn" id="btn-dia-${index}" onclick="seleccionarDia(${index})" 
+        let numeroDiaExcel = index + 1;
+        html += `<button class="day-btn" id="btn-dia-${index}" onclick="seleccionarDia(${numeroDiaExcel})" 
                  style="width: 45px; height: 45px; border-radius: 50%; border: none; font-weight: 600; cursor: pointer; font-size: 15px; transition: all 0.2s;">
                  ${dia}
                  </button>`;
