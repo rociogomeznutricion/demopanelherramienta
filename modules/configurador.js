@@ -294,9 +294,9 @@ function guardarCombinacionSugerida() {
     const containerPlato = document.getElementById('plate-output');
     
     const contenido = containerPlato.innerText.trim();
-    Console.log(window.currentPacienteId);
+    console.log(currentPacienteId);
     const payload = {
-        spreadsheetId: window.currentPacienteId,
+        spreadsheetId: currentPacienteId,
         gid: '425566588',
         dia: selectDia.value,
         ingesta: selectIngesta.value,
