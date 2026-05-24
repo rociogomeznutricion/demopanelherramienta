@@ -28,7 +28,7 @@ window.inicializarPlanificacion = async function() {
         construirInterfazDias(container);
         
         // 2. Simulamos que hacemos "clic" en el Lunes (índice 0) para que no salga la pantalla vacía
-        seleccionarDia(0);
+        seleccionarDia(1);
         
     } catch (e) {
         console.error("Error al cargar planificación:", e);
@@ -48,7 +48,7 @@ function construirInterfazDias(container) {
     // Creamos un botón por cada letra del array 'dias'
     dias.forEach((dia, index) => {
         let numeroDiaExcel = index + 1;
-        html += `<button class="day-btn" id="btn-dia-${index}" onclick="seleccionarDia(${numeroDiaExcel})" 
+        html += `<button class="day-btn" id="btn-dia-${numeroDiaExcel}" onclick="seleccionarDia(${numeroDiaExcel})" 
                  style="width: 45px; height: 45px; border-radius: 50%; border: none; font-weight: 600; cursor: pointer; font-size: 15px; transition: all 0.2s;">
                  ${dia}
                  </button>`;
