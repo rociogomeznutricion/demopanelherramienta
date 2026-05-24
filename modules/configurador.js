@@ -292,15 +292,25 @@ function guardarCombinacionSugerida() {
     const selectDia = document.getElementById('day-selector'); 
     const selectIngesta = document.getElementById('meal-selector');
     const containerPlato = document.getElementById('plate-output');
-    
+
+    // Obtén el texto de donde lo tengas (ej: un div o un textarea)    
     const contenido = containerPlato.innerText.trim();
-    console.log(currentPacienteId);
+
+// 1. Extraemos solo las líneas que tienen emoji
+var alimentosCadena = contenido.split('\n')
+    .map(linea => linea.trim())
+    .filter(linea => /^[\p{Extended_Pictographic}]/u.test(linea));
+
+// 2. Unimos con salto de línea para que se vea bien en la celda
+var textoParaGuardarSugerencia = alimentosCadena.join("\n");
+
+    
     const payload = {
         spreadsheetId: currentPacienteId,
         gid: '425566588',
         dia: selectDia.value,
         ingesta: selectIngesta.value,
-        texto: contenido
+        texto: textoParaGuardarSugerencia
     };
 
     const URL_WEB_APP = "https://script.google.com/macros/s/AKfycbyxvzA_vlaVgB3Bz5qD6dFzXC2RES2exj50sg7QD67PM-hbzKqVsIlVtePV6c_Cbdkd/exec";
