@@ -296,6 +296,8 @@ function guardarCombinacionSugerida() {
     // Obtén el texto de donde lo tengas (ej: un div o un textarea)    
     const contenido = containerPlato.innerText.trim();
 
+    BtnguardarCombinacion.style.display = "none";
+    
 // 1. Extraemos solo las líneas que tienen emoji
 var alimentosCadena = contenido.split('\n')
     .map(linea => linea.trim())
@@ -321,6 +323,16 @@ var textoParaGuardarSugerencia = alimentosCadena.join("\n");
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
     })
-    .then(() => alert("¡Enviado a Google Sheets!"))
-    .catch(err => alert("Error: " + err));
+  .then(() => {
+    // 3. Volvemos a mostrar el botón al terminar con éxito
+    BtnguardarCombinacion.style.display = "block"; // o "inline-block" según tu CSS
+    alert("Combinacion guardada con éxito");
+})
+.catch(err => {
+    // 4. Volvemos a mostrar el botón si hay error
+    BtnguardarCombinacion.style.display = "block";
+    alert("Error: " + err);
+});
+
+    
 }
