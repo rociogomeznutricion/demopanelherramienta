@@ -40,7 +40,8 @@ function construirInterfazDias(container) {
     const dias = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
     
     // Titulo de la sección
-    let html = `<div class="section-title">📅 Tu Semana al Detalle</div>`;
+   // let html = `<div class="section-title">📅 Tu Semana al Detalle</div>`;
+     let html = ``;
     
     // Contenedor de las burbujas (centradas y alineadas)
     html += `<div style="display: flex; gap: 12px; justify-content: center; margin-bottom: 25px; flex-wrap: wrap;">`;
